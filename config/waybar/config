@@ -1,0 +1,81 @@
+{
+    "layer": "top", // Waybar at top layer
+    "position": "top", // Waybar position (top|bottom|left|right)
+    // "width": 1280, // Waybar width
+    // Choose the order of the modules
+    "modules-left": [
+      "hyprland/workspaces",
+      "hyprland/window"
+    ],
+    "modules-right": [
+       "pulseaudio",
+       "battery",
+       "network",
+       "custom/clock",
+       "tray",
+       "custom/lock",
+       "custom/power"],
+
+    "hyprland/workspaces": {
+         "disable-scroll": true,
+         "sort-by-name": true,
+         "format": "{name} {icon}",
+         "format-icons": {
+            //"default": "",
+            "urgent": "",
+            "active": "",
+            "default": ""
+         },
+     },
+    "tray": {
+        "icon-size": 21,
+        "spacing": 10
+    },
+    "custom/clock": {
+        "exec": "date '+%Y-%m-%d %H:%M'",
+        "interval": 30,
+        "tooltip": false
+    },
+    "network": {
+        // "interface": "wlp2*", // (Optional) To force the use of this interface
+        "format-wifi": "{essid} ({signalStrength}%) ",
+        "format-ethernet": "{ipaddr}/{cidr} ",
+        "tooltip-format": "{ifname} via {gwaddr} ",
+        "format-linked": "{ifname} (No IP) ",
+        "format-disconnected": "Disconnected ⚠",
+        "format-alt": "{ifname}: {ipaddr}/{cidr}"
+    },
+    "battery": {
+        "states": {
+            "warning": 30,
+            "critical": 15
+        },
+        "format": "{capacity}% {icon}",
+        "format-charging": "{time} 󰉁",
+        "format-plugged": "",
+        "format-alt": "{icon}",
+        "format-icons": ["", "", "", "", ""]
+    },
+    "pulseaudio": {
+        // "scroll-step": 1, // %, can be a float
+        "format": "{volume}% {icon}",
+        "format-muted": "",
+        "format-icons": {
+            "default": ["", "", " "]
+        },
+        "on-click": "pamixer --toggle-mute",
+        "on-click-right": "$HOME/.bin/pulsemixer-toggle",
+        "on-scroll-up": "pamixer --increase 5",
+        "on-scroll-down": "pamixer --decrease 5"
+    },
+    "custom/lock": {
+        "tooltip": false,
+        "on-click": "hyprlock",
+        "format": "",
+    },
+    "custom/power": {
+        "tooltip": false,
+        "on-click": "~/.config/waybar/scripts/powermenu.sh",
+        "format": "󰐥"
+    }
+}

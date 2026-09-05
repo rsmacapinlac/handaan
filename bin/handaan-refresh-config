@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# handaan:summary=Replace one file under ~/.config with the handaan default.
+# handaan:args=<config-path>
+#
+# The copy model means ~/.config is yours once seeded, so handaan never
+# overwrites it during an update. This is the deliberate way to take a new
+# default, and it keeps a backup because "deliberate" is not the same as "sure".
+
+set -euo pipefail
+
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+
+config_file=${1:-}
+if [[ -z $config_file ]]; then
+    cat <<USAGE
+Usage: $(basename "$0") <config-path>
+
+Copies \$HANDAAN_PATH/config/<path> over ~/.config/<path>.
+
+    $(basename "$0") hypr/hyprlock.conf
+USAGE
+    exit 1
+fi
+
+user_file="$HOME/.config/$config_file"
+default_file="$HANDAAN_PATH/config/$config_file"
+backup_file="$user_file.bak.$(date +%s)"
+
+if [[ ! -f $default_file ]]; then
+    echo "No handaan default at $default_file" >&2
+    exit 1
+fi
+
+mkdir -p "$(dirname "$user_file")"
+
+if [[ ! -f $user_file ]]; then
+    cp -f "$default_file" "$user_file"
+    echo "Installed $user_file"
+    exit 0
+fi
+
+cp -f "$user_file" "$backup_file"
+cp -f "$default_file" "$user_file"
+
+if cmp -s "$user_file" "$backup_file"; then
+    rm -f "$backup_file"
+    echo "$user_file already matched the default."
+else
+    printf '\033[0;31mReplaced %s with the handaan default.\033[0m\n' "$user_file"
+    printf 'Backup saved as %s\n\n\033[0;32mWhat changed:\033[0m\n' "$backup_file"
+    diff "$backup_file" "$user_file" || true
+fi

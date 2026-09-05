@@ -1,0 +1,127 @@
+@import "mocha.css";
+
+* {
+  font-family: "BlexMono Nerd Font", monospace;
+  font-size: 13px;
+  min-height: 0;
+}
+
+#waybar {
+  background: transparent;
+  color: @text;
+  margin: 5px 5px;
+}
+
+#workspaces {
+  border-radius: 1rem;
+  margin: 5px;
+  background-color: @surface0;
+  margin-left: 1rem;
+}
+
+#workspaces button {
+  color: @lavender;
+  border-radius: 1rem;
+  padding: 0.4rem;
+}
+
+#workspaces button.active {
+  color: @sky;
+  border-radius: 1rem;
+}
+
+#workspaces button:hover {
+  color: @sapphire;
+  border-radius: 1rem;
+}
+
+#window,
+#tray,
+#backlight,
+#clock,
+#custom-clock,
+#network,
+#battery,
+#custom-music,
+#pulseaudio,
+#custom-lock,
+#custom-power {
+  background-color: @surface0;
+  padding: 0.5rem 1rem;
+  margin: 5px 0;
+}
+
+#window {
+  margin-right: 1rem;
+  border-radius: 1rem;
+}
+
+#clock,
+#custom-clock {
+  color: @blue;
+  border-radius: 1rem;
+  margin-right: 1rem;
+}
+
+#network {
+  margin-right: 1rem;
+  border-radius: 1rem;
+}
+
+#battery {
+  color: @green;
+}
+
+#battery.charging {
+  color: @green;
+}
+
+#battery.warning:not(.charging) {
+  color: @red;
+}
+
+#backlight {
+  color: @yellow;
+}
+
+#battery {
+    border-radius: 1rem;
+    margin-right: 1rem;
+}
+
+#backlight {
+    border-radius: 0;
+}
+
+/* pulseaudio and battery are separate pills, each fully rounded.
+   They used to be two halves of one pill — pulseaudio rounded on the left,
+   battery on the right — which broke anywhere battery is hidden, such as a
+   desktop or a VM. The volume pill was then left with a flat, cut-off right
+   edge where battery should have continued it. */
+#pulseaudio {
+  color: @maroon;
+  border-radius: 1rem;
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+#custom-music {
+  color: @mauve;
+  border-radius: 1rem;
+}
+
+#custom-lock {
+    border-radius: 1rem 0px 0px 1rem;
+    color: @lavender;
+}
+
+#custom-power {
+    margin-right: 1rem;
+    border-radius: 0px 1rem 1rem 0px;
+    color: @red;
+}
+
+#tray {
+  margin-right: 1rem;
+  border-radius: 1rem;
+}

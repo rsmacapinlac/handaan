@@ -1,0 +1,8 @@
+# Credential tooling. Passwords are retrieved through pass; nothing here
+# stores a secret in a config file.
+gnupg
+gnome-keyring
+libsecret
+pass
+pass-otp
+zbar

@@ -1,0 +1,25 @@
+# The Hyprland desktop.
+#
+# waybar is installed but its unit is deliberately left un-enabled: it stays a
+# fallback bar while the Quickshell one grows to parity. See
+# docs/hyprland-startup.md.
+hyprland
+uwsm
+mako
+libnotify
+kitty
+rofi
+waybar
+quickshell
+xdg-desktop-portal-hyprland
+qt5-wayland
+qt6-wayland
+grim
+slurp
+hyprshot
+hyprpaper
+hyprpicker
+hypridle
+hyprlock
+hyprcursor
+hyprpolkitagent

@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# handaan:summary=Install mise-backed launchers for user-facing developer tools.
+#
+# Install small mise-backed launchers for user-facing development tools.
+
+set -euo pipefail
+
+if ! command -v mise &>/dev/null; then
+    echo "mise is required before installing tool wrappers" >&2
+    exit 1
+fi
+
+install_wrapper() {
+    local package=$1
+    local command=${2:-$package}
+    local bin=${3:-$command}
+    local target="$HOME/.local/bin/$command"
+
+    mkdir -p "$HOME/.local/bin"
+    rm -f "$target"
+    cat > "$target" <<EOF
+#!/bin/bash
+export MISE_MINIMUM_RELEASE_AGE=0
+mise use --global --quiet "$package" || exit 1
+exec mise x "$package" -- "$bin" "\$@"
+EOF
+    chmod +x "$target"
+}
+
+install_named_wrapper() {
+    case "$1" in
+        claude|codex|gh|pi)
+            install_wrapper "$1"
+            ;;
+        bw)
+            install_wrapper 'npm:@bitwarden/cli' bw bw
+            ;;
+        *)
+            echo "Unknown mise wrapper: $1" >&2
+            return 1
+            ;;
+    esac
+}
+
+if (( $# == 0 )); then
+    set -- claude codex gh pi
+fi
+
+for wrapper in "$@"; do
+    install_named_wrapper "$wrapper"
+done
+
+echo "Installed mise wrappers in $HOME/.local/bin"

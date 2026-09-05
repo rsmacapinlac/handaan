@@ -1,0 +1,42 @@
+directory: ~/Music
+library: ~/.local/share/beets/musiclibrary.db
+
+# Keep filesystem paths portable for MPD playlists and firmware-based players
+# like the HIFI Walker H2. Tags can remain Unicode; this only affects paths.
+asciify_paths: yes
+
+ignore: ['DJ Johnny*', 'dj_johnnys*', 'Bumpers and Ads', 'Dynamic Power Hour Playlist 1']
+
+import:
+    move: yes    # Move files to new location
+    # copy: no   # Use files in place
+    # write: no  # Don't modify tags
+
+# Plugins
+plugins: 
+  - musicbrainz
+  - fetchart 
+  - embedart
+  - discogs
+  - mbsync
+  - duplicates
+
+# Album art settings
+fetchart:
+    auto: yes
+    store_source: yes
+    sources: [filesystem, coverart]
+    quality: 0
+    maxwidth: 0
+    enforce_ratio: no
+    cautious: no
+    cover_names: cover front album art folder
+
+embedart:
+    auto: yes
+    remove_art_file: no
+    quality: 85
+
+match:
+  preferred:
+    media: ["CD", "Digital Media|File"]

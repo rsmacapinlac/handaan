@@ -1,0 +1,10 @@
+# Machine-local Hyprland overrides. Seeded into ~/.config, never tracked here.
+config/hypr/conf/local.lua
+
+# mise writes to this on every `mise use --global`, which a lazy launcher does
+# on first run. Tracking it would dirty the tree on ordinary use. See docs/mise.md.
+config/mise/config.toml
+
+*.bak
+*.bak.[0-9]*
+.DS_Store

@@ -1,0 +1,32 @@
+# Core system and terminal packages. Everything here is required for a usable
+# machine; anything optional belongs in a handaan-apps group instead.
+base-devel
+linux-headers
+linux-firmware
+mesa
+vulkan-icd-loader
+curl
+git
+rsync
+openssh
+zsh
+mise
+neovim
+python-pynvim
+tmux
+ranger
+ripgrep
+fd
+fzf
+lazygit
+make
+xclip
+wl-clipboard
+htop
+btop
+pulsemixer
+tldr
+fastfetch
+jq
+pinentry
+polkit-kde-agent

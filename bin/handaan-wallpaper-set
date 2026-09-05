@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# handaan:summary=Set the desktop wallpaper through hyprpaper.
+# handaan:args=[--initial|--random]
+
+filename="$HOME/.wallpaper"
+mode="${1:-random}"
+
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+WALLPAPER_DIR="$HANDAAN_PATH/default/wallpapers"
+
+# Start hyprpaper if not running. Under uwsm it is a systemd user unit, so go
+# through systemd rather than forking a second unsupervised copy beside it.
+if ! pgrep -x "hyprpaper" > /dev/null; then
+    if systemctl --user --quiet is-enabled hyprpaper.service 2>/dev/null; then
+        systemctl --user start hyprpaper.service
+    else
+        hyprpaper &
+    fi
+fi
+
+# Wait for hyprpaper IPC to be ready before issuing commands.  Newer
+# hyprpaper versions do not support the old listpreloaded request, but
+# listactive is enough to confirm the IPC socket is responding.
+for _ in $(seq 1 20); do
+    hyprctl hyprpaper listactive &>/dev/null && break
+    sleep 0.5
+done
+
+# create the filename if it doesn't exist
+if [[ ! -e $filename ]]
+then
+  touch $filename
+fi
+
+cd "$WALLPAPER_DIR"
+
+# Get current month for monthly wallpapers
+month=$( date '+%Y-%m' )
+monthly_wallpaper="Monthly/$month*"
+
+# Collect candidate wallpapers. On Hyprland startup, prefer a current-month
+# calendar if one exists; otherwise fall back to generic non-calendar images.
+# Manual changes use the normal random rotation: Generic/ plus any current-month
+# Monthly/YYYY-MM* matches.
+declare -a wallpapers
+shopt -s nullglob
+case "$mode" in
+  --initial|initial|--startup|startup)
+    wallpapers=( $monthly_wallpaper )
+    if [[ ${#wallpapers[@]} -eq 0 ]]; then
+      wallpapers=( Generic/* )
+    fi
+    ;;
+  random|--random)
+    wallpapers=( Generic/* $monthly_wallpaper )
+    ;;
+  *)
+    echo "Usage: $0 [--initial|--random]" >&2
+    exit 2
+    ;;
+esac
+shopt -u nullglob
+wallpaper_count=${#wallpapers[*]}
+
+if [[ $wallpaper_count -eq 0 ]]; then
+  echo "No wallpapers found under $PWD" >&2
+  exit 1
+fi
+
+# Select random wallpaper (shuf returns 0 to count-1)
+index=$( shuf -i 0-$((wallpaper_count - 1)) -n 1 )
+if [[ $index -lt $wallpaper_count ]]
+then
+  current_wallpaper="$PWD/${wallpapers[$index]}"
+
+  # Save absolute path so hyprpaper.conf can preload it on next boot
+  echo "$current_wallpaper" > "$filename"
+
+  while IFS= read -r monitor; do
+    hyprctl hyprpaper wallpaper "$monitor,$current_wallpaper"
+  done < <(hyprctl monitors -j | jq -r '.[].name')
+
+  # Optional: Generate color scheme using wal if available
+  if command -v wal &> /dev/null; then
+    wal -c
+    wal -i "$current_wallpaper" -q
+  fi
+fi

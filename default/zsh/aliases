@@ -1,0 +1,30 @@
+# Unix
+alias ll="ls -al"
+alias ln="ln -v"
+alias mkdir="mkdir -p"
+alias e="$EDITOR"
+alias r="ranger"
+alias brain="cd '$HOME/Obsidian/Second Brain/' && nvim"
+
+
+# Ritchie's stuff :)
+
+# Change wallpaper
+alias w="$HOME/.config/wallpapers/bin/set_wallpaper"
+
+# Habit change
+alias v="echo \"Use 'e'\"! Gawd!"
+
+# Pretty print the path
+alias path='echo $PATH | tr -s ":" "\n"'
+
+# Development stuff
+alias be='bundle exec'
+
+# Go development aliases
+alias gob='go build'
+alias gor='go run'
+alias got='go test'  
+alias gom='go mod'
+alias gof='go fmt'
+alias gol='golangci-lint run'

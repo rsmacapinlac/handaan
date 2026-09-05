@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# handaan:summary=List handaan commands, or run one.
+# handaan:args=[command] [args...]
+#
+# Commands are plain executables in $HANDAAN_PATH/bin named handaan-<verb>, and
+# each declares its own one-line summary in a `# handaan:summary=` comment. The
+# listing below is generated from those comments, so a new command shows up here
+# by existing rather than by being registered anywhere.
+
+set -euo pipefail
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+
+if [[ $# -gt 0 ]]; then
+    exec "$HANDAAN_PATH/bin/handaan-$1" "${@:2}"
+fi
+
+printf '\033[1mhandaan\033[0m %s\n\n' "$(cat "$HANDAAN_PATH/version" 2>/dev/null || echo)"
+for file in "$HANDAAN_PATH"/bin/handaan-*; do
+    [[ -x $file ]] || continue
+    name=$(basename "$file")
+    summary=$(sed -n 's/^# handaan:summary=//p' "$file" | head -1)
+    printf '  \033[0;32m%-26s\033[0m %s\n' "${name#handaan-}" "$summary"
+done
+printf '\nRun one with: handaan <command>, or call %s directly.\n' "handaan-<command>"

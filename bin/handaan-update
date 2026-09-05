@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# handaan:summary=Update handaan, system packages and developer tools.
+# handaan:args=[-y]
+#
+# Order matters and is taken from Omarchy: snapshot first, then move the
+# checkout, then packages, then migrations. Migrations run *after* the package
+# transaction because a migration usually exists to repair something a new
+# package version needs, and *before* the tool updates so a repaired PATH is in
+# effect for them.
+#
+# The whole session is logged through `script` so a failure can be read back
+# afterwards. -f flushes, -q drops the banner, -e propagates the exit status,
+# and running under a PTY is what keeps pacman's progress bars alive.
+
+set -euo pipefail
+
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+if [[ -z ${HANDAAN_UPDATE_LOGGED:-} ]]; then
+    command=$(printf '%q ' "$0" "$@")
+    exec env HANDAAN_UPDATE_LOGGED=1 script -qefc "$command" /tmp/handaan-update.log
+fi
+
+NPM_MODULES_DIR="/usr/lib/node_modules"
+
+snapshot_first() {
+    # timeshift-autosnap already hooks pacman, so the packages are covered. The
+    # checkout is not: it lives under @home, which ADR 0001 excludes from both
+    # backup and restore. Recording the commit is what makes a bad update
+    # recoverable with `git reset --hard` rather than guesswork.
+    mkdir -p "$HANDAAN_STATE"
+    if git -C "$HANDAAN_PATH" rev-parse HEAD > "$HANDAAN_STATE/last-update-commit" 2>/dev/null; then
+        log_info "Recorded pre-update commit $(cut -c1-12 < "$HANDAAN_STATE/last-update-commit")"
+    fi
+}
+
+update_handaan_checkout() {
+    log_info "Updating the handaan checkout..."
+    if [[ -n $(git -C "$HANDAAN_PATH" status --porcelain) ]]; then
+        log_warning "$HANDAAN_PATH has local changes; skipping git pull."
+        return 0
+    fi
+    if git -C "$HANDAAN_PATH" pull --ff-only; then
+        log_success "handaan updated"
+    else
+        log_warning "Could not fast-forward the checkout; resolve it by hand."
+    fi
+}
+
+update_system_packages() {
+    log_info "Updating all system packages..."
+
+    local log_file
+    log_file="$(mktemp)"
+
+    if yay -Syu --noconfirm --answerdiff None --answerclean None --removemake \
+        2>&1 | tee "$log_file"; then
+        rm -f "$log_file"
+        log_success "System packages updated"
+        return 0
+    fi
+
+    # Recover from npm file-ownership conflicts caused by `sudo npm update -g`
+    # shadowing pacman's `npm` package. Only retry when the upgrade failed on
+    # "exists in filesystem" AND every conflicting path lives under the npm
+    # modules tree, so we never blindly overwrite unrelated packages.
+    local conflicts
+    conflicts="$(grep -oE '/[^ ]+ exists in filesystem' "$log_file" | awk '{print $1}')"
+    rm -f "$log_file"
+
+    if [[ -z "$conflicts" ]]; then
+        log_error "System package update failed"
+        return 1
+    fi
+
+    if grep -qv "^${NPM_MODULES_DIR}/" <<< "$conflicts"; then
+        log_error "System upgrade hit file conflicts outside ${NPM_MODULES_DIR}; not auto-overwriting. Resolve manually."
+        return 1
+    fi
+
+    log_warning "npm file conflicts under ${NPM_MODULES_DIR} detected; retrying upgrade with --overwrite..."
+    if yay -Syu --noconfirm --answerdiff None --answerclean None --removemake \
+        --overwrite "${NPM_MODULES_DIR}/*"; then
+        log_success "System packages updated (resolved npm file conflicts)"
+    else
+        log_error "System package update failed even after overwriting npm conflicts"
+        return 1
+    fi
+}
+
+run_migrations() {
+    log_info "Applying pending migrations..."
+    handaan-migrate
+}
+
+update_mise_tools() {
+    log_info "Updating mise-managed tools..."
+    if ! command -v mise &>/dev/null; then
+        yay -S --needed --noconfirm mise || { log_warning "mise install failed"; return 0; }
+    fi
+    export PATH="$HOME/.local/bin:$PATH"
+    "$HANDAAN_PATH/bin/handaan-mise-tools"
+    MISE_MINIMUM_RELEASE_AGE=0 mise up
+    log_success "mise-managed tools updated"
+}
+
+update_nvim_plugins() {
+    log_info "Updating Neovim plugins..."
+    if command -v nvim &>/dev/null; then
+        nvim --headless -c "Lazy! sync" -c "qa" 2>/dev/null \
+            || log_warning "Failed to update Neovim plugins"
+    else
+        log_warning "nvim not found, skipping"
+    fi
+}
+
+report_config_drift() {
+    # The copy model means ~/.config is yours and an update never touches it.
+    # Saying so out loud beats discovering a stranded edit during a rebuild.
+    local drifted
+    drifted=$(handaan-diff-config 2>/dev/null | grep -c 'drifted' || true)
+    if (( drifted > 0 )); then
+        log_warning "$drifted seeded config file(s) differ from the handaan defaults."
+        log_warning "Review with: handaan-diff-config"
+    fi
+}
+
+main() {
+    if [[ ${1:-} != -y ]]; then
+        read -r -p "Update handaan and all system packages? [y/N] " answer < /dev/tty || answer=n
+        [[ $answer == [yY] ]] || { log_info "Aborted."; exit 0; }
+    fi
+
+    log_info "Starting handaan update..."
+    snapshot_first
+    update_handaan_checkout
+    update_system_packages
+    run_migrations
+    update_mise_tools
+    update_nvim_plugins
+    report_config_drift
+
+    log_success "Update complete. Session log: /tmp/handaan-update.log"
+}
+
+main "$@"

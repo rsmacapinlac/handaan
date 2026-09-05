@@ -1,0 +1,22 @@
+# Hardware and system integration.
+networkmanager
+network-manager-applet
+bluez
+bluez-utils
+blueman
+bolt
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+brightnessctl
+pamixer
+playerctl
+ddcutil
+cups
+cups-pdf
+system-config-printer
+avahi
+nss-mdns
+upower
+udisks2

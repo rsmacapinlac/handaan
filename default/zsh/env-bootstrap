@@ -1,0 +1,29 @@
+# Single source of truth for HANDAAN_PATH and the PATH entries that depend on it.
+#
+# Sourced by every entry point that needs the environment set:
+#
+#   ~/.zshenv                        interactive and non-interactive shells
+#   ~/.config/uwsm/env               the Hyprland session (uwsm inherits no shell PATH)
+#   install.sh                       the bootstrap, before anything else runs
+#
+# POSIX sh on purpose: zsh, bash and the uwsm env loader all read this file.
+# Idempotent -- safe to source more than once in the same shell.
+
+# /etc/handaan.conf is how a checkout somewhere other than the default path
+# announces itself. Nothing writes it today; it is the seam that makes moving
+# the tree to /usr/share/handaan a one-file change rather than a grep.
+if [ -r /etc/handaan.conf ]; then
+    . /etc/handaan.conf
+fi
+
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+export HANDAAN_PATH
+
+: "${HANDAAN_STATE:=${XDG_STATE_HOME:-$HOME/.local/state}/handaan}"
+export HANDAAN_STATE
+
+case ":$PATH:" in
+    *":$HANDAAN_PATH/bin:"*) ;;
+    *) PATH="$HANDAAN_PATH/bin:$PATH" ;;
+esac
+export PATH

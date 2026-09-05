@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# handaan:summary=Copy a file from ~/.config back into the handaan checkout.
+# handaan:args=<config-path>
+#
+# The other half of handaan-diff-config: a local edit worth keeping is promoted
+# into the tree deliberately, then committed. Without this the copy model is a
+# one-way door and good changes get stranded in ~/.config.
+
+set -euo pipefail
+
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+
+config_file=${1:-}
+if [[ -z $config_file ]]; then
+    echo "Usage: $(basename "$0") <config-path>   e.g. nvim/init.lua" >&2
+    exit 1
+fi
+
+user_file="$HOME/.config/$config_file"
+tree_file="$HANDAAN_PATH/config/$config_file"
+
+if [[ ! -f $user_file ]]; then
+    echo "No such file: $user_file" >&2
+    exit 1
+fi
+
+mkdir -p "$(dirname "$tree_file")"
+cp -f "$user_file" "$tree_file"
+printf 'Promoted %s -> %s\n\n' "$user_file" "${tree_file#"$HANDAAN_PATH/"}"
+git -C "$HANDAAN_PATH" --no-pager diff --stat -- "config/$config_file" || true
+echo
+echo "Review and commit it in $HANDAAN_PATH."

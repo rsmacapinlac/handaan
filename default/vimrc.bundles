@@ -1,0 +1,72 @@
+if &compatible
+  set nocompatible
+end
+
+" Remove declared plugins
+function! s:UnPlug(plug_name)
+  if has_key(g:plugs, a:plug_name)
+    call remove(g:plugs, a:plug_name)
+  endif
+endfunction
+command!  -nargs=1 UnPlug call s:UnPlug(<args>)
+
+let g:has_async = v:version >= 800 || has('nvim')
+
+call plug#begin('~/.vim/bundles')
+
+" Define bundles via Github repos
+" Plug 'christoomey/vim-run-interactive'
+
+" If fzf has already been installed via Homebrew, use the existing fzf
+" Otherwise, install fzf. The `--all` flag makes fzf accessible outside of vim
+if isdirectory("/usr/local/opt/fzf")
+  Plug '/usr/local/opt/fzf'
+else
+  Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+endif
+
+Plug 'junegunn/fzf.vim'
+Plug 'janko-m/vim-test'
+
+" Utilities
+"
+" https://github.com/pbrisbin/vim-mkdir
+" When you :o and the file / dir doesn't exists, it creates it
+Plug 'pbrisbin/vim-mkdir'
+
+
+" https://github.com/tpope/vim-endwise
+" Code completion
+Plug 'tpope/vim-endwise'
+
+" https://github.com/tpope/vim-eunuch
+" File utilities
+Plug 'tpope/vim-eunuch'
+
+" https://github.com/tpope/vim-surround
+" Seems useful, might need to evaluate
+Plug 'tpope/vim-surround'
+
+" https://github.com/slim-template/vim-slim
+Plug 'slim-template/vim-slim'
+
+" Ruby / Rails stuff
+Plug 'tpope/vim-bundler'
+Plug 'tpope/vim-rails'
+Plug 'tpope/vim-rake'
+Plug 'vim-ruby/vim-ruby'
+
+" https://github.com/tomtom/tcomment_vim/blob/master/doc/tcomment.txt
+Plug 'vim-scripts/tComment'
+
+" pretty layout
+Plug 'altercation/vim-colors-solarized'
+
+" minimal writer, replacement for focuswriter
+Plug 'junegunn/goyo.vim'
+Plug 'junegunn/limelight.vim'
+"
+" Markdown highlighting
+Plug 'plasticboy/vim-markdown'
+
+call plug#end()

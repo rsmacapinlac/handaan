@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# handaan:summary=Run pending migrations to bring this machine in line with the checkout.
+# handaan:args=[--pending]
+#
+# `git pull` updates files in the tree. It cannot enable a systemd unit, write
+# to /etc, or repoint a path that an already-installed machine still holds. That
+# is what migrations are for: one-shot, idempotent fixes for machines that were
+# installed before the change landed.
+#
+# A fresh install marks every migration as already applied (see
+# install/preflight/migrations.sh), so history is never replayed onto a machine
+# that was built from it.
+
+set -euo pipefail
+
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+: "${HANDAAN_STATE:=${XDG_STATE_HOME:-$HOME/.local/state}/handaan}"
+
+STATE_DIR="$HANDAAN_STATE/migrations"
+mkdir -p "$STATE_DIR/skipped"
+
+pending() {
+    local file name
+    for file in "$HANDAAN_PATH"/migrations/*.sh; do
+        [[ -e $file ]] || continue
+        name=$(basename "$file")
+        if [[ ! -f $STATE_DIR/$name && ! -f $STATE_DIR/skipped/$name ]]; then
+            printf '%s\n' "$file"
+        fi
+    done
+}
+
+if [[ ${1:-} == --pending ]]; then
+    pending
+    exit 0
+fi
+
+mapfile -t queue < <(pending)
+if (( ${#queue[@]} == 0 )); then
+    echo "No pending migrations."
+    exit 0
+fi
+
+for file in "${queue[@]}"; do
+    name=$(basename "$file")
+    printf '\n\033[0;32mRunning migration (%s)\033[0m\n' "${name%.sh}"
+
+    if bash "$file"; then
+        touch "$STATE_DIR/$name"
+        continue
+    fi
+
+    # A failed migration must not silently vanish, and must not wedge every
+    # future update either. Ask, and record the choice so the answer sticks.
+    printf '\033[0;31mMigration %s failed.\033[0m Skip it and continue? [y/N] ' "${name%.sh}"
+    read -r answer < /dev/tty || answer=n
+    if [[ $answer == [yY] ]]; then
+        touch "$STATE_DIR/skipped/$name"
+    else
+        exit 1
+    fi
+done

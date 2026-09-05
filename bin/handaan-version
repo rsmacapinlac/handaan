@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# handaan:summary=Print the installed handaan version and checkout commit.
+
+set -euo pipefail
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+
+printf 'handaan %s\n' "$(cat "$HANDAAN_PATH/version" 2>/dev/null || echo unknown)"
+printf 'path    %s\n' "$HANDAAN_PATH"
+if git -C "$HANDAAN_PATH" rev-parse --short HEAD &>/dev/null; then
+    printf 'commit  %s (%s)\n' \
+        "$(git -C "$HANDAAN_PATH" rev-parse --short HEAD)" \
+        "$(git -C "$HANDAAN_PATH" rev-parse --abbrev-ref HEAD)"
+fi
+printf 'pending migrations: %s\n' "$(handaan-migrate --pending | wc -l)"

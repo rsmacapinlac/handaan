@@ -1,0 +1,74 @@
+-- Keybindings
+-- See https://wiki.hypr.land/Configuring/Basics/Binds/
+
+local home = os.getenv("HOME")
+local handaan = os.getenv("HANDAAN_PATH") or (os.getenv("HOME") .. "/.local/share/handaan")
+
+local mainMod = "SUPER"       -- "Windows" key
+
+-- The old hyprlang config used "Control_L" here. That is a keysym, not a
+-- modifier name; hyprlang only accepted it because it substring-matched
+-- "CONTROL", so it always meant either Control key. The Lua parser rejects it
+-- outright -- it drops the modifier and binds the bare key. Use "CTRL".
+local ctrlMod = "CTRL"
+
+local terminal  = "kitty"
+local menu      = home .. "/.config/rofi/rofi-dynamic.sh"
+local powermenu = home .. "/.config/waybar/scripts/powermenu.sh"
+local wallpaper = handaan .. "/bin/handaan-wallpaper-set"
+local lid_switch = handaan .. "/bin/handaan-lid-switch"
+
+-- Applications and session
+hl.bind(mainMod .. " + Return",        hl.dsp.exec_cmd(terminal))
+hl.bind(mainMod .. " + space",         hl.dsp.exec_cmd(menu))
+hl.bind(mainMod .. " + SHIFT + Q",     hl.dsp.window.close())
+hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
+
+hl.bind(ctrlMod .. " + SHIFT + W",     hl.dsp.exec_cmd(wallpaper))
+hl.bind(ctrlMod .. " + ALT + Delete",  hl.dsp.exec_cmd(powermenu))
+
+-- Switch workspaces with ctrlMod + [0-9]
+-- Move the active window to a workspace with ctrlMod + SHIFT + [0-9]
+for i = 1, 10 do
+    local key = i % 10 -- 10 maps to key 0
+    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ workspace = i }))
+    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ workspace = i }))
+end
+
+-- Move focus with ctrlMod + arrow keys
+hl.bind(mainMod .. " + left",  hl.dsp.focus({ direction = "left" }))
+hl.bind(mainMod .. " + up",    hl.dsp.focus({ direction = "up" }))
+hl.bind(mainMod .. " + down",  hl.dsp.focus({ direction = "down" }))
+hl.bind(mainMod .. " + right", hl.dsp.focus({ direction = "right" }))
+
+-- Move windows with mainMod + LMB drag
+hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
+
+-- Volume and brightness
+hl.bind("XF86AudioRaiseVolume",  hl.dsp.exec_cmd("wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"), { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume",  hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),      { locked = true, repeating = true })
+hl.bind("XF86AudioMute",         hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),     { locked = true, repeating = true })
+hl.bind("XF86AudioMicMute",      hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"),   { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%+"),                  { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl -e4 -n2 set 5%-"),                  { locked = true, repeating = true })
+
+-- Media keys (requires playerctl)
+hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })
+hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
+hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
+hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
+
+-- Laptop lid. Closing it with no external display locks the session and lets
+-- logind suspend on its own default; closing it with a monitor attached is
+-- clamshell mode, which must neither lock nor sleep, so hypr/lid-switch only
+-- drops the internal panel out of the layout. See that script for the split.
+--
+-- `locked` is load-bearing here rather than a nicety: without it neither bind
+-- fires once hyprlock is up, which is precisely when a lid gets closed.
+hl.bind("switch:on:Lid Switch",  hl.dsp.exec_cmd(lid_switch .. " closed"), { locked = true })
+hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd(lid_switch .. " open"),   { locked = true })
+
+-- Screenshots (hyprshot)
+hl.bind("Print",                   hl.dsp.exec_cmd("hyprshot -m output")) -- full screen
+hl.bind("SHIFT + Print",           hl.dsp.exec_cmd("hyprshot -m region")) -- select region
+hl.bind(ctrlMod .. " + Print",     hl.dsp.exec_cmd("hyprshot -m window")) -- active window

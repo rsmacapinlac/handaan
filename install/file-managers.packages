@@ -1,0 +1,15 @@
+# File managers and the preview tooling ranger shells out to.
+atool
+elinks
+ffmpegthumbnailer
+highlight
+imagemagick
+lynx
+mediainfo
+transmission-cli
+ueberzug
+w3m
+nautilus
+sushi
+gvfs
+gvfs-smb
