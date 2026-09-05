@@ -1,6 +1,6 @@
 #!/bin/bash
 run_phase "$HANDAAN_INSTALL/packaging/aur.sh"
-run_phase "$HANDAAN_INSTALL/preflight/lua54.sh"
+run_phase "$HANDAAN_INSTALL/packaging/lua54.sh"
 run_phase "$HANDAAN_INSTALL/packaging/base.sh"
 run_phase "$HANDAAN_INSTALL/packaging/hardware.sh"
 run_phase "$HANDAAN_INSTALL/packaging/browsers.sh"

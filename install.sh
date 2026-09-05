@@ -11,10 +11,15 @@
 set -eEo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+
+# Announce the checkout *before* sourcing env-bootstrap. env-bootstrap only
+# defaults HANDAAN_PATH when it is unset, and it builds PATH out of whatever it
+# ends up holding -- so setting it afterwards would leave PATH pointing at the
+# default location's bin/ while everything else ran from this checkout. That
+# split is exactly the failure a running installer cannot report on itself.
+export HANDAAN_PATH="$SCRIPT_DIR"
 # shellcheck source=default/zsh/env-bootstrap
 source "$SCRIPT_DIR/default/zsh/env-bootstrap"
-HANDAAN_PATH="$SCRIPT_DIR"
-export HANDAAN_PATH
 export HANDAAN_INSTALL="$HANDAAN_PATH/install"
 
 # shellcheck source=install/lib/handaan-common.sh
