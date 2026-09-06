@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # handaan:summary=Replace one file under ~/.config with the handaan default.
 # handaan:args=<config-path>
+# handaan:hidden=config-drift tooling, not core to running handaan
 #
 # The copy model means ~/.config is yours once seeded, so handaan never
 # overwrites it during an update. This is the deliberate way to take a new

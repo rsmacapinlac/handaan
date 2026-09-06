@@ -1,5 +1,6 @@
 #!/bin/sh
 # handaan:summary=Report Caps Lock state for the hyprlock indicator.
+# handaan:hidden=called from hyprlock.conf, not by hand
 #
 # Print a Caps Lock warning for the hyprlock screen.
 #

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # handaan:summary=Install mise-backed launchers for user-facing developer tools.
+# handaan:hidden=installs tool launchers, not handaan itself; called by handaan update
 #
 # Install small mise-backed launchers for user-facing development tools.
 

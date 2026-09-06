@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # handaan:summary=Create a migration named for the last commit's timestamp.
 # handaan:args=[--no-edit]
+# handaan:hidden=dev-authoring tool for handaan itself, not a machine command
 #
 # The name is the unix time of the last commit, so migrations sort by when the
 # change landed rather than by when someone got round to writing the repair.

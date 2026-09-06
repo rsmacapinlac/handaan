@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # handaan:summary=Enable or disable the internal panel as the lid moves.
 # handaan:args=[sync]
+# handaan:hidden=called from default/hypr/binds.lua, not by hand
 # Laptop lid handling.
 #
 # Closing the lid means "I am done" only when the laptop panel is the only

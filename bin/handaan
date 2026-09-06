@@ -17,6 +17,11 @@ fi
 printf '\033[1mhandaan\033[0m %s\n\n' "$(cat "$HANDAAN_PATH/version" 2>/dev/null || echo)"
 for file in "$HANDAAN_PATH"/bin/handaan-*; do
     [[ -x $file ]] || continue
+    # A script opts out of the listing with its own `# handaan:hidden` line --
+    # apps and service-* install or manage things beyond handaan itself, and
+    # hyprlock-capslock/lid-switch are internal helpers invoked by other
+    # config, not commands anyone runs by hand. All stay runnable directly.
+    grep -q '^# handaan:hidden' "$file" && continue
     name=$(basename "$file")
     summary=$(sed -n 's/^# handaan:summary=//p' "$file" | head -1)
     printf '  \033[0;32m%-26s\033[0m %s\n' "${name#handaan-}" "$summary"

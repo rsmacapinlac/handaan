@@ -1,0 +1,9 @@
+# Fresh installs carry every fix
+
+A migration repairs a machine that was already built before a fix landed. It is never the only place the fix lives — the installer, `default/`, or `config/` must independently produce a correct machine, without the migration ever running.
+
+This matters because [0004](../decisions/adrs/0004-apply-changes-to-installed-machines.md) makes fresh installs trust migrations by default: `install/preflight/migrations.sh` marks every shipped migration as already-applied the moment a machine is built, on the theory that a checkout built from HEAD already has whatever the migration was written to repair. If a fix were written only into `migrations/<timestamp>.sh`, that theory would be false — a fresh install would carry the bug forever, silently, because the one script that repairs it is marked done without ever running.
+
+So landing a fix that touches system state is two changes, not one, unless the change is provably irrelevant to a fresh install: fix the actual install-time source (a package list, an install phase, a seeded config, a `default/` file) so a new machine never has the bug, *and* ship a migration so a machine built before today catches up. Reviewing a migration means asking what a fresh install does differently now, not just whether the migration script itself is idempotent and correct — a correct migration for a bug that still exists in `install/` is a fix that only ever reaches half the fleet.
+
+Three examples, checked directly rather than assumed: the zshrc-overwrite fix lives in `install/config/shell.sh`'s ordering (write the seed, then install Oh My Zsh with `--keep-zshrc`); the env-bootstrap wiring lives in `install/config/env-bootstrap.sh` writing `/etc/profile.d/handaan.sh` and `~/.config/uwsm/env`; the lua54 shim fix lives in `install/desktop.packages` installing the real package. Each has a migration too, for machines that predate it — but the migration is the backfill, not the fix.

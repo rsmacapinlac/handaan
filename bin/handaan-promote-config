@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # handaan:summary=Copy a file from ~/.config back into the handaan checkout.
 # handaan:args=<config-path>
+# handaan:hidden=config-drift tooling, not core to running handaan
 #
 # The other half of handaan-diff-config: a local edit worth keeping is promoted
 # into the tree deliberately, then committed. Without this the copy model is a

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # handaan:summary=Provision the headless Debian LXC target.
+# handaan:hidden=provisions a different machine, not the user's installed desktop
 #
 # LXC Maintenance Script - Keep Debian LXC packages and dotfiles up to date
 #

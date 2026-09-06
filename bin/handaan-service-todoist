@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # handaan:summary=Install Todoist as a Chromium web app.
+# handaan:hidden=account-bound service, not handaan itself; see docs/standards/core-stays-minimal.md
 # Install Todoist as a Chromium web app.
 #
 # Todoist has no first-party Linux client, and the AUR builds wrap the same web

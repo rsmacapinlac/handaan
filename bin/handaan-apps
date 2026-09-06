@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # handaan:summary=Install optional application groups.
 # handaan:args=[GROUP ... | all]
+# handaan:hidden=installs apps, not handaan itself; see docs/standards/core-stays-minimal.md
 #
 # Optional application installer for an already provisioned Arch workstation.
 

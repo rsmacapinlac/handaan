@@ -1,4 +1,4 @@
-# 0004. Apply changes to already-installed machines without rerunning the installer
+# 0004. Use migrations to apply changes to already-installed machines without rerunning the installer
 
 Status: accepted
 
@@ -20,6 +20,6 @@ Ship one-shot repairs as **migrations**: `migrations/<unix-timestamp>.sh`, run p
 
 ## Consequences
 
-Migrations are the only mechanism that reaches an installed machine, so a change that touches system state is not finished until either the installer handles the fresh case *and* a migration handles the installed one, or the change is provably irrelevant to existing machines.
+Migrations are the only mechanism that reaches an installed machine, so a change that touches system state is not finished until either the installer handles the fresh case *and* a migration handles the installed one, or the change is provably irrelevant to existing machines. This is a standing rule, not just a consequence of this one decision — see [Fresh installs carry every fix](../../standards/fresh-installs-carry-every-fix.md).
 
 This creates a test case that neither a syntax check nor a fresh-install VM rehearsal covers: install an older ref, `git pull` to HEAD, run `handaan-migrate`. It is the only way to find a migration that is wrong, and it belongs in the rehearsal alongside the bare-ISO run. See [Testing the build scripts](../../testing-build-scripts.md).

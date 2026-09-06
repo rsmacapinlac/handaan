@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # handaan:summary=Show which seeded config files have drifted from the handaan defaults.
 # handaan:args=[config-path]
+# handaan:hidden=config-drift tooling, not core to running handaan
 #
 # The cost of the copy model is that an edit to ~/.config no longer lands in
 # git on its own. This is how drift stays visible instead of being discovered

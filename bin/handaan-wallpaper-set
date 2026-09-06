@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # handaan:summary=Set the desktop wallpaper through hyprpaper.
 # handaan:args=[--initial|--random]
+# handaan:hidden=called from default/hypr/binds.lua (Ctrl+Shift+W), not by hand
 
 filename="$HOME/.wallpaper"
 mode="${1:-random}"

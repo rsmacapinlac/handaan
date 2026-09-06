@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # handaan:summary=Install and sign in to the Nextcloud sync client.
+# handaan:hidden=account-bound service, not handaan itself; see docs/standards/core-stays-minimal.md
 # Install and start the Nextcloud sync client.
 #
 # This is deliberately NOT wired into the bootstrap scripts. A sync client is

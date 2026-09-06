@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # handaan:summary=Regenerate the three colour palettes from the theme source.
+# handaan:hidden=dev-authoring tool for handaan itself, not a machine command
 #
 # Generate the per-application colour palettes from a single source.
 #
