@@ -96,8 +96,17 @@ select_apps() {
     out_file="${XDG_RUNTIME_DIR:-/tmp}/handaan-apps-selection.$$"
     rm -f "$out_file"
 
+    # qs writes every INFO and WARN line to stdout, not stderr -- and this
+    # function's stdout *is* the selection, read by `mapfile -t requested`.
+    # Left alone, "Launching config: ...", the shell ID and "Configuration
+    # Loaded" each arrive as a requested app name, normalize_apps rejects the
+    # first one, and the run dies before installing anything.
+    #
+    # The selection never travels on stdout anyway: the picker writes it to
+    # $out_file, which is read below. So send qs's own output to stderr, where
+    # it stays visible without being mistaken for data.
     HANDAAN_APPS_LIST="$list_text" HANDAAN_APPS_OUT="$out_file" \
-        qs -n -p "$HANDAAN_PATH/default/apps-installer/installer.qml"
+        qs -n -p "$HANDAAN_PATH/default/apps-installer/installer.qml" >&2
 
     if [[ -s $out_file ]]; then
         # A blank line here would otherwise become one requested app named "",
