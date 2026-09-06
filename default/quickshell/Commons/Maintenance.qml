@@ -12,7 +12,7 @@
 // file, so each bar would silently get its own copy and the duplication would
 // come straight back.
 //
-// The widget that draws this is modules/Pending.qml. The two are named
+// The widget that draws this is modules/Updates.qml. The two are named
 // differently on purpose -- a type in modules/ sharing a name with a singleton
 // imported into it would shadow the singleton silently, which is the trap
 // AGENTS.md records for `Palette`.
@@ -49,16 +49,26 @@ Singleton {
 
     readonly property int handaan: Math.max(0, root.handaanCommits) + Math.max(0, root.handaanMigrations)
 
+    // Work that clears when it is done, which is the only kind the bar shows.
+    //
+    // `apps` is deliberately not in here. It is parsed and published because
+    // handaan-pending reports it and it is worth having in a terminal, but it
+    // is a catalogue rather than a chore: the apps directory offers everything
+    // its owner might ever want on any machine, so the count is permanently
+    // non-zero on every machine that is not all of them at once. Summing it
+    // into the number that drives the bar made the indicator permanent, which
+    // is the same failure as an animation that never stops -- see
+    // modules/Updates.qml.
+    //
     // Only counts that were actually measured. An unknown source contributes
     // nothing rather than a guess, so the indicator never appears on the
     // strength of a check that failed.
-    readonly property int total: Math.max(0, root.apps) + Math.max(0, root.arch) + root.handaan
+    readonly property int updates: Math.max(0, root.arch) + root.handaan
 
-    // Any source whose check could not answer. The widget does not light up for
-    // this -- an indicator that appears because a tool is missing would cry
-    // wolf every boot before the network is up -- but the tooltip says so,
-    // because "no updates" and "could not check" must not look identical.
-    readonly property bool degraded: !root.known(root.apps) || !root.known(root.arch) || !root.known(root.handaanCommits) || !root.known(root.handaanMigrations)
+    // Whether a given source could be measured is exposed through known()
+    // rather than a rolled-up flag. The widget needs to name which check is
+    // blind, not merely that one is -- "no updates" and "could not check" must
+    // not look identical, and a bare boolean cannot say which.
 
     // Resolved rather than looked up on PATH, and run as argv rather than
     // through a shell. The bar is a systemd user unit whose environment comes

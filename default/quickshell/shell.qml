@@ -26,7 +26,7 @@ ShellRoot {
             // Placed first, the widgets that are always there keep their
             // position and only the bar's leading edge moves.
             Component {
-                Modules.Pending {}
+                Modules.Updates {}
             },
             Component {
                 Modules.Battery {}

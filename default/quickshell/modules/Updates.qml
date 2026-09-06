@@ -1,33 +1,50 @@
-// Pending maintenance.
+// Pending updates.
 //
 // One question, per docs/quickshell-widgets.md:
-//   1. Is there anything for me to install or update?
+//   1. Is there anything for me to update?
 //
-// Three sources feed it -- apps offered from ~/.config/handaan/apps that are
-// not installed, package updates, and a handaan that has moved on or has
-// migrations to apply -- but they are one question, not three. Each of them
-// ends in the same place: open a terminal and deal with it. Which of the three
-// is precision, and precision is the hover layer's job.
+// Two sources answer it -- package updates, and a handaan that has moved on or
+// has migrations to apply -- but they are one question. Both end in the same
+// place: open a terminal and deal with it. Which of the two is precision, and
+// precision is the hover layer's job.
 //
-// Presence is the entire glance encoding. The widget is absent when nothing is
-// waiting and present when something is, which the doc's two-strong-states
-// rule makes the strongest signal available: the alternative states are "a
-// widget" and "no widget at all", and nothing else on the bar has to be read
-// to tell them apart. BarWidget.active drops the widget and its spacing from
-// the row, so an idle machine has no maintenance chrome on it whatsoever.
+// Presence is the entire glance encoding. The widget is absent when there is
+// nothing to update and present when there is, which the doc's
+// two-strong-states rule makes the strongest signal available: the states are
+// "a widget" and "no widget at all", and nothing else on the bar has to be
+// read to tell them apart. BarWidget.active drops the widget and its spacing
+// from the row, so an up-to-date machine has no update chrome on it whatsoever.
 //
-// That is also why there is no count on the glance layer. A numeral beside the
-// icon would be a second thing to parse that changes nothing: two apps and
-// eleven updates both mean "go and deal with it", and neither the decision nor
-// its urgency differs. The figures live on hover, where the battery widget
-// puts its percentage and for the same reason.
+// This widget counted apps-to-install as a third source at first, because the
+// question it was asked was "do I have apps to install, or updates". That was
+// wrong, and wrong in a way worth recording: ~/.config/handaan/apps offers
+// everything its owner might want on any machine, so on a machine that is not
+// all of them at once the count never reaches zero. Presence was therefore
+// permanent, and a signal that is always on carries nothing -- the same
+// failure as an animation that never stops, one layer up. It also failed the
+// doc's first test outright: "you have not installed Citrix" changes nothing
+// about what happens next. The app list is a catalogue, not a chore, and it
+// belongs in `handaan apps` where it is chosen from deliberately.
 //
-// Nothing moves. Motion is reserved for "this needs a response" and is spent
-// at most once across the whole bar; a pending update is not that. It can wait
-// for the end of what you are doing, which is exactly the class of thing the
-// doc says must not animate -- an indicator that pulsed every time a package
-// was published would train the eye to discard the channel that the battery
-// widget needs when it is nearly flat.
+// Putting apps in the tooltip instead would have been worse, not better. Hover
+// may sharpen an answer the widget already gave; it may not introduce a
+// question the widget does not claim to answer, and "what could I install" is
+// a different question from "what needs updating".
+//
+// There is no count on the glance layer. A numeral beside the icon would be a
+// second thing to parse that changes nothing: two updates and forty both mean
+// "go and deal with it", and neither the decision nor its urgency differs. The
+// figures live on hover, where the battery widget puts its percentage and for
+// the same reason.
+//
+// Nothing moves, and this was asked about directly. Motion means "this needs a
+// response" and is rationed to one thing on the whole bar; Workspaces spends
+// it on an urgent window and Battery on a flat one, both conditions that clear
+// when handled. Available updates do not clear -- on Arch they are true most
+// days -- so a pulse bound to them is a permanent animation, which the doc says
+// trains the eye to discard the one channel that has to survive peripheral
+// vision. An update can wait for the end of what you are doing; that is the
+// definition of the thing that must not animate.
 //
 // A check that cannot run is not the same as nothing to do. Maintenance keeps
 // those apart (-1 against 0) and this widget refuses to appear on the strength
@@ -43,13 +60,13 @@ import qs.Ui
 
 BarWidget {
     id: root
-    moduleName: "pending"
+    moduleName: "updates"
 
     // Shown only when a check actually found something. `polled` gates the
-    // first seconds after login, where every count is still -1 and `total`
+    // first seconds after login, where every count is still -1 and `updates`
     // would read 0 anyway -- but saying so explicitly keeps the widget from
     // depending on that coincidence.
-    active: Maintenance.polled && Maintenance.total > 0
+    active: Maintenance.polled && Maintenance.updates > 0
 
     implicitWidth: icon.implicitWidth + Style.widgetPadding * 2
 
@@ -61,11 +78,9 @@ BarWidget {
 
     // The parts of the answer, in the order they are worth acting on. Built as
     // a list so the tooltip never prints a source with nothing waiting -- a
-    // line reading "0 apps" is noise on a layer that exists to be precise.
+    // line reading "0 packages" is noise on a layer that exists to be precise.
     readonly property var parts: {
         var out = [];
-        if (Maintenance.apps > 0)
-            out.push(Maintenance.apps + (Maintenance.apps === 1 ? " app" : " apps") + " to install");
         if (Maintenance.arch > 0)
             out.push(Maintenance.arch + (Maintenance.arch === 1 ? " package update" : " package updates"));
         if (Maintenance.handaanCommits > 0)
@@ -76,8 +91,8 @@ BarWidget {
     }
 
     readonly property string summary: {
-        const n = Maintenance.total;
-        return n + (n === 1 ? " thing waiting" : " things waiting");
+        const n = Maintenance.updates;
+        return n + (n === 1 ? " update waiting" : " updates waiting");
     }
 
     // Named rather than listed: which check is blind is the useful half, and a
@@ -85,8 +100,6 @@ BarWidget {
     // undercounts with no sign of it.
     readonly property string blind: {
         var out = [];
-        if (!Maintenance.known(Maintenance.apps))
-            out.push("apps");
         if (!Maintenance.known(Maintenance.arch))
             out.push("packages");
         if (!Maintenance.known(Maintenance.handaanCommits))
@@ -97,8 +110,8 @@ BarWidget {
     }
 
     // Detail on request, and only ever the same question at higher
-    // resolution: the glance layer said work is waiting, this says how much
-    // and of what. Nothing here is required to read the widget.
+    // resolution: the glance layer said updates are waiting, this says how
+    // many and of what. Nothing here is required to read the widget.
     Tooltip {
         anchorItem: root
         open: hover.containsMouse
@@ -115,11 +128,6 @@ BarWidget {
         // command is set the widget accepts no buttons at all, so it does not
         // swallow presses over the bar for a handler that does nothing --
         // Battery.qml makes the same choice for the same reason.
-        //
-        // There is no default because there is no single obvious action: apps
-        // want `handaan apps` and updates want `handaan update`, and choosing
-        // one would be wrong whenever the other fired. Set it per-machine, or
-        // leave it and use the terminal.
         acceptedButtons: root.clickCommand !== "" ? Qt.LeftButton : Qt.NoButton
         onClicked: {
             if (root.clickCommand !== "")
@@ -132,9 +140,17 @@ BarWidget {
     Text {
         id: icon
         anchors.centerIn: parent
-        // Nerd Font "arrow down into tray": the shape the desktop already uses
-        // for "there is something to fetch and apply".
-        text: ""
+        // Nerd Font U+F019, "arrow down into tray": the shape the desktop
+        // already uses for "there is something to fetch and apply".
+        //
+        // Written as an escape rather than the literal glyph. A private-use
+        // codepoint is invisible in most diffs and editors, and this one was
+        // silently lost once already when the file was rewritten -- the widget
+        // went on reporting itself active while drawing an empty Text, so it
+        // had zero width and never appeared, with nothing in any log to say
+        // why. The escape is greppable, survives a rewrite, and names the
+        // codepoint it means.
+        text: "\uf019"
         color: root.tint
         font.family: Style.fontFamily
         font.pixelSize: Style.fontSize
