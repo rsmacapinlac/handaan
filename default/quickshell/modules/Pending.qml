@@ -1,0 +1,156 @@
+// Pending maintenance.
+//
+// One question, per docs/quickshell-widgets.md:
+//   1. Is there anything for me to install or update?
+//
+// Three sources feed it -- apps offered from ~/.config/handaan/apps that are
+// not installed, package updates, and a handaan that has moved on or has
+// migrations to apply -- but they are one question, not three. Each of them
+// ends in the same place: open a terminal and deal with it. Which of the three
+// is precision, and precision is the hover layer's job.
+//
+// Presence is the entire glance encoding. The widget is absent when nothing is
+// waiting and present when something is, which the doc's two-strong-states
+// rule makes the strongest signal available: the alternative states are "a
+// widget" and "no widget at all", and nothing else on the bar has to be read
+// to tell them apart. BarWidget.active drops the widget and its spacing from
+// the row, so an idle machine has no maintenance chrome on it whatsoever.
+//
+// That is also why there is no count on the glance layer. A numeral beside the
+// icon would be a second thing to parse that changes nothing: two apps and
+// eleven updates both mean "go and deal with it", and neither the decision nor
+// its urgency differs. The figures live on hover, where the battery widget
+// puts its percentage and for the same reason.
+//
+// Nothing moves. Motion is reserved for "this needs a response" and is spent
+// at most once across the whole bar; a pending update is not that. It can wait
+// for the end of what you are doing, which is exactly the class of thing the
+// doc says must not animate -- an indicator that pulsed every time a package
+// was published would train the eye to discard the channel that the battery
+// widget needs when it is nearly flat.
+//
+// A check that cannot run is not the same as nothing to do. Maintenance keeps
+// those apart (-1 against 0) and this widget refuses to appear on the strength
+// of an unknown: a missing checkupdates or a fetch that failed before the
+// network was up would otherwise light the bar on every boot. When the widget
+// is up for other reasons the tooltip says which check is blind, because the
+// doc's rule is to say why a value is missing rather than go quiet about it.
+
+import QtQuick
+import QtQuick.Layouts
+import qs.Commons
+import qs.Ui
+
+BarWidget {
+    id: root
+    moduleName: "pending"
+
+    // Shown only when a check actually found something. `polled` gates the
+    // first seconds after login, where every count is still -1 and `total`
+    // would read 0 anyway -- but saying so explicitly keeps the widget from
+    // depending on that coincidence.
+    active: Maintenance.polled && Maintenance.total > 0
+
+    implicitWidth: icon.implicitWidth + Style.widgetPadding * 2
+
+    // Peach rather than red. This is "there is work waiting", not "something
+    // is wrong": red is the bar's critical level and belongs to a flat battery
+    // and an urgent window, and spending it here would flatten the ladder that
+    // makes those legible.
+    readonly property color tint: Theme.warning
+
+    // The parts of the answer, in the order they are worth acting on. Built as
+    // a list so the tooltip never prints a source with nothing waiting -- a
+    // line reading "0 apps" is noise on a layer that exists to be precise.
+    readonly property var parts: {
+        var out = [];
+        if (Maintenance.apps > 0)
+            out.push(Maintenance.apps + (Maintenance.apps === 1 ? " app" : " apps") + " to install");
+        if (Maintenance.arch > 0)
+            out.push(Maintenance.arch + (Maintenance.arch === 1 ? " package update" : " package updates"));
+        if (Maintenance.handaanCommits > 0)
+            out.push(Maintenance.handaanCommits + (Maintenance.handaanCommits === 1 ? " handaan commit" : " handaan commits"));
+        if (Maintenance.handaanMigrations > 0)
+            out.push(Maintenance.handaanMigrations + (Maintenance.handaanMigrations === 1 ? " migration" : " migrations"));
+        return out;
+    }
+
+    readonly property string summary: {
+        const n = Maintenance.total;
+        return n + (n === 1 ? " thing waiting" : " things waiting");
+    }
+
+    // Named rather than listed: which check is blind is the useful half, and a
+    // machine with no checkupdates would otherwise show a tooltip that quietly
+    // undercounts with no sign of it.
+    readonly property string blind: {
+        var out = [];
+        if (!Maintenance.known(Maintenance.apps))
+            out.push("apps");
+        if (!Maintenance.known(Maintenance.arch))
+            out.push("packages");
+        if (!Maintenance.known(Maintenance.handaanCommits))
+            out.push("handaan");
+        if (out.length === 0)
+            return "";
+        return "Could not check: " + out.join(", ");
+    }
+
+    // Detail on request, and only ever the same question at higher
+    // resolution: the glance layer said work is waiting, this says how much
+    // and of what. Nothing here is required to read the widget.
+    Tooltip {
+        anchorItem: root
+        open: hover.containsMouse
+        text: root.summary
+        detail: root.parts.join("\n") + (root.blind !== "" ? "\n" + root.blind : "")
+    }
+
+    MouseArea {
+        id: hover
+        anchors.fill: parent
+        hoverEnabled: true
+
+        // The seam for a click action, deliberately empty for now. Until a
+        // command is set the widget accepts no buttons at all, so it does not
+        // swallow presses over the bar for a handler that does nothing --
+        // Battery.qml makes the same choice for the same reason.
+        //
+        // There is no default because there is no single obvious action: apps
+        // want `handaan apps` and updates want `handaan update`, and choosing
+        // one would be wrong whenever the other fired. Set it per-machine, or
+        // leave it and use the terminal.
+        acceptedButtons: root.clickCommand !== "" ? Qt.LeftButton : Qt.NoButton
+        onClicked: {
+            if (root.clickCommand !== "")
+                root.run(root.clickCommand);
+        }
+    }
+
+    property string clickCommand: setting("clickCommand", "")
+
+    Text {
+        id: icon
+        anchors.centerIn: parent
+        // Nerd Font "arrow down into tray": the shape the desktop already uses
+        // for "there is something to fetch and apply".
+        text: ""
+        color: root.tint
+        font.family: Style.fontFamily
+        font.pixelSize: Style.fontSize
+
+        // A transition, not motion: the widget appears when a poll lands, and
+        // fading it in over a beat makes the arrival legible as a change
+        // rather than a glyph that was always there and you had missed.
+        // Bounded and over before you look, which is what the doc separates
+        // from the sustained kind.
+        opacity: root.active ? 1 : 0
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Style.animationNormal
+                easing.type: Easing.OutCubic
+            }
+        }
+    }
+}

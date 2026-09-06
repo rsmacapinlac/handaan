@@ -9,6 +9,11 @@ curl
 git
 rsync
 openssh
+# checkupdates, for handaan-pending and the bar's maintenance indicator. It is
+# the only way to count pending updates without root: it syncs a private
+# database rather than the real one, where `pacman -Sy` would leave the system
+# half-upgraded. Without it that check reports unknown, not zero.
+pacman-contrib
 mise
 neovim
 python-pynvim

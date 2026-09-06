@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# handaan:summary=Show what is waiting: apps to install, package and handaan updates.
+# handaan:args=[--fetch]
+#
+# One machine-readable line per source, `key<TAB>count`:
+#
+#   apps                 apps under ~/.config/handaan/apps not installed yet
+#   arch                 package updates, repo (checkupdates) and AUR (yay -Qua)
+#   handaan-commits      commits on origin/main this checkout does not have
+#   handaan-migrations   migrations this machine has not applied
+#
+# The count is `?` when the answer is unknown rather than zero -- no
+# checkupdates on the machine, no origin/main to compare against, no network.
+# Those are different from "nothing waiting" and a reader that cannot tell them
+# apart will report a machine as up to date because the check was broken. The
+# bar's indicator depends on that distinction; see
+# default/quickshell/Commons/Maintenance.qml.
+#
+# Nothing here needs sudo, and by default nothing touches the network: --fetch
+# is opt-in, because a bare run should be instant and work offline. Only the
+# background poller passes it.
+
+set -uo pipefail
+
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+
+fetch=0
+case "${1:-}" in
+    --fetch) fetch=1 ;;
+    -h|--help)
+        sed -n '3,22p' "$0" | sed 's/^# \{0,1\}//'
+        exit 0
+        ;;
+    "") ;;
+    *)
+        echo "handaan-pending: unknown argument '$1'" >&2
+        exit 1
+        ;;
+esac
+
+# Count non-empty lines on stdin. `wc -l` alone miscounts output with no
+# trailing newline, and counts a lone blank line as one item.
+count_lines() {
+    grep -c '[^[:space:]]' || true
+}
+
+emit() {
+    printf '%s\t%s\n' "$1" "$2"
+}
+
+# ------------------------------------------------------------------- apps
+if [[ -d $HOME/.config/handaan/apps ]]; then
+    emit apps "$("$HANDAAN_PATH/bin/handaan-apps" --pending 2>/dev/null | count_lines)"
+else
+    # No app directory is a real answer, not a broken check: nothing is
+    # waiting because nothing has been offered.
+    emit apps 0
+fi
+
+# ------------------------------------------------------------------- arch
+# checkupdates syncs a private database under its own temp dir, so it needs no
+# root and cannot leave the real one half-synced the way `pacman -Sy` does. It
+# exits 2 with no output when there is nothing to upgrade, which is why the
+# exit status is ignored and the lines are counted instead.
+if command -v checkupdates >/dev/null 2>&1; then
+    repo=$(checkupdates 2>/dev/null | count_lines)
+    aur=$(yay -Qua 2>/dev/null | count_lines)
+    emit arch "$(( repo + aur ))"
+else
+    emit arch '?'
+fi
+
+# ---------------------------------------------------------------- handaan
+# A fetch here is the only network write in this script, and it only updates
+# remote-tracking refs -- it can never move the checkout or touch the working
+# tree, so it is safe against a tree holding unpushed work.
+if [[ -d $HANDAAN_PATH/.git ]]; then
+    (( fetch )) && git -C "$HANDAAN_PATH" fetch --quiet origin 2>/dev/null
+
+    if git -C "$HANDAAN_PATH" rev-parse --verify --quiet origin/main >/dev/null; then
+        emit handaan-commits "$(git -C "$HANDAAN_PATH" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+    else
+        emit handaan-commits '?'
+    fi
+else
+    emit handaan-commits '?'
+fi
+
+emit handaan-migrations "$("$HANDAAN_PATH/bin/handaan-migrate" --pending 2>/dev/null | count_lines)"

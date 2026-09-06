@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # handaan:summary=Install optional applications from your own dotfile repository.
-# handaan:args=[APP ... | all]
+# handaan:args=[APP ... | all | --pending]
 # handaan:hidden=installs apps, not handaan itself; see docs/standards/core-stays-minimal.md
 #
 # handaan ships no optional applications of its own -- see
@@ -35,7 +35,7 @@ readonly APPS_LOG=/tmp/handaan-apps.log
 #
 # -f flushes, -q drops the banner, -e propagates the exit status, and the PTY
 # is what keeps pacman's progress bars alive.
-if (( $# > 0 )) && [[ $1 != -h && $1 != --help && -z ${HANDAAN_APPS_LOGGED:-} ]]; then
+if (( $# > 0 )) && [[ $1 != -h && $1 != --help && $1 != --pending && -z ${HANDAAN_APPS_LOGGED:-} ]]; then
     command=$(printf '%q ' "$0" "$@")
     exec env HANDAAN_APPS_LOGGED=1 script -qefc "$command" "$APPS_LOG"
 fi
@@ -44,10 +44,14 @@ readonly APPS_ROOT="$HOME/.config/handaan/apps"
 
 usage() {
     cat <<EOF
-Usage: handaan-apps [APP ... | all]
+Usage: handaan-apps [APP ... | all | --pending]
 
 With no arguments, opens a Quickshell selection window listing every app found
 under $APPS_ROOT. Pass "all" to install everything found there.
+
+--pending lists the apps that are not installed yet, one per line, and does
+nothing else. An app counts as installed when every package it declares is;
+one that declares none cannot be judged and is always listed.
 
 None found yet? Nothing is wrong -- handaan ships no applications of its own.
 Add one in your own dotfile repository as $APPS_ROOT/<name>/, then symlink or
@@ -200,6 +204,21 @@ install_app() {
 main() {
     if [[ ${1:-} == -h || ${1:-} == --help ]]; then
         usage
+        exit 0
+    fi
+
+    # Names only, one per line, for anything that reads this rather than
+    # watches it -- the bar's maintenance indicator via handaan-pending, and
+    # anyone asking the same question from a terminal. Named after
+    # handaan-migrate --pending, which answers the same shape of question.
+    # Installs nothing, needs no sudo and no Wayland session.
+    if [[ ${1:-} == --pending ]]; then
+        local app apps=()
+        load_installed_packages
+        mapfile -t apps < <(discover_apps)
+        for app in "${apps[@]}"; do
+            app_installed "$app" || printf '%s\n' "$app"
+        done
         exit 0
     fi
 
