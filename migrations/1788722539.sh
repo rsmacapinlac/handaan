@@ -4,7 +4,7 @@ echo "Hand the zsh configuration over: handaan no longer owns your login shell"
 # seed ~/.zshrc and ~/.zshenv as stubs sourcing default/zsh/{rc,aliases,env}
 # out of the checkout. That whole tree is gone -- the login shell is a
 # preference, not desktop chrome, so it belongs to the user's own dotfile
-# repository now. See docs/decisions/adrs/0006-leave-the-login-shell-to-the-user.md.
+# repository now.
 #
 # The seeded stubs are still on this machine and still point at the removed
 # files, so every new shell prints "no such file or directory" and comes up

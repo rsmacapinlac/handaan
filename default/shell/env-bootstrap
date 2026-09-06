@@ -9,7 +9,7 @@
 # handaan writes the first three. A shell that reads none of them has to source
 # this file itself: a non-login interactive shell is the case that matters, and
 # it is why the zsh setup handaan handed to the user still sources this from
-# ~/.zshenv (see 0006). Wiring only that one is not enough, and fails quietly --
+# ~/.zshenv. Wiring only that one is not enough, and fails quietly --
 # a bash login, an ssh command, or a TTY session opened before a `chsh` took
 # effect all come up without $HANDAAN_PATH/bin on PATH, so handaan-* is simply
 # "command not found" on a machine that is otherwise installed correctly.

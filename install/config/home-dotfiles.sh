@@ -2,8 +2,8 @@
 # Seed the root dotfiles handaan still owns.
 #
 # The shell is not among them. handaan installs no shell, chooses no login
-# shell, and seeds neither ~/.zshrc nor ~/.zshenv -- see
-# docs/decisions/adrs/0006-leave-the-login-shell-to-the-user.md. $HANDAAN_PATH
+# shell, and seeds neither ~/.zshrc nor ~/.zshenv -- the login shell is a
+# preference and ships from the user's own dotfile repository. $HANDAAN_PATH
 # and PATH reach every shell through /etc/profile.d/handaan.sh and
 # ~/.config/uwsm/env instead, both written by env-bootstrap.sh.
 #

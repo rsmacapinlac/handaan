@@ -2,7 +2,7 @@
 # Wire env-bootstrap into every entry point handaan owns.
 #
 # These two are the whole of it. handaan installs no shell and seeds no shell
-# rc file (see 0006), so a login shell gets $HANDAAN_PATH from /etc/profile.d
+# rc file, so a login shell gets $HANDAAN_PATH from /etc/profile.d
 # and the graphical session gets it from uwsm, which inherits no interactive
 # PATH at all; see docs/hyprland-startup.md. A non-login interactive shell
 # reads neither, which is why a user-supplied ~/.zshenv (or bashrc) still has
