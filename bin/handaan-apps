@@ -21,6 +21,25 @@ HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
 # shellcheck source=install/lib/handaan-common.sh
 source "$HANDAAN_PATH/install/lib/handaan-common.sh"
 
+readonly APPS_LOG=/tmp/handaan-apps.log
+
+# Log the install run the way handaan-update logs its own, and for the same
+# reason: this script is `set -e`, so any failure ends it immediately, and when
+# it was launched from the picker it is running inside a terminal that closes
+# with it. Without this the error is gone before it can be read.
+#
+# Only the run that installs something is wrapped. The picker path re-execs
+# into a terminal of its own and that child does its own logging -- wrapping
+# the picker instead would capture kitty's stdout, which is not where the
+# install's output goes.
+#
+# -f flushes, -q drops the banner, -e propagates the exit status, and the PTY
+# is what keeps pacman's progress bars alive.
+if (( $# > 0 )) && [[ $1 != -h && $1 != --help && -z ${HANDAAN_APPS_LOGGED:-} ]]; then
+    command=$(printf '%q ' "$0" "$@")
+    exec env HANDAAN_APPS_LOGGED=1 script -qefc "$command" "$APPS_LOG"
+fi
+
 readonly APPS_ROOT="$HOME/.config/handaan/apps"
 
 usage() {
@@ -158,9 +177,35 @@ main() {
         # a future keybind or launcher entry wouldn't have one -- so the
         # actual install runs in a terminal of its own, re-invoking this
         # script with explicit app names to skip straight past the picker.
-        # kitty closes it automatically once the install finishes.
-        exec kitty --title "Installing applications" \
-            -e "$HANDAAN_PATH/bin/handaan-apps" "${requested[@]}"
+        #
+        # An `exec` that cannot find its target exits 127 with nothing on
+        # screen, which from the picker looks identical to a terminal that
+        # opened and vanished. Say which it was.
+        if ! command -v kitty &>/dev/null; then
+            log_error "kitty is not installed, so the install cannot open a terminal of its own."
+            log_error "Run it directly instead:  handaan-apps ${requested[*]}"
+            exit 1
+        fi
+
+        # kitty closes when its child does. On success that is what should
+        # happen; on failure it used to take the error off the screen with it.
+        # Hold the window open on a non-zero exit and name the log, so a
+        # failure is readable rather than a flash.
+        #
+        # `status=$?` follows the call directly rather than an `if`: the exit
+        # status of an `if` with no else branch is 0 even when its condition
+        # failed, which would report every failure as a clean exit.
+        exec kitty --title "Installing applications" -e bash -c '
+            log=$1; shift
+            "$@"
+            status=$?
+            [ "$status" -eq 0 ] && exit 0
+            printf "\n\033[0;31m[FAILED]\033[0m handaan-apps exited %d.\n" "$status"
+            printf "Full log: %s\n" "$log"
+            printf "\nPress Enter to close this window. "
+            read -r _ < /dev/tty
+            exit "$status"
+        ' _ "$APPS_LOG" "$HANDAAN_PATH/bin/handaan-apps" "${requested[@]}"
     fi
 
     requested=("$@")
@@ -185,7 +230,7 @@ main() {
     done
     remove_build_dependencies
 
-    log_success "Selected applications installed."
+    log_success "Selected applications installed. Session log: $APPS_LOG"
 }
 
 main "$@"
