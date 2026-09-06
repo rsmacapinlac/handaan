@@ -1,6 +1,13 @@
 # ADR Changelog
 
 
+## 2026-09-06 (login shell)
+
+- **0006** written. handaan installs no shell, runs no `chsh`, and seeds no shell rc file. `zsh`, Oh My Zsh, the `~/.zshrc`/`~/.zshenv` seeds and the whole `default/zsh/` body are gone; the login shell is a preference and ships from the user's own dotfile repository as an app under 0005's convention. `default/shell/env-bootstrap` stays handaan's, because it is POSIX `sh` and is what 0003 makes the single source of truth for `$HANDAAN_PATH`.
+
+- **0003** edited in place. Its env-bootstrap consumer list named `~/.zshenv` as one of the entry points handaan wires; handaan no longer writes that file. The list now names only the three handaan owns, and says that a non-login interactive shell — which none of them reach — has to source env-bootstrap from the user's own rc. The VM-rehearsal paragraph reads in the past tense about `chsh`.
+
+
 ## 2026-09-06 (apps)
 
 - **0005** written. Optional applications are a per-app directory convention (`apps/<app-name>/`: `meta`, `packages`, `install.sh`, `update.sh`, `config/`), discovered from a user-owned dotfile repository at `~/.config/handaan/apps/` rather than curated inside this repository -- so adding an application never means forking handaan.

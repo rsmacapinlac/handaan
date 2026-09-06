@@ -9,7 +9,6 @@ curl
 git
 rsync
 openssh
-zsh
 mise
 neovim
 python-pynvim

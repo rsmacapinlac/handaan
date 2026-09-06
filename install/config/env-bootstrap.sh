@@ -1,10 +1,12 @@
 #!/bin/bash
-# Wire env-bootstrap into the entry points that are not zsh.
+# Wire env-bootstrap into every entry point handaan owns.
 #
-# ~/.zshenv covers zsh, which is the login shell -- but not a bash login, an ssh
-# command, a TTY opened before `chsh` took effect, or the graphical session.
-# uwsm in particular inherits no interactive PATH at all; see
-# docs/hyprland-startup.md.
+# These two are the whole of it. handaan installs no shell and seeds no shell
+# rc file (see 0006), so a login shell gets $HANDAAN_PATH from /etc/profile.d
+# and the graphical session gets it from uwsm, which inherits no interactive
+# PATH at all; see docs/hyprland-startup.md. A non-login interactive shell
+# reads neither, which is why a user-supplied ~/.zshenv (or bashrc) still has
+# to source env-bootstrap itself.
 
 log_info "Wiring env-bootstrap into login shells and the session..."
 
