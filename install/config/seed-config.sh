@@ -36,9 +36,9 @@ cp -Rn "$HANDAAN_PATH"/config/. "$HOME/.config/" 2>/dev/null || true
 mkdir -p "$HOME/.config/systemd/user"
 cp -f "$HANDAAN_PATH"/default/systemd/user/*.service "$HOME/.config/systemd/user/"
 
-# Overrides for core packages only. applications/optional/ holds overrides for
-# packages handaan-apps installs, and is seeded from there instead -- copying
-# it here would drop a launcher for a package that isn't installed yet.
+# Overrides for core packages only. handaan ships no optional applications of
+# its own (see docs/decisions/adrs/0005-accept-user-owned-optional-applications.md),
+# so anything here belongs to a package core actually installs.
 mkdir -p "$HOME/.local/share/applications"
 for entry in "$HANDAAN_PATH"/applications/*.desktop; do
     [[ -e $entry ]] || continue

@@ -8,6 +8,12 @@
 # package version needs, and *before* the tool updates so a repaired PATH is in
 # effect for them.
 #
+# Every app under ~/.config/handaan/apps/ gets its own update.sh sourced right
+# after, unconditionally -- see
+# docs/decisions/adrs/0005-accept-user-owned-optional-applications.md. Unlike a
+# migration, which repairs one thing once, an app's update.sh is ongoing
+# maintenance for as long as that app stays selected.
+#
 # The whole session is logged through `script` so a failure can be read back
 # afterwards. -f flushes, -q drops the banner, -e propagates the exit status,
 # and running under a PTY is what keeps pacman's progress bars alive.
@@ -95,6 +101,18 @@ run_migrations() {
     handaan-migrate
 }
 
+update_apps() {
+    local apps_root="$HOME/.config/handaan/apps" dir
+    [[ -d $apps_root ]] || return 0
+
+    log_info "Running per-app update hooks..."
+    for dir in "$apps_root"/*/; do
+        [[ -f "${dir}update.sh" ]] || continue
+        log_info "Updating $(basename "$dir")..."
+        ( source "${dir}update.sh" )
+    done
+}
+
 update_mise_tools() {
     log_info "Updating mise-managed tools..."
     if ! command -v mise &>/dev/null; then
@@ -138,6 +156,7 @@ main() {
     update_handaan_checkout
     update_system_packages
     run_migrations
+    update_apps
     update_mise_tools
     update_nvim_plugins
     report_config_drift

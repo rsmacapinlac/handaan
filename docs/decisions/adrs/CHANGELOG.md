@@ -1,6 +1,10 @@
 # ADR Changelog
 
 
+## 2026-09-06 (apps)
+
+- **0005** written. Optional applications are a per-app directory convention (`apps/<app-name>/`: `meta`, `packages`, `install.sh`, `update.sh`, `config/`), discovered from a user-owned dotfile repository at `~/.config/handaan/apps/` rather than curated inside this repository -- so adding an application never means forking handaan.
+
 ## 2026-09-06
 
 - **0004** edited in place. Its Consequences section stated "the installer handles the fresh case and a migration handles the installed one" as an aside; that rule is now written up as its own standard, [Fresh installs carry every fix](../../standards/fresh-installs-carry-every-fix.md), and 0004 links to it rather than restating it.

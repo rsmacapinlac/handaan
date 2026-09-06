@@ -6,5 +6,5 @@ Something belongs in core only if the desktop is unusable without it — a compo
 
 Account-bound services are never core. They live in `bin/handaan-service-*` and are kept out of the bootstrap on purpose, because they cannot complete without someone logging in to an account and would turn an unattended rebuild into an interactive one.
 
-The same split applies to `.desktop` overrides. `applications/*.desktop` is seeded into `~/.local/share/applications` by core's `seed-config.sh`, so anything there must belong to a package core actually installs. An override for an optional package (one installed by `handaan-apps`) goes in `applications/optional/` instead, and is copied by that package's install group in `bin/handaan-apps` -- otherwise a core-only install ends up with a launcher for a binary that was never installed.
+The same split applies to `.desktop` overrides. `applications/*.desktop` is seeded into `~/.local/share/applications` by core's `seed-config.sh`, so anything there must belong to a package core actually installs. An override for an optional application doesn't belong in this repository at all -- handaan ships no optional applications of its own (see [0005](../decisions/adrs/0005-accept-user-owned-optional-applications.md)); it lives in that app's own `config/` directory, wherever the app itself is defined.
 

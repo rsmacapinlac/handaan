@@ -40,3 +40,16 @@ hl.window_rule({
     float  = true,
     center = true,
 })
+
+-- Float the handaan-apps installer dialog (default/apps-installer/installer.qml).
+-- It reports Quickshell's generic class, so title pins the match to this one
+-- dialog -- without a rule it tiles like a normal window, and the explicit
+-- width/height set in the QML gets silently overridden to whatever tile slot
+-- it lands in.
+hl.window_rule({
+    name  = "float-handaan-apps-installer",
+    match = { class = "^org.quickshell$", title = "^handaan apps$" },
+
+    float  = true,
+    center = true,
+})
