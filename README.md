@@ -1,6 +1,6 @@
 # handaan
 
-A minimal, recreatable Arch + Hyprland desktop that installs into its own tree and can rebuild a machine in 10–15 minutes.
+A minimal, recreatable single-user Arch + Hyprland desktop that installs into its own tree and can rebuild a machine in 10–15 minutes.
 
 It is optimized for the hardware I own, and it caters to two use cases: an ordinary desktop (browsing, office tools) and a terminal workspace. It extends with your own tools and apps.
 
