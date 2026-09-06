@@ -30,7 +30,9 @@ Hyprland shows the layering: `~/.config/hypr/hyprland.lua` puts `$HANDAAN_PATH/d
 
 **The seed is `cp -Rn`, not `cp -R`.** Refusing to clobber is what makes a second run safe: a failed bootstrap can be retried without losing edits made between the attempts.
 
-**`$HANDAAN_PATH` is never hardcoded.** `default/zsh/env-bootstrap` is the single source of truth, sourced by `~/.zshenv`, the uwsm session and `install.sh`. It reads `/etc/handaan.conf` first if that file exists. Nothing writes that file today; it is the seam that makes relocating the tree — to `/usr/share/handaan` as a pacman package, say — a change to one file rather than a grep across the repository.
+**`$HANDAAN_PATH` is never hardcoded.** `default/shell/env-bootstrap` is the single source of truth, sourced by `/etc/profile.d/handaan.sh` (every login shell), `~/.zshenv`, `~/.config/uwsm/env` (the graphical session, which inherits no interactive `PATH`) and `install.sh`. It reads `/etc/handaan.conf` first if that file exists. Nothing writes that file today; it is the seam that makes relocating the tree — to `/usr/share/handaan` as a pacman package, say — a change to one file rather than a grep across the repository.
+
+Wiring **only** `~/.zshenv` is not enough, and the first VM rehearsal proved it: zsh is the login shell, so everything looked correct, while a bash login, an ssh command and a TTY opened before `chsh` took effect all came up with `handaan-*` simply "command not found". The failure is silent because `~/.zshenv` is what sets `$HANDAAN_PATH` in the case anyone checks by hand.
 
 ## Consequences
 

@@ -2,9 +2,15 @@
 #
 # Sourced by every entry point that needs the environment set:
 #
-#   ~/.zshenv                        interactive and non-interactive shells
+#   /etc/profile.d/handaan.sh        every login shell, zsh and bash alike
+#   ~/.zshenv                        interactive and non-interactive zsh
 #   ~/.config/uwsm/env               the Hyprland session (uwsm inherits no shell PATH)
 #   install.sh                       the bootstrap, before anything else runs
+#
+# Wiring only ~/.zshenv is not enough, and fails quietly: a bash login, an ssh
+# command, or a TTY session opened before `chsh` took effect all come up without
+# $HANDAAN_PATH/bin on PATH, so handaan-* is simply "command not found" on a
+# machine that is otherwise installed correctly.
 #
 # POSIX sh on purpose: zsh, bash and the uwsm env loader all read this file.
 # Idempotent -- safe to source more than once in the same shell.

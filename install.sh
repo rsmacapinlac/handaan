@@ -18,8 +18,8 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # default location's bin/ while everything else ran from this checkout. That
 # split is exactly the failure a running installer cannot report on itself.
 export HANDAAN_PATH="$SCRIPT_DIR"
-# shellcheck source=default/zsh/env-bootstrap
-source "$SCRIPT_DIR/default/zsh/env-bootstrap"
+# shellcheck source=default/shell/env-bootstrap
+source "$SCRIPT_DIR/default/shell/env-bootstrap"
 export HANDAAN_INSTALL="$HANDAAN_PATH/install"
 
 # shellcheck source=install/lib/handaan-common.sh

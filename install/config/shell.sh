@@ -16,7 +16,7 @@ sudo chsh -s /bin/zsh "$USER"
 if [[ ! -f $HOME/.zshenv ]]; then
     cat > "$HOME/.zshenv" <<'ZSHENV'
 # Seeded by handaan. Yours -- an update will not overwrite it.
-. "$HOME/.local/share/handaan/default/zsh/env-bootstrap"
+. "$HOME/.local/share/handaan/default/shell/env-bootstrap"
 . "$HANDAAN_PATH/default/zsh/env"
 [[ -f ~/.zshenv.local ]] && . ~/.zshenv.local
 ZSHENV
