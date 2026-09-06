@@ -10,7 +10,7 @@ You're more than **welcome** to use it. See Contributing.
 
 ## The stance on AI
 
-AI is welcome here. The guardrails are written down, and explicit. If a guardrail turns out to be wrong, fix the guardrail. Don't work around it and leave the next session to rediscover why.
+AI is welcome here. The guardrails are written down, and explicit, in [`AGENTS.md`](AGENTS.md). If a guardrail turns out to be wrong, fix the guardrail. Don't work around it and leave the next session to rediscover why.
 
 ## Quick setup
 
@@ -56,6 +56,16 @@ handaan promote-config <p>   # send a local edit back into the tree
 handaan apps [group ...]     # optional application groups
 ```
 
+## Development setup
+
+Development happens directly against the checkout named above — `$HANDAAN_PATH`, `~/.local/share/handaan` by default — since that checkout *is* the running system, not a separate clone you sync in from elsewhere.
+
+To push changes back to GitHub, point `origin` at your fork (or this repo, if you have write access) over SSH, and make sure a key registered with GitHub is unlocked in an agent:
+
+```bash
+git remote set-url origin git@github.com:<you>/handaan.git
+ssh-add -l   # confirm a key is loaded; ssh-add ~/.ssh/<key> if not
+```
 ## Contributing
 
 This is a personal configuration repository, but you're welcome to:
