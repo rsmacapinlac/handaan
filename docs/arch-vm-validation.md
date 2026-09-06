@@ -171,6 +171,37 @@ Record the tested commit, profile, date, selected optional groups, and any VM
 limitations. Do not retain an old “last confirmed” result after changing the
 installer; validation claims must correspond to the current scripts.
 
+### 2026-09-06 — commit `7cdbd78` (branch `main`), profile `vm-test.json`
+
+Full rebuild from a new 30 GiB UEFI/KVM guest, driven through the visible VM
+console, to validate the config-layout move (most app-preference configs out
+to the private companion tree, keeping Hyprland/hyprlock/hypridle/hyprpaper,
+rofi, waybar and mako) and the two guards it required.
+
+- Archinstall completed in 2m22s with no errors; `Reboot system` powered the
+  guest off rather than rebooting in place, which is normal for this
+  archinstall build -- ejecting the (already-dropped) cdrom and `virsh start`
+  brought it up on disk as documented.
+- Core provisioning completed with no errors and no failed units
+  (`systemctl --failed` empty both before and after reboot).
+- After reboot, greetd entered Hyprland; `graphical-session.target` active,
+  `hyprctl configerrors` clean, `hypridle`/`mako`/`hyprpolkitagent`/`quickshell`
+  all running with `NRestarts=0`. `hyprpaper` shows `NRestarts=1` with the
+  exact documented EGL failure signature (`EGL_NOT_INITIALIZED` ->
+  `kms_swrast` -> "Monitor Virtual-1 has no target: no wp will be created") --
+  the visible background is Hyprland's built-in fallback, not a config defect.
+- Quickshell's bar layer is mapped (`namespace: quickshell-bar`, full monitor
+  width) and `Ctrl+Return` opened Kitty correctly.
+- Config-layout check, by design: `~/.config/{tmux,kitty,nvim}/...` absent
+  (moved to the private tree, which this disposable guest never cloned) while
+  `~/.config/{waybar,rofi,mako}/...` present (kept in handaan). TPM was still
+  cloned into `~/.config/tmux/plugins/tpm` by `install/config/tmux.sh`, but
+  plugin install was skipped cleanly since `tmux.conf` doesn't exist yet --
+  the guard worked, no crash, no silent no-op.
+- `SUPER+space` opened the rofi launcher live, themed correctly, confirming
+  `default/hypr/binds.lua`'s reverted (unguarded) exec still resolves now that
+  rofi's config is handaan's again.
+
 ### 2026-08-31 — commit `ec9be68` (branch `main`) plus tested working-tree fixes, profile `vm-test.json`
 
 Full rebuild from a new 30 GiB UEFI/KVM guest, driven through the visible VM
