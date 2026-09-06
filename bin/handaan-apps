@@ -112,6 +112,12 @@ install_development() {
     yay_install go nodejs npm cursor-bin
 }
 
+seed_optional_desktop_entry() {
+    local name=$1
+    mkdir -p "$HOME/.local/share/applications"
+    cp -n "$HANDAAN_PATH/applications/optional/$name" "$HOME/.local/share/applications/"
+}
+
 install_productivity() {
     log_info "Installing productivity applications..."
     yay_install \
@@ -120,6 +126,7 @@ install_productivity() {
         slack-desktop \
         zoom \
         aether
+    seed_optional_desktop_entry slack.desktop
 }
 
 install_media() {
@@ -188,6 +195,7 @@ set_default_web_browser() {
 install_ai_desktop() {
     log_info "Installing AI desktop applications..."
     yay_install claude-desktop chatgpt-desktop
+    seed_optional_desktop_entry com.anthropic.Claude.desktop
     set_default_web_browser
 }
 
