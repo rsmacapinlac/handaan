@@ -172,6 +172,16 @@ virsh change-media handaan-test sda --eject --config    # or it boots the instal
 virsh start handaan-test
 ```
 
+When the guest was created with `virt-install --cdrom`, libvirt has already
+dropped the media from the *persistent* definition, so the eject above answers
+`error: The disk device 'sda' doesn't have media`. That is the expected result
+in this path, not a problem — run it anyway, because a guest created any other
+way will still be holding the ISO and will cheerfully reinstall.
+
+`virt-viewer` exits when the domain is destroyed. Start it with `--reconnect`
+so it survives the eject cycle and the reboots that follow, or you will be
+running blind exactly when the interesting part starts.
+
 Then, at the guest console, log in and install the agent:
 
 ```bash
@@ -316,6 +326,13 @@ Make the failure branch as wide as the success branch while you are there. A
 watcher that greps only for the success string stays silent through a crash, a
 hang, and a prompt waiting on input — and silence looks exactly like "still
 working".
+
+And pick a success string that appears **only** in the state you are waiting
+for. Watching for `chroot` to detect the end of the base install matches
+`Skipped: Running in chroot.` — which pacstrap prints repeatedly, minutes early,
+while it is still installing packages. The watcher then reports done against a
+half-built system. Anchor on the full sentence archinstall actually prints, not
+on a word that also occurs in ordinary log output.
 
 
 Note that the agent runs as root and bypasses the console entirely, so use it to
