@@ -107,20 +107,23 @@ guests.
 ## Creating the VM
 
 ```bash
-# The ISO is ~1.5 GB — keep it outside the repo
-curl -o /tmp/archlinux-x86_64.iso \
+# The ISO is ~1.5 GiB — keep it outside the repo, and off /tmp.
+# /tmp is tmpfs here, so an ISO parked there is 1.5 GiB of RAM the 4 GiB guest
+# then has to compete for. /var/tmp is on disk.
+mkdir -p /var/tmp/handaan-vm
+curl -o /var/tmp/handaan-vm/archlinux-x86_64.iso \
   https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso
 
 # Verify it. A truncated or corrupt ISO wastes a full rehearsal before it fails.
-curl -fsSL -o /tmp/sha256sums.txt \
+curl -fsSL -o /var/tmp/handaan-vm/sha256sums.txt \
   https://geo.mirror.pkgbuild.com/iso/latest/sha256sums.txt
-grep 'archlinux-x86_64.iso$' /tmp/sha256sums.txt \
-  | sed 's#archlinux-x86_64.iso#/tmp/archlinux-x86_64.iso#' | sha256sum -c -
+grep 'archlinux-x86_64.iso$' /var/tmp/handaan-vm/sha256sums.txt \
+  | sed 's#archlinux-x86_64.iso#/var/tmp/handaan-vm/archlinux-x86_64.iso#' | sha256sum -c -
 
 virt-install --connect qemu:///system \
   --name handaan-test --memory 4096 --vcpus 4 --cpu host-passthrough \
   --disk path=/var/lib/libvirt/images/handaan-test.qcow2,size=30,bus=virtio,format=qcow2 \
-  --boot uefi --cdrom /tmp/archlinux-x86_64.iso --os-variant archlinux \
+  --boot uefi --cdrom /var/tmp/handaan-vm/archlinux-x86_64.iso --os-variant archlinux \
   --graphics spice --video virtio
 ```
 
@@ -149,7 +152,15 @@ Type the bootstrap **at the VM console**.
 curl -fsSL https://raw.githubusercontent.com/rsmacapinlac/handaan/main/boot.sh | bash
 ```
 
-In the archinstall menu you **must** set a root password and add a user **with sudo/wheel** — the profile deliberately carries no credentials.
+In the archinstall menu you **must** set a root password and add a user **with sudo/wheel** — the profile deliberately carries no credentials. From the main menu that is:
+
+1. **Authentication** (9th item) → **Root password**, typed twice.
+2. **User account** → **Add a user** → username, password twice, then **"Should <user> be a superuser (sudo)?" → Yes** (already highlighted). Then **Confirm and exit**, then **Back**.
+3. **Install** (below the blank line, above Abort). The right pane must read `Ready to install`.
+
+**Selecting Install is not the last confirmation.** archinstall then shows *"The specified configuration will be applied. Would you like to continue?"* over a full JSON dump of the config, with **Yes** preselected. An unattended run that stops watching after pressing Install will sit on this dialog forever looking exactly like a slow pacstrap. Press Enter again.
+
+That JSON is worth reading rather than skipping — it is the only place the whole resolved configuration appears at once. Confirm `"bootloader": "Grub"` and the fat32 `/boot` ESP, which is what [ADR 0001](decisions/adrs/0001-system-upgrade-snapshots-and-rollback.md) depends on.
 
 ## Snapshot before the core phase
 
@@ -236,9 +247,14 @@ curl -fsSL -H 'Accept: application/vnd.github.raw' -o /tmp/start.sh \
 The console can be operated without touching the VM window, which is useful for scripted or unattended rehearsals.
 
 ```bash
-virsh screenshot handaan-test /tmp/console.png          # read the screen
+virsh screenshot handaan-test console.ppm               # read the screen
+magick console.ppm console.png                          # ImageMagick 7: magick, not convert
 virsh send-key handaan-test --codeset linux KEY_ENTER   # type at the console
 ```
+
+`virsh screenshot` writes a **PPM** regardless of the extension you give it, so
+naming the target `.png` produces a PPM with a misleading name that most viewers
+will still open and some tools will not. Convert it explicitly.
 
 Use the repository helper for text. It sends one paced event per character so
 repeated letters are not collapsed, handles shifted US-keyboard punctuation,
@@ -246,7 +262,7 @@ and can press Enter after the text. Focus the intended terminal or input field
 in the viewer first; libvirt sends keys to whichever guest window has focus:
 
 ```bash
-test/vm-send-keys --enter handaan-test 'bash /tmp/start.sh'
+test/vm-send-keys --enter handaan-test 'bash /tmp/boot.sh'
 test/vm-send-keys --prompt --enter handaan-test       # passwords, hidden input
 test/vm-send-keys --dry-run --enter handaan-test 'echo test'
 ```
@@ -282,6 +298,25 @@ which beats cropping screenshots:
 virsh qemu-agent-command handaan-test \
   '{"execute":"guest-exec","arguments":{"path":"/bin/sh","arg":["-c","fold -w 160 /dev/vcs1"],"capture-output":true}}'
 ```
+
+**`/dev/vcs1` is NUL-padded, and that silently breaks `grep`.** A screen read
+this way is mostly `\0`, so `grep` decides the input is binary, prints
+`Binary file (standard input) matches` and *suppresses the matching line*. With
+`-q` it still returns 0 — so a polling loop that greps for a completion string
+matches immediately and reports success against a screen that says nothing of
+the kind. This has happened: a watcher for the end of the base install returned
+at once while archinstall was still sitting on its confirmation dialog. Strip
+them first:
+
+```bash
+... | tr -d '\0' | grep -aiE 'installation completed|traceback'
+```
+
+Make the failure branch as wide as the success branch while you are there. A
+watcher that greps only for the success string stays silent through a crash, a
+hang, and a prompt waiting on input — and silence looks exactly like "still
+working".
+
 
 Note that the agent runs as root and bypasses the console entirely, so use it to
 *verify* results, never to drive `start.sh` — driving it from anywhere but the
