@@ -66,7 +66,7 @@ hl.monitor({
 
 Align by eye when it makes a block scannable; do not treat it as mandatory, and do not reflow a neighbouring block to keep a column when adding one key. Each module opens with a title comment and the relevant wiki link.
 
-Neovim's own Lua config no longer lives in this repository — it moved to the private companion tree, along with the rest of the app-preference configs that used to sit under `config/`. See [`docs/standards/privacy.md`](standards/privacy.md).
+Neovim's own Lua config no longer lives in this repository — it moved to the private companion tree, along with the rest of the app-preference configs that used to sit under `config/`. See [`docs/standards/privacy-policy.md`](standards/privacy-policy.md).
 
 `$HOME` does not expand anywhere in Lua config. Build paths with `os.getenv("HOME") .. "/..."`.
 

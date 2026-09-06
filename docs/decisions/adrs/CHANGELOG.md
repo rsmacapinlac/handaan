@@ -14,7 +14,7 @@
 
 - **0004** edited in place. Its Consequences section stated "the installer handles the fresh case and a migration handles the installed one" as an aside; that rule is now written up as its own standard, [Fresh installs carry every fix](../../standards/fresh-installs-carry-every-fix.md), and 0004 links to it rather than restating it.
 
-- **0003** edited in place. The private companion repository's override mechanism, previously described as unbuilt, has been rebuilt on the copy model — and most of what it was meant to override no longer needs overriding at all: most app-preference configs (tmux, nvim, kitty, and others) moved out of handaan's `config/` entirely, leaving Hyprland/hyprlock/hypridle/hyprpaper, rofi, waybar and mako there. `docs/standards/privacy.md` and `AGENTS.md` updated to match.
+- **0003** edited in place. The private companion repository's override mechanism, previously described as unbuilt, has been rebuilt on the copy model — and most of what it was meant to override no longer needs overriding at all: most app-preference configs (tmux, nvim, kitty, and others) moved out of handaan's `config/` entirely, leaving Hyprland/hyprlock/hypridle/hyprpaper, rofi, waybar and mako there. `docs/standards/privacy-policy.md` (then named `privacy.md`) and `AGENTS.md` updated to match.
 
 ## 2026-09-05 (handaan)
 

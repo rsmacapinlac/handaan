@@ -11,4 +11,4 @@ The same argument applies inside an application. Keep concerns in separate modul
 
 Deciding which tree a file belongs in is the same question every time: **would a `git pull` be allowed to change this file under you?** If yes it is a default; if no it is a seed.
 
-[Privacy](privacy.md) covers which of the two *repositories* a new file belongs in, which is a separate question from this one.
+[Privacy](privacy-policy.md) covers which of the two *repositories* a new file belongs in, which is a separate question from this one.

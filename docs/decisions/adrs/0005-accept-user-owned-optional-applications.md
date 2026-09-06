@@ -26,7 +26,7 @@ apps/<app-name>/
 
 `handaan-apps` discovers apps and offers each individually:
 
-- `$HOME/.config/handaan/apps/` — supplied by a separate dotfile repository the user owns and maintains, the same private-companion-repo relationship `docs/standards/privacy.md` already describes for `~/.config` overrides. A user who wants an app writes one there; they never fork or patch this repository to get it.
+- `$HOME/.config/handaan/apps/` — supplied by a separate dotfile repository the user owns and maintains, the same private-companion-repo relationship `docs/standards/privacy-policy.md` already describes for `~/.config` overrides. A user who wants an app writes one there; they never fork or patch this repository to get it.
 
 `meta`'s tag reuses the existing `# handaan:summary=` self-declaration convention `bin/handaan-*` scripts already use, rather than inventing a second metadata format.
 

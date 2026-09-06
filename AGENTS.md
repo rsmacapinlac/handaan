@@ -51,7 +51,7 @@ Avoid running the installer or `handaan-update` unless explicitly requested; the
 
 ## Security and privacy
 
-The public tree, the private companion repository, what counts as identity, and the rules that hold either way are in [`docs/standards/privacy.md`](docs/standards/privacy.md). Read it before adding a file. The private repository is deliberately not named anywhere in this tree.
+The public tree, the private companion repository, what counts as identity, and the rules that hold either way are in [`docs/standards/privacy-policy.md`](docs/standards/privacy-policy.md). Read it before adding a file. The private repository is deliberately not named anywhere in this tree.
 
 **The private repository now has its own copy-model seed mechanism**, replacing the old `rcm`-ordering trick. It deploys `~/.config` (and a few root dotfiles) the same no-clobber way handaan does. The two trees currently hold disjoint files, so neither one shadows the other today — but check before assuming that stays true, since nothing enforces it.
 
