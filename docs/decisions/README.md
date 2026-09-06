@@ -38,7 +38,7 @@ Decisions already made and living as prose in `README.md`, `AGENTS.md`, or `docs
 - `Colors` (raw palette) and `Theme` (semantic roles) kept separate
 
 **Repository and tooling**
-- Public repo plus private companion; the override mechanism is unbuilt since the move off `rcm` (see 0003)
+- Public repo plus private companion; the override mechanism was rebuilt on the copy model after the move off `rcm` (see 0003)
 - `~/.ssh` deliberately unmanaged; the bootstrap creates no secrets
 - Account-bound services kept out of the bootstrap
 - mise owns portable developer tools; `config/mise/config.toml` stays untracked

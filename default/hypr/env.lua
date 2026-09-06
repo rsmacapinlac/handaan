@@ -13,8 +13,8 @@
 -- and basic (v10) keys, existing cookies and saved passwords become
 -- undecryptable and are silently dropped, not merely unsaved. The backend is
 -- now pinned per app with --password-store=gnome-libsecret instead; see
--- config/chromium-flags.conf, local/share/applications/, and
--- docs/ai-desktop-control.md.
+-- ~/.config/chromium-flags.conf (private companion tree), local/share/applications/,
+-- and docs/ai-desktop-control.md.
 hl.env("XDG_CURRENT_DESKTOP", "Hyprland")
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")

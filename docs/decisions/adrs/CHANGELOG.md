@@ -1,6 +1,10 @@
 # ADR Changelog
 
 
+## 2026-09-06
+
+- **0003** edited in place. The private companion repository's override mechanism, previously described as unbuilt, has been rebuilt on the copy model — and most of what it was meant to override no longer needs overriding at all: most app-preference configs (tmux, nvim, kitty, and others) moved out of handaan's `config/` entirely, leaving Hyprland/hyprlock/hypridle/hyprpaper, rofi, waybar and mako there. `docs/standards/privacy.md` and `AGENTS.md` updated to match.
+
 ## 2026-09-05 (handaan)
 
 - **0003** and **0004** written together as part of the move from the `dots` dotfile repository to handaan. They are separable decisions — a tree that owns itself does not require migrations, and migrations would work under `rcm` — but each is half the answer to the same question: what is allowed to change on an installed machine, and by what mechanism.

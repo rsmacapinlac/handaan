@@ -5,9 +5,17 @@ if [[ ! -d $tpm_dir ]]; then
     git clone --depth 1 https://github.com/tmux-plugins/tpm.git "$tpm_dir"
 fi
 
+# tmux.conf itself comes from the private companion tree, not handaan, so a
+# handaan-only machine has no plugin list to read yet. TPM is cloned above
+# regardless -- installing plugins is just deferred until tmux.conf exists.
+if [[ ! -f $HOME/.config/tmux/tmux.conf ]]; then
+    log_warning "No ~/.config/tmux/tmux.conf yet; skipping plugin install"
+    return 0 2>/dev/null || exit 0
+fi
+
 # Cloning TPM only installs the plugin manager. Without the step below the
-# plugins declared in config/tmux/tmux.conf -- Catppuccin included -- are never
-# fetched, and tmux comes up unstyled until someone presses prefix + I by hand.
+# plugins declared in tmux.conf -- Catppuccin included -- are never fetched,
+# and tmux comes up unstyled until someone presses prefix + I by hand.
 [[ -x $tpm_dir/bin/install_plugins ]] || return 0 2>/dev/null || exit 0
 
 # install_plugins reads the plugin list from tmux options, so a server has to

@@ -125,9 +125,10 @@ systemctl --user stop quickshell   # do not run two bars at once
 systemctl --user start waybar      # this session only
 ```
 
-`config/waybar/` is deployed by rcm either way, so it is ready the moment it is
-started. Do not add it to `conf/autostart.lua` — the unit is the supported
-path, and an exec there would be unsupervised.
+`config/waybar/` seeds `~/.config` once at install like everything else under
+`config/`, so it is ready the moment it is started. Do not add it to
+`conf/autostart.lua` — the unit is the supported path, and an exec there would
+be unsupervised.
 
 ### Caveat: PATH
 

@@ -51,9 +51,7 @@ log_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 
 ## Lua
 
-**Indentation follows the upstream you are configuring, not a house number.** Hyprland's own shipped example config at `/usr/share/hypr/hyprland.lua` indents four spaces; Neovim's runtime Lua indents two. Both trees here already match their upstream, so there is no single number to standardise on — picking one would put this repository at odds with the documentation and examples an agent will read while working. When a new Lua tree appears, take its indent from that project's own config, and record it here.
-
-Beyond indentation the two trees share the language and little else. Do not carry a convention from one into the other.
+**Indentation follows the upstream you are configuring, not a house number.** Hyprland's own shipped example config at `/usr/share/hypr/hyprland.lua` indents four spaces. The Hyprland tree here already matches its upstream, so there is no single number to standardise on — picking one would put this repository at odds with the documentation and examples an agent will read while working. When a new Lua tree appears, take its indent from that project's own config, and record it here.
 
 **`config/hypr/` — Hyprland.** Four-space indent, double quotes (376 against 4), one module per concern under `conf/`, and `local` constants hoisted to the top of the file. `config/hypr/hyprland.lua` is a thin loader that `require`s those modules in dependency order and holds no configuration itself; new configuration goes in a module, not in the loader. Table literals align their `=`, and so do runs of related calls:
 
@@ -68,7 +66,7 @@ hl.monitor({
 
 Align by eye when it makes a block scannable; do not treat it as mandatory, and do not reflow a neighbouring block to keep a column when adding one key. Each module opens with a title comment and the relevant wiki link.
 
-**`config/nvim/` — Neovim.** Two-space indent, and the `require("x").setup({ … })` shape throughout. Plugin declarations stay in `lua/core/plugins.lua`; a plugin's own setup goes in its own file under `lua/core/plugins_config/`. Quoting is genuinely mixed — 149 double against 110 single, sometimes within one file — so this is the one place to prefer double quotes for new code, matching the Hyprland tree and Neovim's own documentation, without churning existing lines.
+Neovim's own Lua config no longer lives in this repository — it moved to the private companion tree, along with the rest of the app-preference configs that used to sit under `config/`. See [`docs/standards/privacy.md`](standards/privacy.md).
 
 `$HOME` does not expand anywhere in Lua config. Build paths with `os.getenv("HOME") .. "/..."`.
 
