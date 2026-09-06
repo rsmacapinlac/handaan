@@ -79,6 +79,35 @@ app_exists() {
     [[ -d "$APPS_ROOT/$1" ]]
 }
 
+# One `pacman -Qq` for the whole picker rather than a query per package: the
+# app lists together name well over a hundred packages.
+declare -A INSTALLED_PKGS=()
+load_installed_packages() {
+    local pkg
+    while read -r pkg; do
+        INSTALLED_PKGS[$pkg]=1
+    done < <(pacman -Qq 2>/dev/null)
+}
+
+# An app counts as installed when every package it declares is installed.
+# Apps that declare none -- citrix and steam install theirs from inside
+# install.sh -- are unknowable from here and report not-installed rather than
+# guessing.
+#
+# The comment strip matches yay_install_list's, plus a trailing-space trim:
+# `s/#.*//` turns "pkg  # why" into "pkg  ", and a trailing space would make
+# the lookup miss a package that is in fact installed.
+app_installed() {
+    local list="$APPS_ROOT/$1/packages" pkg declared=0
+    [[ -f $list ]] || return 1
+    while read -r pkg; do
+        [[ -n $pkg ]] || continue
+        declared=1
+        [[ -n ${INSTALLED_PKGS[$pkg]:-} ]] || return 1
+    done < <(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "$list")
+    (( declared ))
+}
+
 select_apps() {
     local apps=("$@")
 
@@ -88,9 +117,16 @@ select_apps() {
     fi
 
     local app list_text out_file
+    load_installed_packages
+    # Third field is the installed flag, which the picker uses to pre-tick the
+    # box. Tab-separated like the summary before it, so the QML splits once.
     list_text=$(
         for app in "${apps[@]}"; do
-            printf '%s\t%s\n' "$app" "$(app_summary "$app")"
+            if app_installed "$app"; then
+                printf '%s\t%s\t1\n' "$app" "$(app_summary "$app")"
+            else
+                printf '%s\t%s\t0\n' "$app" "$(app_summary "$app")"
+            fi
         done
     )
     out_file="${XDG_RUNTIME_DIR:-/tmp}/handaan-apps-selection.$$"

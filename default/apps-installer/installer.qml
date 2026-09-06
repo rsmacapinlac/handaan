@@ -21,13 +21,14 @@ Window {
     id: window
 
     width: 420
-    height: Math.min(560, 120 + list.count * 40)
+    height: Math.min(560, 150 + list.count * 40)
     visible: true
     title: "handaan apps"
     color: "#1e1e2e"
 
     property var appNames: []
     property var appSummaries: []
+    property var appInstalled: []
     property var checked: ({})
     // Both selectedCount and selectionText exist because two different
     // bindings (Install's enabled, and the writer Process's command) each
@@ -43,15 +44,28 @@ Window {
         const lines = raw.split("\n").filter(line => line.length > 0)
         const initialChecked = {}
         for (const line of lines) {
-            const tab = line.indexOf("\t")
-            const name = tab === -1 ? line : line.slice(0, tab)
-            const summary = tab === -1 ? "" : line.slice(tab + 1)
+            // name \t summary \t installed. Split on every tab rather than the
+            // first: a summary is free text and must not be able to swallow
+            // the flag after it.
+            const parts = line.split("\t")
+            const name = parts[0]
+            const summary = parts.length > 1 ? parts[1] : ""
+            const installed = parts.length > 2 && parts[2] === "1"
             appNames.push(name)
             appSummaries.push(summary)
-            initialChecked[name] = false
+            appInstalled.push(installed)
+            initialChecked[name] = installed
         }
         checked = initialChecked
         list.model = appNames.length
+
+        // Pre-ticked boxes have to be reflected in these two, for the reason
+        // given above: nothing recomputes them from `checked`. Without this,
+        // Install stays disabled until you toggle something, and the writer
+        // sends an empty selection.
+        const selected = appNames.filter(n => initialChecked[n])
+        selectedCount = selected.length
+        selectionText = selected.join("\n")
     }
 
     function setChecked(name, value) {
@@ -78,11 +92,24 @@ Window {
         anchors.margins: 16
         spacing: 12
 
-        Label {
-            text: "Select applications to install"
-            font.bold: true
-            font.pixelSize: 16
-            color: "#cdd6f4"
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 2
+
+            Label {
+                text: "Select applications to install"
+                font.bold: true
+                font.pixelSize: 16
+                color: "#cdd6f4"
+            }
+
+            Label {
+                text: "Already installed ones start ticked. Unticking removes nothing."
+                font.pixelSize: 11
+                color: "#a6adc8"
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
         }
 
         ScrollView {
@@ -107,10 +134,24 @@ Window {
                         Layout.fillWidth: true
                         spacing: 0
 
-                        Label {
-                            text: window.appNames[index]
-                            color: "#cdd6f4"
-                            font.bold: true
+                        RowLayout {
+                            spacing: 6
+
+                            Label {
+                                text: window.appNames[index]
+                                color: "#cdd6f4"
+                                font.bold: true
+                            }
+
+                            // A ticked box otherwise reads only as "will be
+                            // installed"; this says which of them are already
+                            // on the machine.
+                            Label {
+                                text: "installed"
+                                visible: window.appInstalled[index] === true
+                                color: "#a6e3a1"
+                                font.pixelSize: 11
+                            }
                         }
                         Label {
                             text: window.appSummaries[index]
