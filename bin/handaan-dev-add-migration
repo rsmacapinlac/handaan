@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# handaan:summary=Create a migration named for the last commit's timestamp.
+# handaan:args=[--no-edit]
+#
+# The name is the unix time of the last commit, so migrations sort by when the
+# change landed rather than by when someone got round to writing the repair.
+
+set -euo pipefail
+: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
+
+file="$HANDAAN_PATH/migrations/$(git -C "$HANDAAN_PATH" log -1 --format=%cd --date=unix).sh"
+if [[ -e $file ]]; then
+    echo "Migration already exists for this commit: $file" >&2
+else
+    cat > "$file" <<'TEMPLATE'
+echo "<one line saying what this repairs and why>"
+
+# Why this is needed, and what it is repairing. Migrations must be idempotent
+# and must no-op cleanly when the fix is already applied.
+TEMPLATE
+fi
+
+[[ ${1:-} == --no-edit ]] || "${EDITOR:-nvim}" "$file"
+echo "$file"
