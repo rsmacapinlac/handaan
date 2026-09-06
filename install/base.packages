@@ -12,7 +12,6 @@ openssh
 mise
 neovim
 python-pynvim
-tmux
 ranger
 ripgrep
 fd

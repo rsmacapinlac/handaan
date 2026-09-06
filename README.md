@@ -4,6 +4,8 @@ A minimal, recreatable single-user Arch + Hyprland desktop that installs into it
 
 It is optimized for the hardware I own, and it caters to two use cases: an ordinary desktop (browsing, office tools) and a terminal workspace. It extends with your own tools and apps.
 
+The terminal workspace means the tooling — Kitty, Neovim, ranger, ripgrep, fzf, lazygit. It does not include a shell or a multiplexer: handaan installs no shell, runs no `chsh`, and does not install tmux, because those come with configuration that is yours rather than handaan's. Both are `handaan apps` away, supplied from your own dotfile repository.
+
 You inherit my hyprland keybindings and quickshell rice (which isn't much now - but this will hopefully improve over time).
 
 handaan is the successor to my `dots` dotfile repository, rebuilt around [Omarchy](https://omarchy.org)'s installation model — a single owned tree, defaults you never edit, and migrations that reach machines that are already installed. Their design is far better thought out than mine; a good deal of this is adapted from it.

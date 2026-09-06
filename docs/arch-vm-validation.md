@@ -77,7 +77,7 @@ pacman -Q \
   hyprland greetd waybar rofi mako kitty \
   firefox \
   networkmanager bluez pipewire wireplumber bolt cups avahi \
-  neovim tmux ranger nautilus sushi gvfs-smb \
+  neovim ranger nautilus sushi gvfs-smb \
   mise pass pass-otp gnome-keyring timeshift-autosnap
 ```
 
@@ -85,7 +85,7 @@ Optional packages must not be pulled in directly by core:
 
 ```bash
 for package in cursor-bin chromium obs-studio neomutt claude-desktop \
-  chatgpt-desktop steam virt-manager bitwarden syncthing; do
+  chatgpt-desktop steam virt-manager bitwarden syncthing zsh tmux; do
   pacman -Q "$package" >/dev/null 2>&1 \
     && echo "PRESENT $package" \
     || echo "optional/absent $package"
@@ -101,7 +101,6 @@ Run these inside Kitty:
 
 ```bash
 nvim --version
-tmux -V
 ranger --version
 mise --version
 pass --version

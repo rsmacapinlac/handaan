@@ -60,10 +60,13 @@ or maintained with custom download code:
 
 Keep system packages native when they provide libraries, services, hardware or
 desktop integration, or are needed before user dotfiles are available. That
-includes shells, tmux, GnuPG/pass, audio/video packages, Hyprland components,
-mail transport, MPD, printer support, and Python modules consumed by the system
-interpreter. Application-owned plugin managers (TPM, lazy.nvim, Pi packages,
-and Oh My Zsh) should also remain responsible for their own plugins.
+includes GnuPG/pass, audio/video packages, Hyprland components, mail transport,
+MPD, printer support, and Python modules consumed by the system interpreter.
+Shells and tmux belong in the same category and are also installed natively,
+but no longer by core — they ship from the user's own repository with the
+configuration they need. Application-owned plugin managers (TPM, lazy.nvim, Pi
+packages, and Oh My Zsh) should also remain responsible for their own plugins,
+wherever the application itself is declared.
 
 Language runtimes are not installed globally by the core Arch bootstrap. Add a
 runtime deliberately through Mise or the optional development group when a
