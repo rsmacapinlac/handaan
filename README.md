@@ -4,6 +4,8 @@ A minimal, recreatable Arch + Hyprland desktop that installs into its own tree a
 
 It is optimized for the hardware I own, and it caters to two use cases: an ordinary desktop (browsing, office tools) and a terminal workspace. It extends with your own tools and apps.
 
+You inherit my hyprland keybindings and quickshell rice (which isn't much now - but this will hopefully improve over time).
+
 handaan is the successor to my `dots` dotfile repository, rebuilt around [Omarchy](https://omarchy.org)'s installation model — a single owned tree, defaults you never edit, and migrations that reach machines that are already installed. Their design is far better thought out than mine; a good deal of this is adapted from it.
 
 You're more than **welcome** to use it. See Contributing.
@@ -68,7 +70,11 @@ ssh-add -l   # confirm a key is loaded; ssh-add ~/.ssh/<key> if not
 ```
 ## Contributing
 
-This is a personal configuration repository, but you're welcome to:
+I'm not claiming that I know everything. I'm continually learning and adjusting. I am a firm believer that collaboration makes the end result much better.
+
+So that said, I hope you see whats been done and contribute.
+
+You are more than welcome to:
 - Fork and adapt for your own use
 - Submit issues for bugs or improvements
 - Share configuration ideas via discussions
