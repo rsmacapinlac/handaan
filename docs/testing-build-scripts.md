@@ -334,6 +334,24 @@ while it is still installing packages. The watcher then reports done against a
 half-built system. Anchor on the full sentence archinstall actually prints, not
 on a word that also occurs in ordinary log output.
 
+**Do not try to detect a stalled prompt by grepping for prompt text.** An
+answered prompt stays on the screen, so `:: Proceed with installation? [Y/n]`
+from a `--noconfirm` transaction reads exactly like a live one that nobody is
+answering. The reliable signal is that the screen *stops changing*: hash the
+console read each poll and alarm after N identical results.
+
+```bash
+h=$(md5sum <<<"$txt" | cut -d' ' -f1)
+[[ $h == "$prev" ]] && same=$((same+1)) || same=0
+prev=$h
+(( same >= 12 )) && { echo "unchanged for ~3min — likely stalled"; exit 3; }
+```
+
+All three of these — the too-broad success string, the NUL padding, and the
+answered-prompt false positive — are the same mistake: treating a console
+*scrollback buffer* as if it were an event stream. It is a picture of the last
+N bytes, with no notion of when any of it happened.
+
 
 Note that the agent runs as root and bypasses the console entirely, so use it to
 *verify* results, never to drive `start.sh` — driving it from anywhere but the
