@@ -46,6 +46,9 @@
 // vision. An update can wait for the end of what you are doing; that is the
 // definition of the thing that must not animate.
 //
+// Click re-checks, and that is the only interaction. See the MouseArea below
+// for why it is that rather than a shortcut to a terminal.
+//
 // A check that cannot run is not the same as nothing to do. Maintenance keeps
 // those apart (-1 against 0) and this widget refuses to appear on the strength
 // of an unknown: a missing checkupdates or a fetch that failed before the
@@ -119,23 +122,24 @@ BarWidget {
         detail: root.parts.join("\n") + (root.blind !== "" ? "\n" + root.blind : "")
     }
 
+    // Click re-checks. It is the obvious action for this widget's question:
+    // the counts are up to half an hour old, so the moment the answer matters
+    // most is just after you have acted on it and want to know it took. A poll
+    // only asks the question again, so an accidental click costs a database
+    // sync and changes nothing -- which is what the doc requires of anything
+    // reachable by a stray press.
+    //
+    // Deliberately not "open a terminal and update". There is no single action
+    // behind these counts -- packages want `handaan update`, a migration wants
+    // `handaan migrate` -- and the doc prefers the terminal-first tool that
+    // already does the job over a second interface built into the bar.
     MouseArea {
         id: hover
         anchors.fill: parent
         hoverEnabled: true
-
-        // The seam for a click action, deliberately empty for now. Until a
-        // command is set the widget accepts no buttons at all, so it does not
-        // swallow presses over the bar for a handler that does nothing --
-        // Battery.qml makes the same choice for the same reason.
-        acceptedButtons: root.clickCommand !== "" ? Qt.LeftButton : Qt.NoButton
-        onClicked: {
-            if (root.clickCommand !== "")
-                root.run(root.clickCommand);
-        }
+        acceptedButtons: Qt.LeftButton
+        onClicked: Maintenance.refresh()
     }
-
-    property string clickCommand: setting("clickCommand", "")
 
     Text {
         id: icon

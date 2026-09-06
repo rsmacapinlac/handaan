@@ -95,6 +95,41 @@ Singleton {
             poll.running = true;
     }
 
+    // Re-poll on demand, so the bar is not stale for up to half an hour after
+    // the work is already done. Nothing here changes the machine -- it only
+    // asks the same question again -- so it is safe to expose and safe to call
+    // from a script that has just finished changing something:
+    //
+    //   qs -p "$HANDAAN_PATH/default/quickshell" ipc call maintenance refresh
+    //
+    // bin/handaan-update calls exactly that on its way out. The alternative
+    // was a shorter poll interval, which would spend battery and bandwidth on
+    // every machine all day to fix a staleness that only matters in the few
+    // minutes after an update.
+    IpcHandler {
+        target: "maintenance"
+
+        function refresh(): string {
+            root.refresh();
+            return "refreshing";
+        }
+
+        // The counts as the bar currently holds them, which is not the same as
+        // running handaan-pending again: this is what the widget is drawing,
+        // including how stale it is. Worth having when the bar and a terminal
+        // disagree and the question is which of them is behind.
+        function status(): string {
+            if (!root.polled)
+                return "not polled yet";
+            return "apps=" + root.apps
+                + " arch=" + root.arch
+                + " handaan-commits=" + root.handaanCommits
+                + " handaan-migrations=" + root.handaanMigrations
+                + " updates=" + root.updates
+                + " polling=" + root.polling;
+        }
+    }
+
     Process {
         id: poll
 

@@ -145,6 +145,21 @@ report_config_drift() {
     fi
 }
 
+refresh_bar_indicator() {
+    # The bar's update indicator polls every half hour, so without this it
+    # keeps claiming there is work to do for up to that long after this run
+    # finished doing it. Asking it to re-check costs one database sync and
+    # changes nothing.
+    #
+    # Entirely best-effort, and quiet when it fails: there is no bar on the LXC
+    # target, none when this runs over ssh, and none if the shell is not
+    # running. A failure here must never colour the exit status of an update
+    # that otherwise succeeded.
+    command -v qs &>/dev/null || return 0
+    qs -p "$HANDAAN_PATH/default/quickshell" ipc call maintenance refresh \
+        &>/dev/null || true
+}
+
 main() {
     if [[ ${1:-} != -y ]]; then
         read -r -p "Update handaan and all system packages? [y/N] " answer < /dev/tty || answer=n
@@ -160,6 +175,7 @@ main() {
     update_mise_tools
     update_nvim_plugins
     report_config_drift
+    refresh_bar_indicator
 
     log_success "Update complete. Session log: /tmp/handaan-update.log"
 }
