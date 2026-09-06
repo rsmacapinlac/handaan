@@ -4,6 +4,11 @@
 # fallback bar while the Quickshell one grows to parity. See
 # docs/hyprland-startup.md.
 hyprland
+# Hyprland links liblua5.4.so.5.4 at runtime. extra/lua54 is a real package that
+# ships it -- do not substitute a `provides=('lua54')` shim, which satisfies
+# dependency resolution while leaving the library absent, so Hyprland dies at
+# start with "cannot open shared object file" and greetd restart-loops.
+lua54
 uwsm
 mako
 libnotify
