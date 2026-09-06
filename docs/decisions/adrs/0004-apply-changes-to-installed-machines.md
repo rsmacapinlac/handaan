@@ -6,7 +6,7 @@ Status: accepted
 
 `git pull` updates files in the tree. It cannot enable a systemd unit, write to `/etc`, remove a package that was replaced, or repoint a path that an installed machine still holds.
 
-The old answer was to rerun the whole installer. It is idempotent, so this was safe — but it is also slow, it re-evaluates every decision to reach the one that changed, and it makes every past fix a permanent branch in the installer. `install/preflight/lua54.sh` exists because of a libinput dependency; the `ksshaskpass` removal exists because of an agent conflict. Both are one-time repairs living forever in the code path of a fresh install that never needed them.
+The old answer was to rerun the whole installer. It is idempotent, so this was safe — but it is also slow, it re-evaluates every decision to reach the one that changed, and it makes every past fix a permanent branch in the installer. The `ksshaskpass` and `polkit-gnome` removals exist because of an authentication-agent conflict on machines that once had them; a fresh install has never seen either. That is a one-time repair living forever in the code path of an install that does not need it.
 
 ## Decision
 
