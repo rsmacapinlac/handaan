@@ -75,7 +75,7 @@ not running there is no idle timeout and no automatic lock.
 ```bash
 pacman -Q \
   hyprland greetd waybar rofi mako kitty \
-  firefox qutebrowser \
+  firefox \
   networkmanager bluez pipewire wireplumber bolt cups avahi \
   neovim tmux ranger nautilus sushi gvfs-smb \
   mise pass pass-otp gnome-keyring timeshift-autosnap
@@ -106,7 +106,6 @@ ranger --version
 mise --version
 pass --version
 firefox --version
-qutebrowser --version
 nautilus --version
 pamixer --get-volume
 playerctl --version
