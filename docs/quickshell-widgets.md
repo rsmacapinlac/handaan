@@ -78,7 +78,23 @@ attention channel and only it is rationed.
 The worked example is the workspace widget: an urgent workspace pulses on about
 a 1.2s cycle at 12% scale, and stops the moment it stops being urgent. It is
 also red, and also a wide labelled pill, so the pulse is escalation on top of an
-already-complete signal rather than the signal itself.
+already-complete signal rather than the signal itself. The battery uses the same
+cycle and amplitude for critical-and-discharging, so the bar has one vocabulary
+for urgency rather than several.
+
+**The update indicator is a deliberate exception, and it is worth being honest
+about which rule it breaks.** It pulses whenever it is visible -- and it is only
+ever visible when something is pending -- so "stops when the condition clears"
+and "runs for as long as the widget exists" are the same statement for it, which
+is the shape this section calls decoration. Available updates are also not
+urgent in the sense the rest of this section means: they wait for the end of
+what you are doing. It was added on the owner's judgement after seeing both
+versions on a real bar, against the argument above rather than in ignorance of
+it. Two things follow. It is now the third holder of a channel this section
+rations to one, so a nearly-flat battery and a pending update can pulse in
+unison and neither will read as the urgent one; and if the channel starts
+feeling like noise, this is the pulse to remove first, because it is the one
+carrying the least.
 
 ## Detail is progressively disclosed
 

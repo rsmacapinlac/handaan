@@ -71,7 +71,13 @@ BarWidget {
     // depending on that coincidence.
     active: Maintenance.polled && Maintenance.updates > 0
 
-    implicitWidth: icon.implicitWidth + Style.widgetPadding * 2
+    // The glyph's own width, with nothing added. Battery and Clock are both a
+    // bare row width, so padding here made this the only widget in the section
+    // wider than its content -- measured at 44px between this and the battery
+    // against 20px between the battery and the clock, and half that excess was
+    // this. The click target keeps the padding, as a negative margin on the
+    // MouseArea below, because a hit area is not a layout size.
+    implicitWidth: icon.implicitWidth
 
     // Peach rather than red. This is "there is work waiting", not "something
     // is wrong": red is the bar's critical level and belongs to a flat battery
@@ -133,9 +139,13 @@ BarWidget {
     // behind these counts -- packages want `handaan update`, a migration wants
     // `handaan migrate` -- and the doc prefers the terminal-first tool that
     // already does the job over a second interface built into the bar.
+    // Reaches past the widget's own bounds so a 13px glyph is not a 13px
+    // target. It grows into the gap either side, which is free: the widgets
+    // it borders have no click handlers of their own to steal from.
     MouseArea {
         id: hover
         anchors.fill: parent
+        anchors.margins: -Style.widgetPadding
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton
         onClicked: Maintenance.refresh()
@@ -158,6 +168,28 @@ BarWidget {
         color: root.tint
         font.family: Style.fontFamily
         font.pixelSize: Style.fontSize
+
+        // Same cycle and amplitude as the workspace and battery pulses, so the
+        // bar has one vocabulary for "look at this" rather than three. Bound to
+        // the condition, not to the widget's existence, so it stops the moment
+        // the counts reach zero -- though for this widget those are nearly the
+        // same thing, which is the reservation recorded at the top of the file.
+        SequentialAnimation on scale {
+            running: root.active
+            loops: Animation.Infinite
+            alwaysRunToEnd: true
+
+            NumberAnimation {
+                to: 1.12
+                duration: 620
+                easing.type: Easing.InOutSine
+            }
+            NumberAnimation {
+                to: 1.0
+                duration: 620
+                easing.type: Easing.InOutSine
+            }
+        }
 
         // A transition, not motion: the widget appears when a poll lands, and
         // fading it in over a beat makes the arrival legible as a change

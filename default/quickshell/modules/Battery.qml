@@ -188,13 +188,24 @@ BarWidget {
         anchors.fill: parent
         spacing: Style.space(1.5)
 
-        // The slot is reserved whether or not anything is plugged in, and is
-        // sized to the wider of the two glyphs so swapping one for the other
-        // cannot move anything either. The bar's right section is
-        // right-anchored, so a glyph that appears, disappears, or changes
-        // width would shove the whole row sideways on every dock and undock --
-        // several times a day, for a state change you can already see.
+        // The slot collapses on battery and reappears on mains, so the widget
+        // is only as wide as it has something to show.
+        //
+        // It used to be reserved permanently, sized to the wider of the two
+        // glyphs, on the argument that the bar's right section is
+        // right-anchored and a glyph appearing or vanishing shoves everything
+        // left of it sideways on every dock and undock -- several times a day,
+        // for a state change you can already see. That is still true and is
+        // the cost of this: the update indicator, when it is up, moves about
+        // 14px each way with the plug.
+        //
+        // It was changed anyway, deliberately. Reserved, the empty slot put
+        // 34px between the battery and its left neighbour against 20px on the
+        // right, and a permanent asymmetry in every state was judged worse
+        // than movement in the moment the state actually changes. Sized to the
+        // wider glyph still, so swapping plug for bolt moves nothing.
         Item {
+            visible: root.present && root.onMains
             Layout.preferredWidth: Math.max(boltMetrics.width, plugMetrics.width)
             Layout.preferredHeight: indicator.implicitHeight
             Layout.alignment: Qt.AlignVCenter
