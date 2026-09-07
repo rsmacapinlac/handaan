@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # handaan:summary=Install optional applications from your own dotfile repository.
-# handaan:args=[APP ... | all | --pending]
+# handaan:args=[APP ... | all | --pending | --mark APP ... | --unmark APP ...]
 # handaan:hidden=installs apps, not handaan itself; see docs/standards/core-stays-minimal.md
 #
 # handaan ships no optional applications of its own -- see
@@ -12,6 +12,9 @@
 #   apps/<name>/packages    optional package list, same shape as install/*.packages
 #   apps/<name>/install.sh  optional, sourced once when the app is (re)selected
 #   apps/<name>/config/     optional, mirrors $HOME, copied in no-clobber
+#
+# Apps handaan has installed are recorded under $HANDAAN_STATE/apps/; see
+# app_installed for why that is the answer rather than the package list.
 #
 # `handaan-update` sources every app's update.sh on its own; see that script.
 
@@ -35,23 +38,29 @@ readonly APPS_LOG=/tmp/handaan-apps.log
 #
 # -f flushes, -q drops the banner, -e propagates the exit status, and the PTY
 # is what keeps pacman's progress bars alive.
-if (( $# > 0 )) && [[ $1 != -h && $1 != --help && $1 != --pending && -z ${HANDAAN_APPS_LOGGED:-} ]]; then
+if (( $# > 0 )) && [[ $1 != -h && $1 != --help && $1 != --pending && $1 != --mark \
+    && $1 != --unmark && -z ${HANDAAN_APPS_LOGGED:-} ]]; then
     command=$(printf '%q ' "$0" "$@")
     exec env HANDAAN_APPS_LOGGED=1 script -qefc "$command" "$APPS_LOG"
 fi
 
 readonly APPS_ROOT="$HOME/.config/handaan/apps"
+readonly APPS_STATE="$HANDAAN_STATE/apps"
 
 usage() {
     cat <<EOF
-Usage: handaan-apps [APP ... | all | --pending]
+Usage: handaan-apps [APP ... | all | --pending | --mark APP ... | --unmark APP ...]
 
 With no arguments, opens a Quickshell selection window listing every app found
 under $APPS_ROOT. Pass "all" to install everything found there.
 
 --pending lists the apps that are not installed yet, one per line, and does
-nothing else. An app counts as installed when every package it declares is;
-one that declares none cannot be judged and is always listed.
+nothing else. An app counts as installed once handaan has installed it and
+every package it declares is still present.
+
+--mark records an app as installed without installing it, for one that was
+already on the machine before handaan started tracking it. It runs nothing.
+--unmark reverses that.
 
 None found yet? Nothing is wrong -- handaan ships no applications of its own.
 Add one in your own dotfile repository as $APPS_ROOT/<name>/, then symlink or
@@ -92,23 +101,31 @@ load_installed_packages() {
     done < <(pacman -Qq 2>/dev/null)
 }
 
-# An app counts as installed when every package it declares is installed.
-# Apps that declare none -- citrix and steam install theirs from inside
-# install.sh -- are unknowable from here and report not-installed rather than
-# guessing.
+# An app counts as installed when handaan installed it -- the marker written by
+# install_app -- and every package it declares is still present.
+#
+# The marker is what makes the answer true of the app rather than of its package
+# list. Judging by packages alone was wrong in both directions. An app that
+# installs from inside install.sh declares none, so it could never report
+# installed and sat in --pending for good. An app whose payload is a config/
+# tree reported installed the moment anything else pulled in the one package it
+# named, so it was never selected, its files were never copied, and the thing it
+# exists to deliver never arrived.
+#
+# Packages are still checked on top, so removing one by hand puts the app back
+# in the pending list instead of leaving the marker to insist otherwise.
 #
 # The comment strip matches yay_install_list's, plus a trailing-space trim:
 # `s/#.*//` turns "pkg  # why" into "pkg  ", and a trailing space would make
 # the lookup miss a package that is in fact installed.
 app_installed() {
-    local list="$APPS_ROOT/$1/packages" pkg declared=0
-    [[ -f $list ]] || return 1
+    local list="$APPS_ROOT/$1/packages" pkg
+    [[ -f "$APPS_STATE/$1" ]] || return 1
+    [[ -f $list ]] || return 0
     while read -r pkg; do
         [[ -n $pkg ]] || continue
-        declared=1
         [[ -n ${INSTALLED_PKGS[$pkg]:-} ]] || return 1
     done < <(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "$list")
-    (( declared ))
 }
 
 select_apps() {
@@ -198,6 +215,11 @@ install_app() {
     if [[ -d "$dir/config" ]]; then
         cp -Rn "$dir"/config/. "$HOME/" 2>/dev/null || true
     fi
+
+    # Written last, and only here: a run that dies part-way leaves the app
+    # pending rather than claiming an install that did not finish.
+    mkdir -p "$APPS_STATE"
+    touch "$APPS_STATE/$name"
 }
 
 main() {
@@ -217,6 +239,38 @@ main() {
         mapfile -t apps < <(discover_apps)
         for app in "${apps[@]}"; do
             app_installed "$app" || printf '%s\n' "$app"
+        done
+        exit 0
+    fi
+
+    # Recording an app without installing it, for one that predates handaan
+    # tracking installs at all. The alternative is a reinstall whose only real
+    # effect is the marker -- and for an app that builds from the AUR inside
+    # install.sh, that means a full rebuild to learn nothing.
+    if [[ ${1:-} == --mark || ${1:-} == --unmark ]]; then
+        local mode=$1 app
+        shift
+        if (( $# == 0 )); then
+            log_error "$mode needs at least one app name."
+            exit 1
+        fi
+        # Check every name before touching anything, so a typo in the third
+        # name does not leave the first two recorded.
+        for app in "$@"; do
+            if ! app_exists "$app"; then
+                log_error "No app found at $APPS_ROOT/$app"
+                exit 1
+            fi
+        done
+        mkdir -p "$APPS_STATE"
+        for app in "$@"; do
+            if [[ $mode == --mark ]]; then
+                touch "$APPS_STATE/$app"
+                log_success "Recorded $app as installed."
+            else
+                rm -f "$APPS_STATE/$app"
+                log_success "Recorded $app as not installed."
+            fi
         done
         exit 0
     fi

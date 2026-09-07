@@ -65,7 +65,7 @@ Keep comments on their own line rather than trailing a package name — that is 
 
 Installation is `yay -S --needed`, so a package already present is left alone and re-running costs nothing.
 
-This file is also what lets handaan tell whether your app is installed; see [How handaan decides an app is installed](#how-handaan-decides-an-app-is-installed).
+Declaring packages here is not what makes handaan consider the app installed, but they are checked; see [How handaan decides an app is installed](#how-handaan-decides-an-app-is-installed).
 
 ### `install.sh`
 
@@ -174,6 +174,8 @@ handaan apps                 # picker: every app found, ticked if installed
 handaan apps tmux neovim     # install these, skip the picker
 handaan apps all             # install everything found
 handaan apps --pending       # names of apps not installed yet, one per line
+handaan apps --mark tmux     # record as installed without installing
+handaan apps --unmark tmux   # the reverse
 handaan apps --help
 ```
 
@@ -187,9 +189,23 @@ The whole session is logged to `/tmp/handaan-apps.log`. When a run launched from
 
 ## How handaan decides an app is installed
 
-An app counts as installed when **every package named in its `packages` file is installed**. Nothing else is consulted: not `install.sh`, not whether `config/` landed.
+An app counts as installed when **handaan installed it, and every package it still declares is present**. The first half is a marker file that `handaan apps` writes at `$HANDAAN_STATE/apps/<name>` (`~/.local/state/handaan/apps/<name>`) once an app's packages, `install.sh` and `config/` have all gone through.
 
-An app that declares no packages cannot be judged, so it always reports as not installed. That is honest rather than broken, but it means an app whose whole job is a `config/` tree or an `install.sh` will sit in `--pending` forever and keep the bar's indicator lit. If that bothers you, give it a `packages` file naming something it genuinely needs.
+That is the answer to a question the package list alone cannot answer, and getting this wrong is quiet in both directions:
+
+- An app that installs its packages from **inside `install.sh`** — because it needs a repository enabled or a PKGBUILD patched first — declares none. Judged on packages, it can never report installed, so it stays ticked-off in the picker and pads `handaan pending` forever.
+- An app whose payload is a **`config/` tree** typically names a package it does not own — a browser, say. Judged on packages, it reports installed the moment something *else* pulls that package in. It is then never offered, never selected, and its files are never copied, so the one thing it exists to deliver silently never arrives.
+
+The package check stays on top of the marker, so removing a package by hand puts the app back in the pending list rather than leaving the marker to insist otherwise.
+
+If an app was installed before handaan started recording this — or you installed it by hand — record it without reinstalling:
+
+```bash
+handaan apps --mark <name>...     # record as installed; runs nothing
+handaan apps --unmark <name>...   # the reverse
+```
+
+`--mark` matters most for the `install.sh` case, where the alternative is a reinstall whose only real effect is the marker. For an app that builds from the AUR, that is a full rebuild to learn nothing.
 
 ## Keeping apps in your own repository
 
@@ -223,6 +239,7 @@ handaan's full policy is at `$HANDAAN_PATH/docs/standards/privacy-policy.md`.
 - **A `config/` copy failure is silent.** The copy suppresses its own errors so one unwritable path cannot abort the run. If a file did not appear, check permissions on the destination.
 - **`install.sh` runs before `config/` is copied.** Do not read your own config files from it.
 - **Adding an app to handaan's own tree does not work.** It is not a place apps go, and `git pull` replaces it. Apps live in your dotfiles repository, deployed to `~/.config/handaan/apps/`.
+- **An app is only "installed" once handaan has installed it.** Writing the app directory is not enough, and neither is having its packages already. Until it goes through `handaan apps`, its `config/` has not been copied — the usual symptom is a `.desktop` file that never appears in your launcher.
 - **Nothing uninstalls.** Unticking in the picker, or deleting the app directory, leaves the packages and the files in place.
 
 ## Testing an app before you trust it

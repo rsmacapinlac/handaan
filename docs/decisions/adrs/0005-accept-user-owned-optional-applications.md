@@ -30,10 +30,14 @@ apps/<app-name>/
 
 `meta`'s tag reuses the existing `# handaan:summary=` self-declaration convention `bin/handaan-*` scripts already use, rather than inventing a second metadata format.
 
+**Whether an app is installed is handaan's own record, not an inference about it.** `handaan-apps` writes a marker to `$HANDAAN_STATE/apps/<app-name>` when it installs one, and an app counts as installed when that marker is present *and* every package it still declares is. Inferring it from the package list alone is wrong in both directions: an app that installs from inside its own `install.sh` declares no packages, so it can never report installed; and an app whose payload is a `config/` tree reports installed the moment anything else pulls in the one package it happens to name, so it is never offered, never selected, and its files are never copied. Keeping the package check on top of the marker is what lets removing a package by hand put the app back in the pending list. `handaan-apps --mark` records an app that was installed before the marker existed, without reinstalling it.
+
 ## Consequences
 
 Selection becomes flat and per-app, one entry per discovered `apps/<app-name>/` directory, rather than the pre-bundled groups an app menu would otherwise tempt handaan into curating.
 
 `install.sh` and `update.sh` are arbitrary shell running with the same privileges as the installer, including `sudo`. That is an accepted trust boundary for a single-user system pointing at a repository it owns, not something this record adds a sandbox for.
+
+The marker is per-machine state, so it needs a migration to reach machines that installed apps before it existed; without one, every app they already have reports pending at once. The backfill reproduces the old packages-only answer rather than a better one, so nothing that was ticked before the change comes back unticked — which also means an app that only ever *looked* installed is recorded as installed, since nothing can tell the two apart after the fact.
 
 `handaan-update` now sources every discovered app's `update.sh` unconditionally on every run, in addition to the migrations and tool updates it already runs — a second per-app hook alongside migrations, distinguished by scope: a migration repairs one thing once for machines that predate a fix; an app's `update.sh` is ongoing maintenance for as long as that app stays selected.
