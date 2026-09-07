@@ -37,14 +37,22 @@
 // figures live on hover, where the battery widget puts its percentage and for
 // the same reason.
 //
-// Nothing moves, and this was asked about directly. Motion means "this needs a
-// response" and is rationed to one thing on the whole bar; Workspaces spends
-// it on an urgent window and Battery on a flat one, both conditions that clear
-// when handled. Available updates do not clear -- on Arch they are true most
-// days -- so a pulse bound to them is a permanent animation, which the doc says
-// trains the eye to discard the one channel that has to survive peripheral
-// vision. An update can wait for the end of what you are doing; that is the
-// definition of the thing that must not animate.
+// Colour carries severity, on a three-level ladder ranked by consequence:
+// packages behind (red) over a handaan not pulled (peach) over migrations not
+// applied (muted). The pulse rides the top of it, which is the battery's
+// discipline -- it pulses at critical, not whenever it is drawn.
+//
+// The reservation stands and is worth keeping in front of whoever reads this
+// next. docs/quickshell-widgets.md rations motion to one thing on the bar and
+// requires it to stop when its condition clears; Workspaces spends it on an
+// urgent window and Battery on a flat one, both rare and both self-clearing.
+// Package updates are neither. They are available most days and never clear on
+// their own, so the top of this ladder is where the widget spends most of its
+// visible life, and the pulse with it. That is the known cost of ranking by
+// consequence rather than by rarity, and it was chosen deliberately: an
+// unpatched system is the more serious fact, even though the rarer one would
+// make the better signal. If the channel starts reading as noise, this is the
+// pulse to drop first.
 //
 // Click re-checks, and that is the only interaction. See the MouseArea below
 // for why it is that rather than a shortcut to a terminal.
@@ -79,11 +87,46 @@ BarWidget {
     // MouseArea below, because a hit area is not a layout size.
     implicitWidth: icon.implicitWidth
 
-    // Peach rather than red. This is "there is work waiting", not "something
-    // is wrong": red is the bar's critical level and belongs to a flat battery
-    // and an urgent window, and spending it here would flatten the ladder that
-    // makes those legible.
-    readonly property color tint: Theme.warning
+    // Severity by the kind of thing waiting, not the amount -- the same shape
+    // as the battery's ladder, where 40% and 10% differ in kind (plan to act,
+    // act now) rather than in magnitude. Ranked by consequence: an unpatched
+    // system outranks a handaan this checkout has not pulled, which outranks
+    // bookkeeping the machine has not applied.
+    //
+    //   1  migrations   handaan's own repairs, not yet run
+    //   2  commits      a newer handaan exists
+    //   3  packages     the system itself is behind
+    //
+    // A source whose check could not run reports -1 and so fails every test
+    // here, which is the decided behaviour: an unknown counts as nothing
+    // waiting from that source. It still says so in the tooltip -- treating a
+    // failed check as zero for ranking is not the same as pretending it
+    // succeeded.
+    //
+    // Highest wins. A machine with a pending migration and forty packages is
+    // ranked by the packages, so the rarer problem is reported by the tooltip
+    // rather than the colour.
+    readonly property int level: {
+        if (Maintenance.arch > 0)
+            return 3;
+        if (Maintenance.handaanCommits > 0)
+            return 2;
+        if (Maintenance.handaanMigrations > 0)
+            return 1;
+        return 0;
+    }
+
+    readonly property color tint: {
+        if (root.level >= 3)
+            return Theme.critical;
+        if (root.level === 2)
+            return Theme.warning;
+        return Theme.barTextMuted;
+    }
+
+    // The pulse's amplitude, shared with the glyph's resting size below so the
+    // two cannot drift apart. Matches the workspace and battery pulses.
+    readonly property real pulseScale: 1.12
 
     // The parts of the answer, in the order they are worth acting on. Built as
     // a list so the tooltip never prints a source with nothing waiting -- a
@@ -167,20 +210,28 @@ BarWidget {
         text: "\uf019"
         color: root.tint
         font.family: Style.fontFamily
-        font.pixelSize: Style.fontSize
+        // Drawn at what the pulse used to peak at, so the glyph reads at that
+        // size all the time rather than only for a moment every 1.2s. The
+        // multiplier is the pulse's own amplitude rather than a second number
+        // to keep in sync: change one and the other follows.
+        font.pixelSize: Math.round(Style.fontSize * root.pulseScale)
 
         // Same cycle and amplitude as the workspace and battery pulses, so the
-        // bar has one vocabulary for "look at this" rather than three. Bound to
-        // the condition, not to the widget's existence, so it stops the moment
-        // the counts reach zero -- though for this widget those are nearly the
-        // same thing, which is the reservation recorded at the top of the file.
+        // bar has one vocabulary for "look at this" rather than three.
+        //
+        // Bound to the top of the ladder rather than to the widget existing,
+        // which is the battery's discipline: it pulses at critical, not
+        // whenever it is drawn. The reservation recorded at the top of the file
+        // still stands, and is sharper here than for the battery -- package
+        // updates are available most days and never clear on their own, so the
+        // top level is where this widget spends most of its visible life.
         SequentialAnimation on scale {
-            running: root.active
+            running: root.level >= 3
             loops: Animation.Infinite
             alwaysRunToEnd: true
 
             NumberAnimation {
-                to: 1.12
+                to: root.pulseScale
                 duration: 620
                 easing.type: Easing.InOutSine
             }

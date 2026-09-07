@@ -83,18 +83,24 @@ cycle and amplitude for critical-and-discharging, so the bar has one vocabulary
 for urgency rather than several.
 
 **The update indicator is a deliberate exception, and it is worth being honest
-about which rule it breaks.** It pulses whenever it is visible -- and it is only
-ever visible when something is pending -- so "stops when the condition clears"
-and "runs for as long as the widget exists" are the same statement for it, which
-is the shape this section calls decoration. Available updates are also not
-urgent in the sense the rest of this section means: they wait for the end of
-what you are doing. It was added on the owner's judgement after seeing both
-versions on a real bar, against the argument above rather than in ignorance of
-it. Two things follow. It is now the third holder of a channel this section
-rations to one, so a nearly-flat battery and a pending update can pulse in
-unison and neither will read as the urgent one; and if the channel starts
-feeling like noise, this is the pulse to remove first, because it is the one
-carrying the least.
+about which rule it breaks.** It carries a three-level colour ladder and pulses
+only at the top of it, which is the battery's discipline exactly -- motion at
+the severe end, not whenever the widget is drawn. What it does not have is the
+battery's other property: its top level is *package updates available*, and on
+Arch that is true most days and never clears on its own. So the pulse is bound
+to a condition that recurs rather than one that resolves, which is the shape
+this section calls decoration.
+
+That was chosen with the alternative in view. Ranking by rarity instead --
+pending migrations at the top, which are unusual and self-clearing -- would have
+made the better signal, and ranking by consequence was preferred anyway, because
+an unpatched system is the more serious fact about a machine. Two things follow.
+It is the third holder of a channel this section rations to one, and it collides
+worst exactly where it matters: at or below 15% the battery is also `critical`
+red on the same 620ms cycle, so a nearly-flat battery and a backlog of packages
+render as the same colour at the same rhythm. And if the channel starts feeling
+like noise, this is the pulse to remove first, because it is the one carrying
+the least.
 
 ## Detail is progressively disclosed
 
