@@ -4,3 +4,4 @@ singleton Colors 1.0 Colors.qml
 singleton Theme 1.0 Theme.qml
 singleton Style 1.0 Style.qml
 singleton Maintenance 1.0 Maintenance.qml
+singleton NetworkPreview 1.0 NetworkPreview.qml

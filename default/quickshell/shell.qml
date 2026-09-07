@@ -21,12 +21,13 @@ ShellRoot {
         ]
 
         rightWidgets: [
-            // Leads the right section: it is absent most of the time, so
-            // anything after it would shift sideways whenever it appeared.
-            // Placed first, the widgets that are always there keep their
-            // position and only the bar's leading edge moves.
+            // Optional indicators lead the right section, keeping Battery
+            // and Clock in place when either indicator appears or disappears.
             Component {
                 Modules.Updates {}
+            },
+            Component {
+                Modules.Network {}
             },
             Component {
                 Modules.Battery {}
