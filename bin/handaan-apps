@@ -55,8 +55,7 @@ one that declares none cannot be judged and is always listed.
 
 None found yet? Nothing is wrong -- handaan ships no applications of its own.
 Add one in your own dotfile repository as $APPS_ROOT/<name>/, then symlink or
-copy it into place there, following the convention in
-docs/decisions/adrs/0005-accept-user-owned-optional-applications.md.
+copy it into place there. The guide is $HANDAAN_PATH/docs/extending-with-apps.md.
 
 Account-bound apps are handled separately. They are useless until you sign in,
 so they ship as one-shot installers you run by hand after the desktop is up:

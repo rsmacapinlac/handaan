@@ -2,7 +2,7 @@
 
 A minimal, recreatable single-user Arch + Hyprland desktop that installs into its own tree and can rebuild a machine in 10–15 minutes.
 
-It is optimized for the hardware I own, and it caters to two use cases: an ordinary desktop (browsing, office tools) and a terminal workspace. It extends with your own tools and apps.
+It is optimized for the hardware I own, and it caters to two use cases: an ordinary desktop (browsing, office tools) and a terminal workspace. It extends with your own tools and apps, which you add from a repository of your own rather than by forking this one — see [Extending handaan with your own applications](docs/extending-with-apps.md).
 
 The terminal workspace means the tooling — Kitty, Neovim, ranger, ripgrep, fzf, lazygit. It does not include a shell or a multiplexer: handaan installs no shell, runs no `chsh`, and does not install tmux, because those come with configuration that is yours rather than handaan's. Both are `handaan apps` away, supplied from your own dotfile repository.
 
@@ -30,7 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/rsmacapinlac/handaan/main/boot.sh |
 sudo reboot
 curl -fsSL https://raw.githubusercontent.com/rsmacapinlac/handaan/main/boot.sh | bash
 
-# reboot into Hyprland, then pick any optional application groups
+# reboot into Hyprland, then pick any of your own optional applications
 sudo reboot
 handaan apps
 ```
@@ -57,7 +57,7 @@ handaan migrate              # apply pending migrations only
 handaan diff-config          # what in ~/.config has drifted from the defaults
 handaan refresh-config <p>   # take a newer default (backs up yours first)
 handaan promote-config <p>   # send a local edit back into the tree
-handaan apps [group ...]     # optional application groups
+handaan apps [name ...]      # your own optional applications
 ```
 
 ## Development setup
