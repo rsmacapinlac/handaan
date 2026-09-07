@@ -1,6 +1,11 @@
 # ADR Changelog
 
 
+## 2026-09-06 (seeding)
+
+- **0003** edited in place. It endorsed `seed-config.sh` breaking every symlink under `~/.config` that pointed into a checkout, calling the guard one that "matters just as much now that two independent trees seed the same directory". It mattered in the opposite direction: the sweep deleted the live deployment of any dotfile repository that still uses symlinks, three levels deep, on every installer run. The write-through hazard it was guarding against is real and is now closed by seeding file-by-file and skipping paths another tree owns, rather than by deleting anything.
+
+
 ## 2026-09-06 (login shell)
 
 - **0003** edited in place. Its env-bootstrap consumer list named `~/.zshenv` as one of the entry points handaan wires; handaan no longer writes that file. The list now names only the three handaan owns, and says that a non-login interactive shell — which none of them reach — has to source env-bootstrap from the user's own rc. The VM-rehearsal paragraph reads in the past tense about `chsh`.
