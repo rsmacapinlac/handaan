@@ -14,11 +14,6 @@
 -- config/systemd/user/quickshell.service -- but it attaches to
 -- graphical-session.target the same way, so it belongs to systemd, not here.
 --
--- waybar is started by neither mechanism. setup/arch.sh installs the package
--- but does not enable its unit, so it stays available as a fallback bar and
--- runs only when started by hand (`systemctl --user start waybar`). Adding an
--- exec here would undo that, and would put two bars on the screen at once.
---
 -- What remains is what has no unit. Each goes through uwsm-app so it lands in
 -- its own systemd scope and dies with the session instead of being reparented
 -- to init. Use absolute paths: uwsm does not inherit an interactive PATH.
@@ -35,3 +30,10 @@ hl.on("hyprland.start", function()
     launch("blueman-applet")
     launch(handaan .. "/bin/handaan-wallpaper-set --initial")
 end)
+
+-- Monitor hotplug and blank-screen recovery, which is session wiring like the
+-- above rather than configuration. Chained from here rather than listed in
+-- ~/.config/hypr/hyprland.lua, because handaan seeds that file once and may
+-- never edit it again -- a default reached only by a line in your file could not
+-- reach a machine that is already installed. See docs/monitors.md.
+require("hypr.monitors")

@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+# handaan:summary=Recover a screen that came up blank because its EDID carried no modes.
+# handaan:hidden=called from default/hypr/monitors.lua, not by hand
+#
+# A monitor that was powered off when Hyprland read its EDID answers with a
+# partial one carrying no video modes. Hyprland enables the output anyway, at
+# 0x0, and the screen stays black. Nothing recovers this on its own: switching
+# the monitor on afterwards fires no DRM hotplug, forcing a re-probe needs root,
+# and only `hyprctl reload` makes Hyprland read the EDID again. So a machine can
+# sit blank all night, with no error anywhere to say why.
+#
+# Hence a loop rather than a single check: reload, wait, look again, and back off
+# because the wait can be hours. It exits the moment there is nothing to fix,
+# which is what happens on almost every invocation.
+#
+# Usage: handaan-monitor-recover
+
+set -euo pipefail
+
+lock_file="${XDG_RUNTIME_DIR:-/tmp}/handaan-monitor-recover.lock"
+
+first_delay=3
+max_delay=60
+
+# A compositor that will not answer is not the same as one saying "nothing is
+# wrong", but one that stays silent has gone and taken this loop's reason with
+# it. Give up after this many consecutive non-answers.
+unanswered_limit=20
+
+# Returns 0 modeless, 1 not, 2 when the compositor cannot say. Mirrors are absent
+# from plain `monitors`, hence `all` plus an explicit disabled filter -- an
+# output Hyprland has deliberately turned off is not a blank screen.
+modeless() {
+    local mons state
+    mons=$(hyprctl monitors all -j 2>/dev/null) || return 2
+    state=$(jq 'if any(.[]; .disabled != true and (.width == 0 or .height == 0)) then 0 else 1 end' \
+        <<<"$mons" 2>/dev/null) || return 2
+
+    case $state in
+        0 | 1) return "$state" ;;
+        *)     return 2 ;;
+    esac
+}
+
+# One loop at a time. Every event that can produce a blank screen calls this, and
+# our own reload calls it again through hl.on("config.reloaded") -- so a second
+# invocation is asking the question the running loop is already answering, and
+# must not start a reload of its own.
+exec 9>"$lock_file"
+flock -n 9 || exit 0
+
+delay=$first_delay
+unanswered=0
+
+while true; do
+    if modeless; then
+        state=0
+    else
+        state=$?
+    fi
+
+    if (( state == 1 )); then
+        break
+    fi
+
+    if (( state == 2 )); then
+        unanswered=$(( unanswered + 1 ))
+        if (( unanswered > unanswered_limit )); then
+            break
+        fi
+    else
+        unanswered=0
+        hyprctl reload >/dev/null 2>&1 || true
+    fi
+
+    sleep "$delay"
+
+    # Only a reload we actually issued earns a longer wait. A silent compositor
+    # keeps the short interval, since it may be a session still coming up.
+    if (( state == 0 )); then
+        delay=$(( delay * 2 ))
+        if (( delay > max_delay )); then
+            delay=$max_delay
+        fi
+    fi
+done

@@ -18,9 +18,9 @@
 # already uses for before_sleep_cmd.
 #
 # Lives beside the config it serves, like hyprlock-capslock. Wired up in
-# conf/binds.lua (the lid itself) and conf/monitors.lua (monitor
-# hotplug, which is what recovers the panel when the dock is pulled while the
-# lid is still shut -- that fires no lid event).
+# default/hypr/binds.lua (the lid itself) and default/hypr/monitors.lua (session
+# start and monitor hotplug -- the latter is what recovers the panel when the
+# dock is pulled while the lid is still shut, which fires no lid event).
 #
 # Usage: lid-switch closed|open|sync
 
@@ -144,10 +144,12 @@ reconcile() {
         resettle_bar
     else
         internal_disabled "$internal" || return 0
-        # Reload rather than re-adding the output by hand: conf/monitors.lua is
-        # the only place the panel's mode, position and scale are written down,
-        # and a reload reapplies them without this script having to remember or
-        # duplicate them.
+        # Reload rather than re-adding the output by hand: your monitor rules
+        # are the only place the panel's mode, position and scale are written
+        # down -- whether that is the catch-all in conf/monitors.lua, a named
+        # rule beside it, or one in conf/local.lua -- and a reload reapplies
+        # whichever of them claims the panel, without this script having to
+        # remember or duplicate any of it.
         hyprctl reload >/dev/null
         resettle_bar
     fi

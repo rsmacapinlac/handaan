@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+# handaan:summary=Show, set or step the focused monitor's scale.
+# handaan:args=[up|down|SCALE]
+#
+# This sets Hyprland's scale for the output, which sizes everything
+# Wayland-native and takes effect at once.
+#
+# It deliberately leaves GDK_SCALE alone. Omarchy's equivalent writes the two
+# together, which is correct there because it also sets
+# `xwayland:force_zero_scaling`: XWayland renders 1:1 and GDK_SCALE is what
+# sizes it. handaan does not set that option, so Hyprland scales XWayland
+# surfaces itself and they already follow the monitor scale -- writing GDK_SCALE
+# to match would scale them a second time on top. It is also integer-only, so it
+# could not express most of the ladder below anyway. See docs/monitors.md.
+#
+# Hyprland refuses a scale where the mode does not divide into whole logical
+# pixels, counted in 1/120ths, so a requested scale is rounded up to the nearest
+# value that does. The gcd trick for finding those is adapted from Omarchy's
+# omarchy-hyprland-monitor-scaling.
+#
+# The change is applied to the running session with `hyprctl eval`, and then
+# written back into ~/.config/hypr/conf/monitors.lua so it survives a reboot --
+# but only into the knob handaan seeds there, and only when that knob unambiguously
+# governs the screen in question. The knob is the catch-all's scale, so on a
+# machine where the catch-all claims several outputs it is not the focused
+# monitor's setting at all; there the runtime change stands on its own and the
+# command prints the named rule to add instead. If you have given the monitor a
+# named rule with its own scale, that rule wins on the next reload and this says
+# so rather than editing your rule.
+#
+# Usage: handaan-monitor-scale [up|down|SCALE]
+
+set -euo pipefail
+
+# The ladder `up` and `down` step through. Cleaning collapses some of these onto
+# the same effective value on a given mode; duplicates are dropped, so a step
+# always lands somewhere different.
+scales="1 1.25 1.5 1.6 1.75 2 2.5 3"
+
+monitor_lua="$HOME/.config/hypr/conf/monitors.lua"
+
+usage() {
+    cat <<USAGE
+Usage: $(basename "$0") [up|down|SCALE]
+
+    $(basename "$0")            # print the focused monitor's scale
+    $(basename "$0") up         # next scale up the ladder ($scales)
+    $(basename "$0") down       # next scale down
+    $(basename "$0") 1.6        # a specific scale, between 1 and 3
+USAGE
+}
+
+focused() {
+    hyprctl monitors -j | jq -e -c '.[] | select(.focused == true)'
+}
+
+# Round up to the nearest scale Hyprland will accept for this mode: the clean
+# values are the divisors of gcd(width * 120, height * 120).
+clean_scale() {
+    awk -v scale="$1" -v width="$2" -v height="$3" '
+        function gcd(a, b, t) { while (b) { t = a % b; a = b; b = t } return a }
+        BEGIN {
+            g = gcd(width * 120, height * 120)
+            k = int(scale * 120 + 0.5)
+            if (k > g) k = g
+            while (g % k != 0) k++
+            printf "%g\n", k / 120
+        }'
+}
+
+# Snap the current scale to the cleaned ladder, then step one place. Snapping
+# first matters because Hyprland reports a float, so an exact match never lands.
+step_scale() {
+    local direction="$1" current="$2" width="$3" height="$4"
+
+    awk -v direction="$direction" -v current="$current" -v list="$scales" \
+        -v width="$width" -v height="$height" '
+        function gcd(a, b, t) { while (b) { t = a % b; a = b; b = t } return a }
+        function clean(scale,   g, k) {
+            g = gcd(width * 120, height * 120)
+            k = int(scale * 120 + 0.5)
+            if (k > g) k = g
+            while (g % k != 0) k++
+            return k / 120
+        }
+        BEGIN {
+            count = split(list, presets, " ")
+            n = 0
+            for (i = 1; i <= count; i++) {
+                effective = clean(presets[i])
+                if (n == 0 || effective != ladder[n]) ladder[++n] = effective
+            }
+
+            best = 1
+            best_diff = 1e9
+            for (i = 1; i <= n; i++) {
+                diff = current - ladder[i]
+                if (diff < 0) diff = -diff
+                if (diff < best_diff) { best_diff = diff; best = i }
+            }
+
+            if (direction == "up")   best = (best < n ? best + 1 : n)
+            if (direction == "down") best = (best > 1 ? best - 1 : 1)
+
+            printf "%g\n", ladder[best]
+        }'
+}
+
+# True when a named rule claims this output, in which case the seeded knob is not
+# what decides its scale after the next reload. Comments are cut first so a
+# commented-out example cannot pose as a rule.
+named_rule_exists() {
+    local output="$1"
+    [[ -f $monitor_lua ]] || return 1
+
+    sed -E -e 's/--\[\[[^]]*\]\]//g' -e 's/--.*$//' "$monitor_lua" \
+        | grep -q "output[[:space:]]*=[[:space:]]*\"$output\""
+}
+
+# How many enabled outputs the catch-all governs: every one without a named rule
+# of its own. A `desc:` rule is not detected, which overcounts and so errs toward
+# refusing to persist -- the safe direction.
+catch_all_outputs() {
+    local out count=0
+
+    while read -r out; do
+        [[ -n $out ]] || continue
+        named_rule_exists "$out" || count=$(( count + 1 ))
+    done < <(hyprctl monitors all -j | jq -r '.[] | select(.disabled != true) | .name')
+
+    printf '%s\n' "$count"
+}
+
+persist() {
+    local scale="$1" name="$2" governed
+
+    if [[ ! -f $monitor_lua ]] || ! grep -q '^local handaan_monitor_scale = ' "$monitor_lua"; then
+        echo "Not persisted: no handaan_monitor_scale knob in $monitor_lua"
+        return 0
+    fi
+
+    # The knob is the catch-all's scale, and the catch-all applies to every output
+    # it claims. Writing it when it governs more than one screen would change the
+    # others on the next reload -- which is not what "set the focused monitor's
+    # scale" asked for. Runtime already has the right answer; say what to add.
+    governed=$(catch_all_outputs)
+    if (( governed > 1 )); then
+        cat <<MSG
+Not persisted: the catch-all rule governs $governed outputs, so writing
+handaan_monitor_scale would change every one of them on the next reload.
+$name is set for this session only.
+
+To keep it for $name alone, add a named rule to $monitor_lua
+(or ~/.config/hypr/conf/local.lua if it should stay on this machine):
+
+    hl.monitor({ output = "$name", mode = "preferred", position = "auto", scale = $scale })
+MSG
+        return 0
+    fi
+
+    # This one line and nothing else. handaan_gdk_scale is an XWayland knob that
+    # does not track the monitor scale here -- see the header -- and a rule is
+    # the user's to edit.
+    sed -i -E \
+        -e "s|^local handaan_monitor_scale = .*|local handaan_monitor_scale = $scale|" \
+        "$monitor_lua"
+
+    echo "Wrote scale $scale to $monitor_lua"
+}
+
+set_scale() {
+    local requested="$1"
+    local info name width height refresh current new
+
+    info=$(focused)
+    name=$(jq -r '.name' <<<"$info")
+    width=$(jq -r '.width' <<<"$info")
+    height=$(jq -r '.height' <<<"$info")
+    refresh=$(jq -r '.refreshRate' <<<"$info")
+    current=$(jq -r '.scale' <<<"$info")
+
+    # The name is interpolated into Lua that Hyprland then executes, and a
+    # headless output can be created with any name at all.
+    if [[ ! $name =~ ^[A-Za-z0-9._-]+$ ]]; then
+        echo "handaan-monitor-scale: refusing unsafe monitor name: $name" >&2
+        exit 1
+    fi
+
+    new=$(clean_scale "$requested" "$width" "$height")
+
+    # position stays "auto": changing the scale changes the output's logical
+    # size, so any explicit layout has to be recomputed anyway.
+    hyprctl eval "hl.monitor({ output = \"$name\", mode = \"${width}x${height}@${refresh}\", position = \"auto\", scale = $new })" >/dev/null
+
+    printf '%s: %s -> %s\n' "$name" "$current" "$new"
+    if [[ $requested != "$new" ]]; then
+        echo "Rounded up from $requested: ${width}x${height} accepts no closer scale."
+    fi
+
+    persist "$new" "$name"
+
+    if named_rule_exists "$name"; then
+        echo "Note: $monitor_lua has a named rule for $name, which wins on the next reload."
+    fi
+}
+
+case ${1:-} in
+    "")
+        focused | jq -r '.scale' | awk 'NR == 1 { printf "%g\n", $0 }'
+        ;;
+    -h | --help)
+        usage
+        ;;
+    up | down)
+        info=$(focused)
+        set_scale "$(step_scale "$1" \
+            "$(jq -r '.scale' <<<"$info")" \
+            "$(jq -r '.width' <<<"$info")" \
+            "$(jq -r '.height' <<<"$info")")"
+        ;;
+    *)
+        if [[ $1 =~ ^[0-9]+([.][0-9]+)?$ ]] \
+            && awk -v scale="$1" 'BEGIN { exit !(scale >= 1 && scale <= 3) }'; then
+            set_scale "$1"
+        else
+            usage >&2
+            exit 1
+        fi
+        ;;
+esac

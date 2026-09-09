@@ -1,44 +1,71 @@
 -- Monitors
 -- See https://wiki.hypr.land/Configuring/Basics/Monitors/
+--
+-- This file is yours. handaan ships one catch-all rule and two knobs, because
+-- it cannot know what is plugged into your machine. Add rules for the screens
+-- you actually own below -- or in conf/local.lua, which is untracked, if the
+-- rule carries a serial number or anything else particular to one machine.
+--
+-- What is attached, and which modes each output offers:
+--
+--     hyprctl monitors all
 
--- The built-in panel. hypr/lid-switch disables this output at runtime while
--- the machine runs clamshell, and re-enables it with `hyprctl reload`, which
--- reapplies the rule below -- so this stays the only place the panel's mode,
--- position and scale are written down.
-hl.monitor({
-    output   = "eDP-1",
-    mode     = "1920x1080@60.01",
-    position = "auto",
-    scale    = 1.25,
-})
+-- Hyprland's own scale for the output. It sizes everything Wayland-native,
+-- accepts fractions (1.25, 1.6), and applies the moment it is set. "auto" lets
+-- Hyprland pick per display, which is the right answer until it is not --
+-- `handaan-monitor-scale up` writes a number back into this line.
+local handaan_monitor_scale = "auto"
 
-hl.monitor({
-    output   = "desc:LG Electronics LG ULTRAGEAR 405BORN09710",
-    mode     = "2560x1440@99.95",
-    position = "auto",
-    scale    = 1,
-})
-
--- Fallback for anything else plugged in
+-- The catch-all. It claims every output no named rule has taken, so it is what
+-- a screen handaan has never seen gets -- which is the point. Keep it that way:
+-- a named rule for `eDP-1` would apply its mode and scale to every laptop panel
+-- in existence, and the catch-all would never see the panel at all.
 hl.monitor({
     output   = "",
     mode     = "preferred",
     position = "auto",
-    scale    = "auto",
+    scale    = handaan_monitor_scale,
 })
 
--- Monitor hotplug.
+-- GDK_SCALE is the factor GTK draws its own UI at. Two things about it, both
+-- measured rather than taken from the documentation:
 --
--- The lid binds in conf/binds.lua cover the lid moving, but pulling the dock
--- while the lid is already shut fires no lid event -- and leaving the panel
--- disabled there would leave the session with no display at all. These hooks
--- are what bring it back.
-local lid_switch = (os.getenv("HANDAAN_PATH")
-    or (os.getenv("HOME") .. "/.local/share/handaan")) .. "/bin/handaan-lid-switch"
+--   * It is parsed as an integer. "1.25" and "1.9" both come out as 1; only 2
+--     gives 2. There is no way to ask for 1.25 here.
+--   * It does nothing for Wayland-native GTK apps. Those take their scale from
+--     the compositor, so the monitor scale above already reaches them. This
+--     applies to XWayland apps and nothing else.
+--
+-- So it is the XWayland knob, and 1 is right for handaan as it stands, because
+-- handaan does not set `xwayland:force_zero_scaling`. Hyprland scales XWayland
+-- surfaces itself, so they are already the size the monitor scale asks for --
+-- soft rather than crisp, but correct. Raising this would scale them a second
+-- time on top of that. Omarchy sets that option and pairs it with GDK_SCALE 2,
+-- which trades softness for XWayland windows sized by an integer; see
+-- docs/monitors.md before taking that route on a 1.25 panel.
+--
+-- A change here only reaches an application when it restarts.
+local handaan_gdk_scale = 1
+hl.env("GDK_SCALE", tostring(handaan_gdk_scale))
 
-local function sync_lid_state()
-    hl.exec_cmd(lid_switch .. " sync")
-end
+-- Cursor size is a handaan default (default/hypr/env.lua, 24 -- sized for scale
+-- 1). This file loads after that one, so a hidpi panel can raise it here:
+--
+-- hl.env("XCURSOR_SIZE", "36")
+-- hl.env("HYPRCURSOR_SIZE", "36")
 
-hl.on("monitor.added", sync_lid_state)
-hl.on("monitor.removed", sync_lid_state)
+-- Examples. A named rule beats the catch-all above, whatever the order.
+--
+-- One output pinned to a mode, placed, and scaled:
+-- hl.monitor({ output = "DP-2", mode = "2560x1440@144", position = "0x0", scale = 1 })
+--
+-- By description rather than connector, for a monitor that moves between ports.
+-- `hyprctl monitors all` prints the string; the trailing serial makes it one
+-- machine's rule, so prefer conf/local.lua for it:
+-- hl.monitor({ output = "desc:LG Electronics LG ULTRAWIDE", mode = "preferred", position = "auto", scale = 1 })
+--
+-- Turned on its side (transform 1 = 90 degrees, 3 = 270):
+-- hl.monitor({ output = "DP-2", mode = "preferred", position = "auto", scale = 1, transform = 1 })
+--
+-- A ghost output, which some docks and Thunderbolt displays advertise:
+-- hl.monitor({ output = "DP-3", disabled = true })

@@ -1,6 +1,10 @@
 # ADR Changelog
 
 
+## 2026-09-09 (monitors)
+
+- **0003** edited in place. Its two-tree table asks which tree a file belongs in and assumed one answer per file. 
+
 ## 2026-09-06 (app install state)
 
 - **0005** edited in place. It described how an app is *defined* but never how handaan decides one is *installed*, and the implementation inferred it from the package list alone. That was wrong in both directions -- apps installing from inside `install.sh` declared no packages and could never report installed, while an app whose payload was a `config/` tree reported installed as soon as anything else pulled in the one package it named, so it was never selected and its files were never copied. The record now names the marker under `$HANDAAN_STATE/apps/` as the answer, with the package check kept on top of it.

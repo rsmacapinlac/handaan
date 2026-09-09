@@ -24,7 +24,7 @@ Decisions already made and living as prose in `README.md`, `AGENTS.md`, or `docs
 - uwsm wrapping `start-hyprland`, so packaged user units actually start
 - Packaged systemd user units rather than `exec-once`, for hypridle, hyprpaper, mako and hyprpolkitagent
 - Quickshell gets a unit of its own, with `QS_DISABLE_FILE_WATCHER=1` set on it
-- No clamshell mode — lid handling left to systemd-logind
+- Suspend on lid close left to systemd-logind's own defaults, with clamshell handled in `handaan-lid-switch` by dropping the panel out of the layout — see [Monitors](../monitors.md)
 
 **Compositor and bar**
 - Hyprland configured in Lua, while hyprlock/hypridle/hyprpaper stay hyprlang
