@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Pinentry dispatcher for gpg-agent.
-# Deployed by rcm to ~/.bin/; referenced from ~/.gnupg/gpg-agent.conf.
+# Referenced from ~/.gnupg/gpg-agent.conf.
 #
 # Candidates are probed with --version before being exec'd. A pinentry binary
 # can be present but unusable -- Arch ships pinentry-qt while its Qt6 backend

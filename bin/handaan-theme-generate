@@ -19,8 +19,8 @@
 # Hand-maintaining three copies means they drift, and a drifted palette is
 # invisible until something renders in the wrong colour. This script makes
 # default/themed/<flavor>.json authoritative and rewrites all three outputs from
-# it. Run it after editing the source, then commit the generated files: rcm
-# reads them from the checkout, and Hyprland reads colors.lua at session start.
+# it. Run it after editing the source, then commit the generated files: they are
+# read live out of the checkout, and Hyprland reads colors.lua at session start.
 #
 # Safe to rerun; output is deterministic, so an unchanged source produces no
 # diff.

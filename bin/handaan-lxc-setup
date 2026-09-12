@@ -30,16 +30,6 @@ update_system_packages() {
     log_success "System packages updated"
 }
 
-update_dotfiles() {
-    log_info "Updating dotfiles via rcup..."
-    if command -v rcup &>/dev/null; then
-        rcup -v
-        log_success "Dotfiles updated"
-    else
-        log_warning "rcup not found, skipping"
-    fi
-}
-
 configure_npm_user_prefix() {
     if ! command -v npm &>/dev/null; then
         log_warning "npm not found, skipping npm user prefix setup"
@@ -125,7 +115,6 @@ main() {
     log_info "Starting LXC maintenance..."
 
     update_system_packages
-    update_dotfiles
     update_npm_packages
     update_mise_tools
     update_nvim_plugins

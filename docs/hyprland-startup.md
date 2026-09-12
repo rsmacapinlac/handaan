@@ -104,7 +104,7 @@ journalctl --user -u quickshell -b
 Two properties of that unit are deliberate and worth not undoing:
 
 - `QS_DISABLE_FILE_WATCHER=1`. Quickshell would otherwise hot-reload on any
-  file change, and `rcup` or a package upgrade rewriting the tree mid-write
+  file change, and a `git pull` or a package upgrade rewriting the tree mid-write
   reloads it against a half-written config. Apply changes with an explicit
   `systemctl --user restart quickshell.service`.
 - A restart is *required*, not merely tidier, after adding a new QML singleton.

@@ -70,9 +70,8 @@ hyprctl monitors
 
 Run `hyprctl reload` only when the live session is meant to be reloaded.
 
-For `rcm` changes prefer a dry run (`rcup -n`) before applying. Validate strict
-JSON with `python -m json.tool`, never JSONC; parse YAML with whatever tooling
-is installed.
+Validate strict JSON with `python -m json.tool`, never JSONC; parse YAML with
+whatever tooling is installed.
 
 Confirm that the VM profile still matches the documented 30 GiB disk geometry:
 
