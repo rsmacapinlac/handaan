@@ -1,5 +1,6 @@
 # Core system and terminal packages. Everything here is required for a usable
-# machine; anything optional belongs in a handaan-apps group instead.
+# machine; anything optional belongs in an app of its own -- see
+# docs/extending-with-apps.md.
 base-devel
 linux-headers
 linux-firmware

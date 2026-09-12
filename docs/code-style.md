@@ -14,7 +14,7 @@ The single most valuable convention here, and the one that varies most. Keep it 
 
 ## Shell
 
-**Shebang follows where the script runs.** `boot.sh`, `install.sh` and everything under `install/` use `#!/bin/bash`: they run on a known Arch system where the path is certain. Everything in `bin/` uses `#!/usr/bin/env bash`, since those run from a user's `PATH` on machines where bash may not be `/bin/bash` — the headless LXC target included. `bin/tat` and `bin/handaan-hyprlock-capslock` are `#!/bin/sh` on purpose — keep them POSIX, and do not reach for bash features in them.
+**Shebang follows where the script runs.** `boot.sh`, `install.sh` and everything under `install/` use `#!/bin/bash`: they run on a known Arch system where the path is certain. Everything in `bin/` uses `#!/usr/bin/env bash`, since those run from a user's `PATH` on machines where bash may not be `/bin/bash` — the headless LXC target included. `bin/handaan-hyprlock-capslock` is `#!/bin/sh` on purpose — keep it POSIX, and do not reach for bash features in it.
 
 **Every script that executes sets strict mode**, on the line after the shebang:
 
@@ -72,7 +72,7 @@ Neovim's own Lua config no longer lives in this repository — it moved to the p
 
 ## QML
 
-Four-space indent, unanimous across all ten files. `id: root` is the first line inside a root element, followed by property declarations, then children.
+Four-space indent, unanimous across all sixteen files, no tabs. `id: root` is the first line inside a root element, followed by property declarations, then children.
 
 Imports go `QtQuick` first, then the repository's own modules:
 

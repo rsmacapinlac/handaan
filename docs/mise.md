@@ -36,10 +36,9 @@ the mise-backed commands have been verified.
 - Maintenance regenerates the launchers and runs
   `MISE_MINIMUM_RELEASE_AGE=0 mise up`.
 
-Do not track `config/mise/config.toml` in this repo. rcm maps `config/` onto
-`~/.config/`, and the lazy launchers run `mise use --global`, which writes to
-that file — tracking it would mean every first run of a launcher dirties the
-working tree. mise's own config stays untracked and is configured imperatively
+Do not track `config/mise/config.toml` in this repo. `config/` seeds `~/.config/`,
+and the lazy launchers run `mise use --global`, which writes to that file —
+tracking it would mean every first run of a launcher dirties the working tree. mise's own config stays untracked and is configured imperatively
 from the setup scripts.
 
 ## Other mise candidates

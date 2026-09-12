@@ -114,5 +114,5 @@ Find it in rofi; it opens in its own window with app_id "$APP_CLASS", so you can
 target it from config/hypr/conf/rules.lua. Log in on first launch -- the session
 persists through the gnome-libsecret store Chromium is pinned to.
 
-Neither file is tracked by rcm; rerun this script after a rebuild.
+Neither file is tracked by handaan; rerun this script after a rebuild.
 EOF
