@@ -49,12 +49,20 @@ emit() {
 }
 
 # ------------------------------------------------------------------- apps
-if [[ -d $HOME/.config/handaan/apps ]]; then
-    emit apps "$("$HANDAAN_PATH/bin/handaan-apps" --pending 2>/dev/null | count_lines)"
-else
+# The catalogue comes from handaan-apps-manifest, the same command the
+# installer reads, so the bar and the picker cannot disagree about which apps
+# are waiting. A manifest that could not be produced reports '?' rather than 0:
+# counting the empty output of a failed check would say nothing is waiting
+# because the check broke, which is the distinction this whole script exists
+# to preserve.
+if [[ ! -d $HOME/.config/handaan/apps ]]; then
     # No app directory is a real answer, not a broken check: nothing is
     # waiting because nothing has been offered.
     emit apps 0
+elif manifest=$("$HANDAAN_PATH/bin/handaan-apps-manifest" 2>/dev/null); then
+    emit apps "$(jq -r '.[] | select(.installed | not) | .name' <<<"$manifest" | count_lines)"
+else
+    emit apps '?'
 fi
 
 # ------------------------------------------------------------------- arch

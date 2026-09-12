@@ -5,6 +5,10 @@
 // instantiated once per importing file, so every consumer silently gets its
 // own empty copy. Only a type in a declared module is process-wide.
 
+// The installer is the shell's other surface: a dialog rather than a bar, up
+// only while something is choosing apps. It lives here so it inherits Theme --
+// see Ui/Installer.qml and Commons/AppCatalog.qml.
+
 import QtQuick
 import Quickshell
 import qs.Ui
@@ -37,4 +41,6 @@ ShellRoot {
             }
         ]
     }
+
+    Installer {}
 }

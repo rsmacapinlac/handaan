@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# handaan:summary=Install optional apps by name: packages, then install.sh, then config/.
+# handaan:args=<app>... | all
+# handaan:hidden=installs apps, not handaan itself; see docs/standards/core-stays-minimal.md
+#
+# Does the work and nothing else -- no terminal, no picker, no log file. It
+# runs wherever it is called from, which is what makes it scriptable and makes
+# a failure reproducible by hand. The terminal window, the session log and the
+# hold-open-on-failure belong to handaan-apps-terminal, which is what the
+# Quickshell installer spawns.
+#
+# An app is a directory under $HOME/.config/handaan/apps/<name>/ supplied by a
+# dotfile repository the user owns; see docs/extending-with-apps.md and
+# docs/decisions/adrs/0005-accept-user-owned-optional-applications.md.
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+readonly APPS_ROOT="$HOME/.config/handaan/apps"
+readonly APPS_STATE="$HANDAAN_STATE/apps"
+
+usage() {
+    cat <<EOF
+Usage: handaan-apps-install <app>... | all
+
+Installs each named app: its package list, then install.sh, then config/.
+Apps live under $APPS_ROOT. "all" installs every app found there.
+
+Re-running is free: packages are installed with --needed, install.sh is
+written to be rerunnable, and config/ is copied without clobbering.
+EOF
+}
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    usage
+    exit 0
+fi
+
+if (( $# == 0 )); then
+    log_error "No applications named."
+    usage
+    exit 1
+fi
+
+discover_apps() {
+    local dir
+    [[ -d $APPS_ROOT ]] || return 0
+    for dir in "$APPS_ROOT"/*/; do
+        [[ -d $dir ]] || continue
+        basename "$dir"
+    done
+}
+
+# Every name is checked before anything is installed, so a typo in the third
+# name does not leave the first two half-applied.
+resolve_apps() {
+    local requested=("$@") all_apps=() name
+    local -A seen=()
+
+    if (( ${#requested[@]} == 1 )) && [[ ${requested[0]} == all ]]; then
+        mapfile -t all_apps < <(discover_apps)
+        if (( ${#all_apps[@]} == 0 )); then
+            log_error "No apps found under $APPS_ROOT" >&2
+            return 1
+        fi
+        printf '%s\n' "${all_apps[@]}"
+        return 0
+    fi
+
+    for name in "${requested[@]}"; do
+        if [[ $name == all ]]; then
+            log_error "'all' cannot be combined with other app names." >&2
+            return 1
+        fi
+        if [[ ! -d "$APPS_ROOT/$name" ]]; then
+            log_error "No app found at $APPS_ROOT/$name" >&2
+            return 1
+        fi
+        if [[ -z ${seen[$name]:-} ]]; then
+            printf '%s\n' "$name"
+            seen[$name]=1
+        fi
+    done
+}
+
+# packages, then install.sh, then config/ -- in that order, so install.sh can
+# rely on its packages being present but not on its own config files, which
+# land after it. The marker is written last and only here: a run that dies
+# part-way leaves the app pending rather than claiming an install that did not
+# finish.
+install_app() {
+    local name=$1 dir="$APPS_ROOT/$1"
+
+    log_info "Installing $name..."
+
+    if [[ -f "$dir/packages" ]]; then
+        yay_install_list "$dir/packages"
+    fi
+
+    if [[ -f "$dir/install.sh" ]]; then
+        ( source "$dir/install.sh" )
+    fi
+
+    if [[ -d "$dir/config" ]]; then
+        cp -Rn "$dir"/config/. "$HOME/" 2>/dev/null || true
+    fi
+
+    mkdir -p "$APPS_STATE"
+    touch "$APPS_STATE/$name"
+}
+
+# Command substitution, not process substitution: `mapfile < <(...)` reports
+# mapfile's status, never the producer's, so a rejected name would read as a
+# clean run with nothing to do.
+selected=()
+resolved=""
+if ! resolved=$(resolve_apps "$@"); then
+    exit 1
+fi
+mapfile -t selected <<< "$resolved"
+
+begin_handaan_install
+install_aur_helper
+upgrade_system
+
+for app in "${selected[@]}"; do
+    install_app "$app"
+done
+
+remove_build_dependencies
+
+# Tell the bar its pending count is out of date rather than leaving it wrong
+# for up to half an hour. Best-effort on purpose: this script has to work from
+# a TTY with no shell running, and a missing bar is not an install failure.
+qs -p "$HANDAAN_PATH/default/quickshell" ipc call maintenance refresh >/dev/null 2>&1 || true
+
+log_success "Installed: ${selected[*]}"

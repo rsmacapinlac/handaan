@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# handaan:summary=Record an app as installed, or unrecord it, without installing anything.
+# handaan:args=<app>... | --undo <app>...
+# handaan:hidden=repairs handaan's own install record; see handaan apps
+#
+# For an app that predates handaan tracking installs at all, or one recorded by
+# a backfill that guessed wrong. The alternative is a reinstall whose only real
+# effect is the marker -- and for an app that builds from the AUR inside its
+# install.sh, that means a full rebuild to learn nothing.
+#
+# The marker is only half the answer: handaan-apps-manifest also requires every
+# package the app declares to be satisfied, so marking an app whose packages
+# are missing will not make it read as installed.
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+readonly APPS_ROOT="$HOME/.config/handaan/apps"
+readonly APPS_STATE="$HANDAAN_STATE/apps"
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    echo "Usage: handaan-apps-mark <app>... | --undo <app>..."
+    exit 0
+fi
+
+undo=0
+if [[ ${1:-} == --undo ]]; then
+    undo=1
+    shift
+fi
+
+if (( $# == 0 )); then
+    log_error "handaan-apps-mark needs at least one app name."
+    exit 1
+fi
+
+# Every name is checked before anything is written, so a typo in the third name
+# does not leave the first two recorded.
+for app in "$@"; do
+    if [[ ! -d "$APPS_ROOT/$app" ]]; then
+        log_error "No app found at $APPS_ROOT/$app"
+        exit 1
+    fi
+done
+
+mkdir -p "$APPS_STATE"
+for app in "$@"; do
+    if (( undo )); then
+        rm -f "$APPS_STATE/$app"
+        log_success "Recorded $app as not installed."
+    else
+        touch "$APPS_STATE/$app"
+        log_success "Recorded $app as installed."
+    fi
+done

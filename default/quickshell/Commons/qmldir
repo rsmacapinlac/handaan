@@ -5,3 +5,4 @@ singleton Theme 1.0 Theme.qml
 singleton Style 1.0 Style.qml
 singleton Maintenance 1.0 Maintenance.qml
 singleton NetworkPreview 1.0 NetworkPreview.qml
+singleton AppCatalog 1.0 AppCatalog.qml

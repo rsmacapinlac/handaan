@@ -126,19 +126,20 @@ done
 Verify help, rejection, interactive cancellation, and explicit selection:
 
 ```bash
-handaan-apps --help
-handaan-apps not-a-group       # must fail before sudo or upgrades
-handaan-apps                   # open fzf, then cancel with Esc
-handaan-apps media mail
-handaan-apps all               # complete boundary rehearsal
-handaan-apps all               # idempotency rehearsal
+handaan apps-install --help
+handaan apps-install not-an-app    # must fail before sudo or upgrades
+handaan apps-manifest              # the catalogue, as JSON; needs no session
+handaan apps                       # open the installer, then cancel with Esc
+handaan apps-install media mail
+handaan apps-install all           # complete boundary rehearsal
+handaan apps-install all           # idempotency rehearsal
 ```
 
 After installing selected groups, verify only their packages and services. For
 example, Syncthing is its own group:
 
 ```bash
-handaan-apps syncthing
+handaan apps-install syncthing
 pacman -Q syncthing
 systemctl --user is-enabled syncthing.service
 ```

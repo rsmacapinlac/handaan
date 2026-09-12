@@ -16,6 +16,7 @@ local terminal  = "kitty"
 local menu      = home .. "/.config/rofi/rofi-dynamic.sh"
 local powermenu = home .. "/.config/waybar/scripts/powermenu.sh"
 local wallpaper = handaan .. "/bin/handaan-wallpaper-set"
+local installer = handaan .. "/bin/handaan-apps"
 local lid_switch = handaan .. "/bin/handaan-lid-switch"
 
 -- Applications and session
@@ -24,6 +25,7 @@ hl.bind(mainMod .. " + space",         hl.dsp.exec_cmd(menu))
 hl.bind(mainMod .. " + SHIFT + Q",     hl.dsp.window.close())
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 
+hl.bind(mainMod .. " + SHIFT + A",     hl.dsp.exec_cmd(installer))
 hl.bind(ctrlMod .. " + SHIFT + W",     hl.dsp.exec_cmd(wallpaper))
 hl.bind(ctrlMod .. " + ALT + Delete",  hl.dsp.exec_cmd(powermenu))
 

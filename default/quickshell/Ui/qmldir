@@ -3,3 +3,4 @@ module qs.Ui
 Bar 1.0 Bar.qml
 BarWidget 1.0 BarWidget.qml
 Tooltip 1.0 Tooltip.qml
+Installer 1.0 Installer.qml
