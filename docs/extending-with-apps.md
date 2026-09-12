@@ -19,7 +19,7 @@ Everything below is the contract between the two. Nothing in it requires editing
 ~/.config/handaan/apps/<name>/
 ```
 
-Every directory found is an app. The name of the directory is the name of the app — it is what the picker lists and what you pass on the command line, so keep it short, lowercase, and free of spaces and tabs.
+Every directory found is an app. The name of the directory is the name of the app — it is what the installer lists, what you search for, and what you pass on the command line, so keep it short, lowercase, and free of spaces and tabs.
 
 That location is deliberately outside handaan's own tree. It belongs to your dotfiles repository, and you get it into place by symlinking or copying it there.
 
@@ -29,7 +29,7 @@ There is no registry to add yourself to. The directory existing is the registrat
 
 | file | required | what it does |
 |---|---|---|
-| `meta` | **required** | Names the app in the picker, with a one-line summary. |
+| `meta` | **required** | Names the app in the installer, with a one-line summary. |
 | `packages` | optional | Package list installed with `yay`. |
 | `install.sh` | optional | Sourced once, each time the app is selected. One-time setup. |
 | `update.sh` | optional | Sourced on every `handaan update`. Ongoing maintenance. |
@@ -47,7 +47,7 @@ One line, in the same `# handaan:summary=` form the `handaan-*` commands use for
 # handaan:summary=Terminal multiplexer, with my keybindings.
 ```
 
-The first matching line wins. An app with no `meta` is still discovered and still installs, but it lists in the picker as a bare name with nothing beside it — an entry nobody can choose from. Write one.
+The first matching line wins. An app with no `meta` is still discovered and still installs, but it lists in the installer as a bare name with nothing beside it — and the summary is searched as well as shown, so an app without one is harder to find. Write one.
 
 ### `packages`
 
@@ -79,15 +79,15 @@ Inside it you have:
 - `yay_install <pkg>...` and `yay_install_list <file>`, if you need to install something conditionally.
 - `$HANDAAN_PATH` and `$HANDAAN_STATE`, already set and exported.
 - `sudo` without a password prompt, for the duration of the run.
-- `set -euo pipefail`, inherited from `handaan-apps`. **Any command that fails ends the whole install run**, including the apps queued behind yours. Append `|| true` where a non-zero exit is acceptable.
+- `set -euo pipefail`, inherited from `handaan-apps-install`. **Any command that fails ends the whole install run**, including the apps queued behind yours. Append `|| true` where a non-zero exit is acceptable.
 
-The working directory is wherever `handaan-apps` was invoked from. Use absolute paths, and reach your own files through the script's own location:
+The working directory is wherever the install was started from, which is `$HOME` when it came from the installer dialog. Use absolute paths, and reach your own files through the script's own location:
 
 ```bash
 app_dir=$(dirname "${BASH_SOURCE[0]}")
 ```
 
-It runs again every time the app is selected, including when it is already ticked in the picker. Write it so that is harmless.
+It runs again every time the app is chosen, including when it is already installed. Write it so that is harmless.
 
 ### `update.sh`
 
@@ -101,7 +101,7 @@ The same environment applies, with two differences worth knowing:
   command -v tmux &>/dev/null || return 0
   ```
 
-- `sudo` here **will prompt**. `handaan update` does not enable the passwordless rule that `handaan apps` does. An unattended-looking update that stops on a password prompt is usually a `sudo` in an `update.sh`.
+- `sudo` here **will prompt**. `handaan update` does not enable the passwordless rule that `handaan-apps-install` does. An unattended-looking update that stops on a password prompt is usually a `sudo` in an `update.sh`.
 
 Strict mode applies here too: a failure aborts the update before it reaches mise, Neovim and the config-drift report. Be conservative.
 
@@ -120,7 +120,7 @@ lands as `~/.config/tmux/tmux.conf` and `~/.local/share/applications/tmux.deskto
 
 The copy is **no-clobber**. A file that already exists in `$HOME` is left exactly as it is — the same rule handaan applies to its own `config/` seed, for the same reason: your live configuration is yours, and nothing here is allowed to overwrite it.
 
-The consequence catches everyone once. **Editing a file in your app's `config/` does not change a machine where the app is already installed.** The copy in `$HOME` already exists and wins. To take the new version, delete or move your local copy and re-run `handaan apps <name>`, or just apply the edit to `$HOME` yourself.
+The consequence catches everyone once. **Editing a file in your app's `config/` does not change a machine where the app is already installed.** The copy in `$HOME` already exists and wins. To take the new version, delete or move your local copy and re-run `handaan apps-install <name>`, or just apply the edit to `$HOME` yourself.
 
 Note also that `.desktop` overrides for your applications belong here, not in handaan — handaan seeds only overrides for packages it installs itself.
 
@@ -164,48 +164,59 @@ cp ~/my-dotfiles/tmux.conf ~/.config/handaan/apps/tmux/config/.config/tmux/tmux.
 Then:
 
 ```bash
-handaan apps tmux
+handaan apps-install tmux
 ```
 
 ## Installing
 
 ```bash
-handaan apps                 # picker: every app found, ticked if installed
-handaan apps tmux neovim     # install these, skip the picker
-handaan apps all             # install everything found
-handaan apps --pending       # names of apps not installed yet, one per line
-handaan apps --mark tmux     # record as installed without installing
-handaan apps --unmark tmux   # the reverse
-handaan apps --help
+handaan apps                        # open the installer (also SUPER+SHIFT+A)
+handaan apps-install tmux neovim    # install these, no dialog
+handaan apps-install all            # install everything found
+handaan apps-manifest               # the catalogue, as JSON
+handaan apps-mark tmux              # record as installed without installing
+handaan apps-mark --undo tmux       # the reverse
 ```
 
-The picker needs a running Hyprland session — it is a Quickshell window. Without one, pass app names explicitly. Already-installed apps start ticked, and **unticking one removes nothing**; there is no uninstall path, by design. Removing an app is `yay -Rns` and deleting the files, deliberately, by you.
+The installer is part of the shell rather than a window of its own, so it needs `quickshell.service` running; `handaan apps` says so plainly if it is not. Everything else works from a TTY with no session at all.
 
-Before it installs anything, an install run performs a full system upgrade and makes sure `yay` is present, then cleans up orphaned build dependencies afterwards. Budget for that: `handaan apps` on a machine that has not been updated in a while is not a quick command.
+The installer is a launcher, not a form. Type to narrow the list, `↑`/`↓` to move, `Enter` to install the app under the cursor, `Esc` to close. The search matches the app's name *and* its `meta` summary. There is no multi-select: one row, one app.
 
-The whole session is logged to `/tmp/handaan-apps.log`. When a run launched from the picker fails, the terminal stays open and names that file.
+`Install all pending` sits at the top of the list whenever something is not installed, and is the only thing here that asks twice — the first `Enter` arms it, the second runs it. It installs what is missing, not everything, so it is a no-op on a machine that is already complete.
 
-`--pending` needs no session, no sudo and no network. It is what the bar's maintenance indicator counts, via `handaan pending` — an app you write and never install shows up there as work waiting.
+Already-installed apps stay in the list and stay choosable; the row says `reinstall` rather than `install`. That is deliberate — re-running an app is how you re-apply a `config/` file you have since deleted. There is no uninstall path, by design: removing an app is `yay -Rns` and deleting the files, deliberately, by you.
+
+Before it installs anything, an install run performs a full system upgrade and makes sure `yay` is present, then cleans up orphaned build dependencies afterwards. Budget for that: an install on a machine that has not been updated in a while is not a quick command.
+
+An install started from the dialog opens a terminal of its own and logs the session to `/tmp/handaan-apps.log`; when it fails the window stays open and names that file. Started from a terminal, it just runs there and logs nothing.
+
+The catalogue needs no session, no sudo and no network, which is why it is also what the bar's maintenance indicator counts, via `handaan pending`:
+
+```bash
+handaan apps-manifest | jq -r '.[] | select(.installed | not) | .name'
+```
+
+An app you write and never install shows up there as work waiting.
 
 ## How handaan decides an app is installed
 
-An app counts as installed when **handaan installed it, and every package it still declares is present**. The first half is a marker file that `handaan apps` writes at `$HANDAAN_STATE/apps/<name>` (`~/.local/state/handaan/apps/<name>`) once an app's packages, `install.sh` and `config/` have all gone through.
+An app counts as installed when **handaan installed it, and every package it still declares is present**. The first half is a marker file that `handaan apps-install` writes at `$HANDAAN_STATE/apps/<name>` (`~/.local/state/handaan/apps/<name>`) once an app's packages, `install.sh` and `config/` have all gone through.
 
 That is the answer to a question the package list alone cannot answer, and getting this wrong is quiet in both directions:
 
-- An app that installs its packages from **inside `install.sh`** — because it needs a repository enabled or a PKGBUILD patched first — declares none. Judged on packages, it can never report installed, so it stays ticked-off in the picker and pads `handaan pending` forever.
+- An app that installs its packages from **inside `install.sh`** — because it needs a repository enabled or a PKGBUILD patched first — declares none. Judged on packages, it can never report installed, so it stays listed as pending and pads `handaan pending` forever.
 - An app whose payload is a **`config/` tree** typically names a package it does not own — a browser, say. Judged on packages, it reports installed the moment something *else* pulls that package in. It is then never offered, never selected, and its files are never copied, so the one thing it exists to deliver silently never arrives.
 
-The package check stays on top of the marker, so removing a package by hand puts the app back in the pending list rather than leaving the marker to insist otherwise.
+The package check stays on top of the marker, so removing a package by hand puts the app back in the pending list rather than leaving the marker to insist otherwise. It is `pacman -T` that answers it, so a package satisfied by something that *provides* it counts as present, the way pacman itself would judge a dependency.
 
 If an app was installed before handaan started recording this — or you installed it by hand — record it without reinstalling:
 
 ```bash
-handaan apps --mark <name>...     # record as installed; runs nothing
-handaan apps --unmark <name>...   # the reverse
+handaan apps-mark <name>...          # record as installed; runs nothing
+handaan apps-mark --undo <name>...   # the reverse
 ```
 
-`--mark` matters most for the `install.sh` case, where the alternative is a reinstall whose only real effect is the marker. For an app that builds from the AUR, that is a full rebuild to learn nothing.
+Marking matters most for the `install.sh` case, where the alternative is a reinstall whose only real effect is the marker. For an app that builds from the AUR, that is a full rebuild to learn nothing.
 
 ## Keeping apps in your own repository
 
@@ -234,13 +245,13 @@ handaan's full policy is at `$HANDAAN_PATH/docs/standards/privacy-policy.md`.
 
 - **A failing command anywhere in `install.sh` or `update.sh` ends the entire run.** Strict mode is inherited. Guard anything allowed to fail.
 - **`update.sh` runs even for apps you never installed.** Return early on the app's absence.
-- **`sudo` prompts during `handaan update` but not during `handaan apps`.**
+- **`sudo` prompts during `handaan update` but not during an app install.**
 - **`config/` never overwrites, so editing it later reaches nobody who already has the app.** Same trap as handaan's own `config/` seed, for the same reason.
 - **A `config/` copy failure is silent.** The copy suppresses its own errors so one unwritable path cannot abort the run. If a file did not appear, check permissions on the destination.
 - **`install.sh` runs before `config/` is copied.** Do not read your own config files from it.
 - **Adding an app to handaan's own tree does not work.** It is not a place apps go, and `git pull` replaces it. Apps live in your dotfiles repository, deployed to `~/.config/handaan/apps/`.
-- **An app is only "installed" once handaan has installed it.** Writing the app directory is not enough, and neither is having its packages already. Until it goes through `handaan apps`, its `config/` has not been copied — the usual symptom is a `.desktop` file that never appears in your launcher.
-- **Nothing uninstalls.** Unticking in the picker, or deleting the app directory, leaves the packages and the files in place.
+- **An app is only "installed" once handaan has installed it.** Writing the app directory is not enough, and neither is having its packages already. Until it goes through `handaan apps-install`, its `config/` has not been copied — the usual symptom is a `.desktop` file that never appears in your launcher.
+- **Nothing uninstalls.** Deleting the app directory removes it from the installer, and leaves its packages and files exactly where they are.
 
 ## Testing an app before you trust it
 
@@ -253,10 +264,10 @@ bash -n ~/.config/handaan/apps/<name>/install.sh ~/.config/handaan/apps/<name>/u
 Then exercise the real thing:
 
 ```bash
-handaan apps <name>       # packages, install.sh, config/
-handaan apps --pending    # should no longer list it, if it declares packages
-handaan update            # update.sh, on its own
-handaan apps <name>       # again: proves it is safe to re-run
+handaan apps-install <name>   # packages, install.sh, config/
+handaan apps-manifest | jq '.[] | select(.name == "<name>")'   # installed: true
+handaan update                # update.sh, on its own
+handaan apps-install <name>   # again: proves it is safe to re-run
 ```
 
 A disposable VM is the honest place for a first run of an app that touches system state; handaan's rehearsal procedure is in `$HANDAAN_PATH/docs/testing-build-scripts.md`. `$HANDAAN_PATH/test/seed-handaan-test-app.sh` writes a complete throwaway app exercising all five files, and is the shortest working reference to read.

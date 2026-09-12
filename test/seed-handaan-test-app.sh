@@ -59,7 +59,7 @@ echo "Seeded $APP_DIR"
 cat <<'EOF'
 
 Verify with:
-  handaan-apps handaan-test          # exercises packages + install.sh + config/
+  handaan apps-install handaan-test  # exercises packages + install.sh + config/
   command -v cowsay && cowsay moo
   cat ~/.local/state/handaan-test/install-ran
   cat ~/.local/share/handaan-test/from-config

@@ -1,5 +1,10 @@
 # ADR Changelog
 
+## 2026-09-12 (installer in the shell)
+
+- **0006** written. handaan's own dialogs are part of the desktop rather than separate applications: the app picker moved into the Quickshell process as `Commons/AppCatalog.qml` and `Ui/Installer.qml`, so it binds to `Theme` instead of carrying a hand-copied palette a regenerate could not reach. The inversion also deleted the handshake that existed only because a script was driving a GUI -- the env-var app list, the selection temp file, the stdout redirect, the self re-exec into a terminal -- and split `handaan-apps` into single-purpose helpers the shell calls. The dialog is a launcher rather than a checkbox form: type to narrow, `Enter` installs the row under the cursor, and `Install all pending` is a row in the same list that confirms before it runs.
+- **0005** edited in place. It named `handaan-apps` as the thing that discovers apps, offers them and writes the install marker; that command now only summons the dialog. The record points at the commands that replaced it and defers the question of *how* apps are presented to 0006, keeping itself to what an app is and when one counts as installed.
+
 
 ## 2026-09-09 (monitors)
 

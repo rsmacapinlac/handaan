@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# handaan:summary=Run an app install in its own terminal window, logged and held open on failure.
+# handaan:args=<app>... | all
+# handaan:hidden=spawned by the Quickshell installer; call handaan-apps-install directly instead
+#
+# The visible half of an install. handaan-apps-install does the work and knows
+# nothing about windows; this opens a terminal for it, keeps a session log, and
+# holds the window open when the run fails.
+#
+# It exists as its own command because the installer is a Quickshell surface:
+# the shell should spawn one thing and forget about it, rather than carry a
+# terminal name and a shell one-liner in QML.
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+readonly APPS_LOG=/tmp/handaan-apps.log
+
+if (( $# == 0 )) || [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    echo "Usage: handaan-apps-terminal <app>... | all"
+    (( $# == 0 )) && exit 1
+    exit 0
+fi
+
+# An `exec` that cannot find its target exits 127 with nothing on screen, which
+# from the installer looks identical to a terminal that opened and vanished.
+# Say which it was.
+if ! command -v kitty &>/dev/null; then
+    log_error "kitty is not installed, so the install cannot open a terminal of its own."
+    log_error "Run it directly instead:  handaan apps-install $*"
+    exit 1
+fi
+
+# script(1) gives the install a PTY, which is what keeps pacman's progress bars
+# alive, and writes the session log at the same time; -q drops the banner, -f
+# flushes so a crash leaves a complete file, and -e propagates the exit status.
+# Its -c takes one command string, so the argv is quoted into one with %q
+# rather than interpolated.
+exec kitty --title "Installing applications" -e bash -c '
+    log=$1; shift
+    printf -v command "%q " "$@"
+    script -qefc "${command% }" "$log"
+    status=$?
+    [ "$status" -eq 0 ] && exit 0
+    printf "\n\033[0;31m[FAILED]\033[0m handaan-apps-install exited %d.\n" "$status"
+    printf "Full log: %s\n" "$log"
+    printf "\nPress Enter to close this window. "
+    read -r _ < /dev/tty
+    exit "$status"
+' _ "$APPS_LOG" "$HANDAAN_PATH/bin/handaan-apps-install" "$@"

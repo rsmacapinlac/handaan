@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# handaan:summary=Print the optional-app catalogue as JSON: name, summary, installed.
+# handaan:hidden=machine-readable catalogue behind the installer; run `handaan apps` instead
+#
+# The only place that answers "which apps exist, and which are installed". The
+# Quickshell installer reads it, and handaan-pending reads it on the bar's
+# behalf. Answering that twice is how two answers drift apart, and the drift is
+# invisible: an app wrongly listed as pending looks exactly like one that was
+# never installed.
+#
+# Output is a JSON array, one object per app directory:
+#
+#   [{"name":"tmux","summary":"Terminal multiplexer.","installed":true}]
+#
+# Nothing here needs sudo, a Wayland session or the network, so it answers the
+# same from a TTY, a script and the bar. What an app is: docs/extending-with-apps.md.
+
+set -euo pipefail
+
+: "${HANDAAN_STATE:=${XDG_STATE_HOME:-$HOME/.local/state}/handaan}"
+
+APPS_ROOT="$HOME/.config/handaan/apps"
+APPS_STATE="$HANDAAN_STATE/apps"
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '3,17p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "handaan-apps-manifest: jq is required" >&2
+    exit 1
+fi
+
+# No app directory is an answer, not a broken check: nothing has been offered,
+# so the catalogue is empty rather than unknown.
+if [[ ! -d $APPS_ROOT ]]; then
+    printf '[]\n'
+    exit 0
+fi
+
+# The comment strip has to match yay_install_list's, plus a trailing-space
+# trim: `s/#.*//` turns "pkg  # why" into "pkg  ", and the trailing space would
+# make the lookup miss a package that is in fact installed.
+declared_packages() {
+    local list="$APPS_ROOT/$1/packages"
+    [[ -f $list ]] || return 0
+    sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "$list"
+}
+
+app_summary() {
+    local meta="$APPS_ROOT/$1/meta"
+    [[ -f $meta ]] || return 0
+    sed -n 's/^# handaan:summary=//p' "$meta" | head -1
+}
+
+apps=()
+for dir in "$APPS_ROOT"/*/; do
+    [[ -d $dir ]] || continue
+    apps+=("$(basename "$dir")")
+done
+
+if (( ${#apps[@]} == 0 )); then
+    printf '[]\n'
+    exit 0
+fi
+
+# One `pacman -T` for every package every app declares, rather than a query per
+# app. -T prints only what is *not* satisfied, and it resolves virtual packages
+# and version constraints the way pacman itself does. `pacman -Qq` alone does
+# not: it reports `sh` as absent on a machine where bash provides it, so an app
+# declaring a provided name would sit in the pending list forever, however many
+# times it was installed successfully.
+all_packages=()
+for app in "${apps[@]}"; do
+    while read -r pkg; do
+        all_packages+=("$pkg")
+    done < <(declared_packages "$app")
+done
+
+declare -A unsatisfied=()
+if (( ${#all_packages[@]} > 0 )); then
+    while read -r pkg; do
+        [[ -n $pkg ]] || continue
+        unsatisfied[$pkg]=1
+    done < <(pacman -T "${all_packages[@]}" 2>/dev/null || true)
+fi
+
+# An app counts as installed when handaan installed it -- the marker written by
+# handaan-apps-install -- and every package it still declares is satisfied.
+#
+# The marker is what makes the answer true of the *app* rather than of its
+# package list. Judging by packages alone was wrong in both directions: an app
+# installing from inside install.sh declares none, so it could never report
+# installed; and an app whose payload is a config/ tree reported installed the
+# moment anything else pulled in the one package it named, so it was never
+# offered and its files never arrived. See adrs/0005.
+#
+# Packages are still checked on top, so removing one by hand puts the app back
+# in the pending list instead of leaving the marker to insist otherwise.
+app_installed() {
+    local app=$1 pkg
+    [[ -f "$APPS_STATE/$app" ]] || return 1
+    while read -r pkg; do
+        if [[ -n ${unsatisfied[$pkg]:-} ]]; then
+            return 1
+        fi
+    done < <(declared_packages "$app")
+    return 0
+}
+
+# Fields reach jq as argv rather than interpolated into a filter, so a summary
+# is free text that cannot terminate a string, inject a key or swallow the
+# field after it -- the failure the old tab-separated handoff could only ask
+# callers not to trigger.
+fields=()
+for app in "${apps[@]}"; do
+    fields+=("$app")
+    fields+=("$(app_summary "$app")")
+    if app_installed "$app"; then
+        fields+=(true)
+    else
+        fields+=(false)
+    fi
+done
+
+jq -n --args '
+  [ range(0; ($ARGS.positional | length); 3) as $i
+    | { name:      $ARGS.positional[$i],
+        summary:   $ARGS.positional[$i + 1],
+        installed: ($ARGS.positional[$i + 2] == "true") } ]
+' "${fields[@]}"

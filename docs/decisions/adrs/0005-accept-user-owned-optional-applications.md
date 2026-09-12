@@ -24,13 +24,15 @@ apps/<app-name>/
                   #   e.g. config/.local/share/applications/foo.desktop, config/.config/foo/settings
 ```
 
-`handaan-apps` discovers apps and offers each individually:
+handaan discovers apps and offers each individually:
 
 - `$HOME/.config/handaan/apps/` — supplied by a separate dotfile repository the user owns and maintains, the same private-companion-repo relationship `docs/standards/privacy-policy.md` already describes for `~/.config` overrides. A user who wants an app writes one there; they never fork or patch this repository to get it.
 
 `meta`'s tag reuses the existing `# handaan:summary=` self-declaration convention `bin/handaan-*` scripts already use, rather than inventing a second metadata format.
 
-**Whether an app is installed is handaan's own record, not an inference about it.** `handaan-apps` writes a marker to `$HANDAAN_STATE/apps/<app-name>` when it installs one, and an app counts as installed when that marker is present *and* every package it still declares is. Inferring it from the package list alone is wrong in both directions: an app that installs from inside its own `install.sh` declares no packages, so it can never report installed; and an app whose payload is a `config/` tree reports installed the moment anything else pulls in the one package it happens to name, so it is never offered, never selected, and its files are never copied. Keeping the package check on top of the marker is what lets removing a package by hand put the app back in the pending list. `handaan-apps --mark` records an app that was installed before the marker existed, without reinstalling it.
+**Whether an app is installed is handaan's own record, not an inference about it.** `handaan-apps-install` writes a marker to `$HANDAAN_STATE/apps/<app-name>` when it installs one, and an app counts as installed when that marker is present *and* every package it still declares is. Inferring it from the package list alone is wrong in both directions: an app that installs from inside its own `install.sh` declares no packages, so it can never report installed; and an app whose payload is a `config/` tree reports installed the moment anything else pulls in the one package it happens to name, so it is never offered, never selected, and its files are never copied. Keeping the package check on top of the marker is what lets removing a package by hand put the app back in the pending list. `handaan-apps-mark` records an app that was installed before the marker existed, without reinstalling it.
+
+Which commands present that offer, and where the picker lives, is [0006](0006-present-handaan-dialogs-as-part-of-the-desktop.md); this record is about what an app *is* and when one counts as installed.
 
 ## Consequences
 
@@ -40,4 +42,4 @@ Selection becomes flat and per-app, one entry per discovered `apps/<app-name>/` 
 
 The marker is per-machine state, so it needs a migration to reach machines that installed apps before it existed; without one, every app they already have reports pending at once. The backfill reproduces the old packages-only answer rather than a better one, so nothing that was ticked before the change comes back unticked — which also means an app that only ever *looked* installed is recorded as installed, since nothing can tell the two apart after the fact.
 
-`handaan-update` now sources every discovered app's `update.sh` unconditionally on every run, in addition to the migrations and tool updates it already runs — a second per-app hook alongside migrations, distinguished by scope: a migration repairs one thing once for machines that predate a fix; an app's `update.sh` is ongoing maintenance for as long as that app stays selected.
+`handaan-update` sources every discovered app's `update.sh` unconditionally on every run, in addition to the migrations and tool updates it already runs — a second per-app hook alongside migrations, distinguished by scope: a migration repairs one thing once for machines that predate a fix; an app's `update.sh` is ongoing maintenance for as long as that app stays selected.

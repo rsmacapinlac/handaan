@@ -1,22 +1,15 @@
 #!/usr/bin/env bash
-# handaan:summary=Install optional applications from your own dotfile repository.
-# handaan:args=[APP ... | all | --pending | --mark APP ... | --unmark APP ...]
+# handaan:summary=Open the application installer.
 # handaan:hidden=installs apps, not handaan itself; see docs/standards/core-stays-minimal.md
 #
-# handaan ships no optional applications of its own -- see
-# docs/decisions/adrs/0005-accept-user-owned-optional-applications.md. Every
-# app comes from a directory under $HOME/.config/handaan/apps/<name>/,
-# supplied by a separate dotfile repository the user owns:
+# The installer is a Quickshell surface -- default/quickshell/Ui/Installer.qml,
+# summoned through the AppCatalog singleton's IPC target. This is the CLI door
+# to it and does nothing else. The pieces behind it are each their own command:
 #
-#   apps/<name>/meta        handaan:summary=... shown in the selection menu
-#   apps/<name>/packages    optional package list, same shape as install/*.packages
-#   apps/<name>/install.sh  optional, sourced once when the app is (re)selected
-#   apps/<name>/config/     optional, mirrors $HOME, copied in no-clobber
-#
-# Apps handaan has installed are recorded under $HANDAAN_STATE/apps/; see
-# app_installed for why that is the answer rather than the package list.
-#
-# `handaan-update` sources every app's update.sh on its own; see that script.
+#   handaan-apps-manifest   the catalogue, as JSON
+#   handaan-apps-install    install named apps, here in this terminal
+#   handaan-apps-terminal   the same, in a window of its own, logged
+#   handaan-apps-mark       record an install without performing one
 
 set -euo pipefail
 
@@ -24,330 +17,32 @@ HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
 # shellcheck source=install/lib/handaan-common.sh
 source "$HANDAAN_PATH/install/lib/handaan-common.sh"
 
-readonly APPS_LOG=/tmp/handaan-apps.log
-
-# Log the install run the way handaan-update logs its own, and for the same
-# reason: this script is `set -e`, so any failure ends it immediately, and when
-# it was launched from the picker it is running inside a terminal that closes
-# with it. Without this the error is gone before it can be read.
-#
-# Only the run that installs something is wrapped. The picker path re-execs
-# into a terminal of its own and that child does its own logging -- wrapping
-# the picker instead would capture kitty's stdout, which is not where the
-# install's output goes.
-#
-# -f flushes, -q drops the banner, -e propagates the exit status, and the PTY
-# is what keeps pacman's progress bars alive.
-if (( $# > 0 )) && [[ $1 != -h && $1 != --help && $1 != --pending && $1 != --mark \
-    && $1 != --unmark && -z ${HANDAAN_APPS_LOGGED:-} ]]; then
-    command=$(printf '%q ' "$0" "$@")
-    exec env HANDAAN_APPS_LOGGED=1 script -qefc "$command" "$APPS_LOG"
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '3,13p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
 fi
 
-readonly APPS_ROOT="$HOME/.config/handaan/apps"
-readonly APPS_STATE="$HANDAAN_STATE/apps"
+if (( $# > 0 )); then
+    log_error "handaan-apps takes no arguments. To install without the picker:"
+    log_error "    handaan apps-install $*"
+    exit 1
+fi
 
-usage() {
-    cat <<EOF
-Usage: handaan-apps [APP ... | all | --pending | --mark APP ... | --unmark APP ...]
+# qs reports a connection failure with a nonzero exit, but an IPC-level failure
+# -- unknown target, unknown function -- on stdout with exit 0, so both have to
+# be checked. The two mean different things and have different fixes.
+if ! output=$(qs -p "$HANDAAN_PATH/default/quickshell" ipc call appCatalog open 2>/dev/null); then
+    log_error "The Quickshell shell is not running, so there is nothing to open."
+    log_error "    systemctl --user start quickshell.service"
+    exit 1
+fi
 
-With no arguments, opens a Quickshell selection window listing every app found
-under $APPS_ROOT. Pass "all" to install everything found there.
-
---pending lists the apps that are not installed yet, one per line, and does
-nothing else. An app counts as installed once handaan has installed it and
-every package it declares is still present.
-
---mark records an app as installed without installing it, for one that was
-already on the machine before handaan started tracking it. It runs nothing.
---unmark reverses that.
-
-None found yet? Nothing is wrong -- handaan ships no applications of its own.
-Add one in your own dotfile repository as $APPS_ROOT/<name>/, then symlink or
-copy it into place there. The guide is $HANDAAN_PATH/docs/extending-with-apps.md.
-
-Account-bound apps are handled separately. They are useless until you sign in,
-so they ship as one-shot installers you run by hand after the desktop is up:
-  handaan-service-nextcloud     Nextcloud sync client
-  handaan-service-todoist       Todoist as a Chromium web app
-EOF
-}
-
-discover_apps() {
-    local dir
-    [[ -d $APPS_ROOT ]] || return 0
-    for dir in "$APPS_ROOT"/*/; do
-        [[ -d $dir ]] || continue
-        basename "$dir"
-    done | sort
-}
-
-app_summary() {
-    local meta="$APPS_ROOT/$1/meta"
-    [[ -f $meta ]] && sed -n 's/^# handaan:summary=//p' "$meta" | head -1
-}
-
-app_exists() {
-    [[ -d "$APPS_ROOT/$1" ]]
-}
-
-# One `pacman -Qq` for the whole picker rather than a query per package: the
-# app lists together name well over a hundred packages.
-declare -A INSTALLED_PKGS=()
-load_installed_packages() {
-    local pkg
-    while read -r pkg; do
-        INSTALLED_PKGS[$pkg]=1
-    done < <(pacman -Qq 2>/dev/null)
-}
-
-# An app counts as installed when handaan installed it -- the marker written by
-# install_app -- and every package it declares is still present.
-#
-# The marker is what makes the answer true of the app rather than of its package
-# list. Judging by packages alone was wrong in both directions. An app that
-# installs from inside install.sh declares none, so it could never report
-# installed and sat in --pending for good. An app whose payload is a config/
-# tree reported installed the moment anything else pulled in the one package it
-# named, so it was never selected, its files were never copied, and the thing it
-# exists to deliver never arrived.
-#
-# Packages are still checked on top, so removing one by hand puts the app back
-# in the pending list instead of leaving the marker to insist otherwise.
-#
-# The comment strip matches yay_install_list's, plus a trailing-space trim:
-# `s/#.*//` turns "pkg  # why" into "pkg  ", and a trailing space would make
-# the lookup miss a package that is in fact installed.
-app_installed() {
-    local list="$APPS_ROOT/$1/packages" pkg
-    [[ -f "$APPS_STATE/$1" ]] || return 1
-    [[ -f $list ]] || return 0
-    while read -r pkg; do
-        [[ -n $pkg ]] || continue
-        [[ -n ${INSTALLED_PKGS[$pkg]:-} ]] || return 1
-    done < <(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "$list")
-}
-
-select_apps() {
-    local apps=("$@")
-
-    if [[ -z ${WAYLAND_DISPLAY:-} ]] || ! command -v qs &>/dev/null; then
-        log_error "handaan-apps needs a running Quickshell session for interactive selection. Pass app names explicitly."
+case $output in
+    "Target not found."* | "Function not found."*)
+        # The QML type registry is built once at launch, so a shell started
+        # before the installer existed cannot see it however current the tree is.
+        log_error "This Quickshell session started before the installer existed."
+        log_error "    systemctl --user restart quickshell.service"
         exit 1
-    fi
-
-    local app list_text out_file
-    load_installed_packages
-    # Third field is the installed flag, which the picker uses to pre-tick the
-    # box. Tab-separated like the summary before it, so the QML splits once.
-    list_text=$(
-        for app in "${apps[@]}"; do
-            if app_installed "$app"; then
-                printf '%s\t%s\t1\n' "$app" "$(app_summary "$app")"
-            else
-                printf '%s\t%s\t0\n' "$app" "$(app_summary "$app")"
-            fi
-        done
-    )
-    out_file="${XDG_RUNTIME_DIR:-/tmp}/handaan-apps-selection.$$"
-    rm -f "$out_file"
-
-    # qs writes every INFO and WARN line to stdout, not stderr -- and this
-    # function's stdout *is* the selection, read by `mapfile -t requested`.
-    # Left alone, "Launching config: ...", the shell ID and "Configuration
-    # Loaded" each arrive as a requested app name, normalize_apps rejects the
-    # first one, and the run dies before installing anything.
-    #
-    # The selection never travels on stdout anyway: the picker writes it to
-    # $out_file, which is read below. So send qs's own output to stderr, where
-    # it stays visible without being mistaken for data.
-    HANDAAN_APPS_LIST="$list_text" HANDAAN_APPS_OUT="$out_file" \
-        qs -n -p "$HANDAAN_PATH/default/apps-installer/installer.qml" >&2
-
-    if [[ -s $out_file ]]; then
-        # A blank line here would otherwise become one requested app named "",
-        # not zero requested apps -- grep it out rather than trust the picker
-        # to never emit one.
-        grep -v '^$' "$out_file" || true
-    fi
-    rm -f "$out_file"
-}
-
-normalize_apps() {
-    local requested=("$@") all_apps name
-    mapfile -t all_apps < <(discover_apps)
-
-    if (( ${#requested[@]} == 1 )) && [[ ${requested[0]} == all ]]; then
-        printf '%s\n' "${all_apps[@]}"
-        return 0
-    fi
-
-    local -A seen=()
-    for name in "${requested[@]}"; do
-        if [[ $name == all ]]; then
-            log_error "'all' cannot be combined with other app names." >&2
-            return 1
-        fi
-        if ! app_exists "$name"; then
-            log_error "No app found at $APPS_ROOT/$name" >&2
-            return 1
-        fi
-        if [[ -z ${seen[$name]:-} ]]; then
-            printf '%s\n' "$name"
-            seen[$name]=1
-        fi
-    done
-}
-
-install_app() {
-    local name=$1 dir="$APPS_ROOT/$1"
-
-    log_info "Installing $name..."
-
-    if [[ -f "$dir/packages" ]]; then
-        yay_install_list "$dir/packages"
-    fi
-
-    if [[ -f "$dir/install.sh" ]]; then
-        ( source "$dir/install.sh" )
-    fi
-
-    if [[ -d "$dir/config" ]]; then
-        cp -Rn "$dir"/config/. "$HOME/" 2>/dev/null || true
-    fi
-
-    # Written last, and only here: a run that dies part-way leaves the app
-    # pending rather than claiming an install that did not finish.
-    mkdir -p "$APPS_STATE"
-    touch "$APPS_STATE/$name"
-}
-
-main() {
-    if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-        usage
-        exit 0
-    fi
-
-    # Names only, one per line, for anything that reads this rather than
-    # watches it -- the bar's maintenance indicator via handaan-pending, and
-    # anyone asking the same question from a terminal. Named after
-    # handaan-migrate --pending, which answers the same shape of question.
-    # Installs nothing, needs no sudo and no Wayland session.
-    if [[ ${1:-} == --pending ]]; then
-        local app apps=()
-        load_installed_packages
-        mapfile -t apps < <(discover_apps)
-        for app in "${apps[@]}"; do
-            app_installed "$app" || printf '%s\n' "$app"
-        done
-        exit 0
-    fi
-
-    # Recording an app without installing it, for one that predates handaan
-    # tracking installs at all. The alternative is a reinstall whose only real
-    # effect is the marker -- and for an app that builds from the AUR inside
-    # install.sh, that means a full rebuild to learn nothing.
-    if [[ ${1:-} == --mark || ${1:-} == --unmark ]]; then
-        local mode=$1 app
-        shift
-        if (( $# == 0 )); then
-            log_error "$mode needs at least one app name."
-            exit 1
-        fi
-        # Check every name before touching anything, so a typo in the third
-        # name does not leave the first two recorded.
-        for app in "$@"; do
-            if ! app_exists "$app"; then
-                log_error "No app found at $APPS_ROOT/$app"
-                exit 1
-            fi
-        done
-        mkdir -p "$APPS_STATE"
-        for app in "$@"; do
-            if [[ $mode == --mark ]]; then
-                touch "$APPS_STATE/$app"
-                log_success "Recorded $app as installed."
-            else
-                rm -f "$APPS_STATE/$app"
-                log_success "Recorded $app as not installed."
-            fi
-        done
-        exit 0
-    fi
-
-    local requested=() selected=() all_apps=()
-    if (( $# == 0 )); then
-        mapfile -t all_apps < <(discover_apps)
-        if (( ${#all_apps[@]} == 0 )); then
-            log_info "No apps found under $APPS_ROOT."
-            usage
-            exit 0
-        fi
-        mapfile -t requested < <(select_apps "${all_apps[@]}")
-
-        if (( ${#requested[@]} == 0 )); then
-            log_info "No applications selected; nothing to do."
-            exit 0
-        fi
-
-        # The picker doesn't assume it was launched from a visible terminal --
-        # a future keybind or launcher entry wouldn't have one -- so the
-        # actual install runs in a terminal of its own, re-invoking this
-        # script with explicit app names to skip straight past the picker.
-        #
-        # An `exec` that cannot find its target exits 127 with nothing on
-        # screen, which from the picker looks identical to a terminal that
-        # opened and vanished. Say which it was.
-        if ! command -v kitty &>/dev/null; then
-            log_error "kitty is not installed, so the install cannot open a terminal of its own."
-            log_error "Run it directly instead:  handaan-apps ${requested[*]}"
-            exit 1
-        fi
-
-        # kitty closes when its child does. On success that is what should
-        # happen; on failure it used to take the error off the screen with it.
-        # Hold the window open on a non-zero exit and name the log, so a
-        # failure is readable rather than a flash.
-        #
-        # `status=$?` follows the call directly rather than an `if`: the exit
-        # status of an `if` with no else branch is 0 even when its condition
-        # failed, which would report every failure as a clean exit.
-        exec kitty --title "Installing applications" -e bash -c '
-            log=$1; shift
-            "$@"
-            status=$?
-            [ "$status" -eq 0 ] && exit 0
-            printf "\n\033[0;31m[FAILED]\033[0m handaan-apps exited %d.\n" "$status"
-            printf "Full log: %s\n" "$log"
-            printf "\nPress Enter to close this window. "
-            read -r _ < /dev/tty
-            exit "$status"
-        ' _ "$APPS_LOG" "$HANDAAN_PATH/bin/handaan-apps" "${requested[@]}"
-    fi
-
-    requested=("$@")
-    if (( ${#requested[@]} == 0 )); then
-        log_info "No applications selected; nothing to do."
-        exit 0
-    fi
-
-    local normalized
-    if ! normalized=$(normalize_apps "${requested[@]}"); then
-        exit 1
-    fi
-    mapfile -t selected <<< "$normalized"
-
-    begin_handaan_install
-    install_aur_helper
-    upgrade_system
-
-    local app
-    for app in "${selected[@]}"; do
-        install_app "$app"
-    done
-    remove_build_dependencies
-
-    log_success "Selected applications installed. Session log: $APPS_LOG"
-}
-
-main "$@"
+        ;;
+esac

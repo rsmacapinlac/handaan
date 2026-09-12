@@ -86,7 +86,7 @@ this once on the host, then log out and back in for `kvm` and `libvirt` group
 membership to take effect:
 
 ```bash
-handaan-apps virtualization
+handaan apps-install virtualization
 ```
 
 Before creating a guest, verify the exact capabilities used below:
@@ -242,7 +242,7 @@ HANDAAN_REF=my-branch bash -c 'curl -fsSL \
 
 Both provisioning scripts are idempotent. After correcting a failure, rerun the
 whole relevant entry point: `boot.sh` for core provisioning or
-`handaan-apps <group>` for an optional group. There is intentionally no
+`handaan apps-install <name>` for an optional application. There is intentionally no
 public single-function recovery interface.
 
 Note that `raw.githubusercontent.com` caches for around five minutes, so a freshly pushed commit is not immediately visible to the guest. The GitHub API serves the current content without that delay:
@@ -364,17 +364,18 @@ user. Run the checks in [`arch-vm-validation.md`](arch-vm-validation.md), then
 exercise the optional interface before installing packages:
 
 ```bash
-handaan-apps --help
-handaan-apps not-a-group       # must fail before sudo or an upgrade
-handaan-apps                   # open fzf, cancel with Escape
+handaan apps-install --help
+handaan apps-install not-an-app    # must fail before sudo or an upgrade
+handaan apps-manifest              # catalogue as JSON; no session needed
+handaan apps                       # open the installer, cancel with Escape
 ```
 
 For a complete optional-application rehearsal, install every group and then run
 the same command again to exercise idempotency:
 
 ```bash
-handaan-apps all
-handaan-apps all
+handaan apps-install all
+handaan apps-install all
 ```
 
 Each invocation must perform one full system upgrade. The second run should

@@ -57,7 +57,8 @@ handaan migrate              # apply pending migrations only
 handaan diff-config          # what in ~/.config has drifted from the defaults
 handaan refresh-config <p>   # take a newer default (backs up yours first)
 handaan promote-config <p>   # send a local edit back into the tree
-handaan apps [name ...]      # your own optional applications
+handaan apps                 # pick your own optional applications
+handaan apps-install <name>  # ...or install one without the dialog
 ```
 
 ## Development setup

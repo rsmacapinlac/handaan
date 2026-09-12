@@ -76,7 +76,7 @@ done
 
 echo "  recorded $marked app(s) as already installed, by the old packages-only rule"
 if (( marked > 0 )); then
-    echo "  If one of them was never really deployed: handaan apps --unmark <name>"
+    echo "  If one of them was never really deployed: handaan apps-mark --undo <name>"
 fi
 
 if (( ${#unknown[@]} > 0 )); then
@@ -86,5 +86,5 @@ if (( ${#unknown[@]} > 0 )); then
     printf '    %s\n' "${unknown[@]}"
     echo
     echo "  If one is in fact installed, record it without reinstalling:"
-    echo "    handaan apps --mark ${unknown[*]}"
+    echo "    handaan apps-mark ${unknown[*]}"
 fi
