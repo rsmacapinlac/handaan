@@ -18,7 +18,7 @@ Usage: $(basename "$0") <config-path>
 
 Copies \$HANDAAN_PATH/config/<path> over ~/.config/<path>.
 
-    $(basename "$0") hypr/hyprlock.conf
+    $(basename "$0") hypr/hypridle.conf
 USAGE
     exit 1
 fi

@@ -58,6 +58,11 @@ hl.config({
     misc = {
         force_default_wallpaper = -1,
         disable_hyprland_logo   = false,
+        -- A locker that dies leaves the session locked behind a blank surface.
+        -- This lets a new one take the lock over, which is how the shell's
+        -- lock screen comes back after quickshell.service restarts mid-lock
+        -- (Commons/SessionLock.qml).
+        allow_session_lock_restore = true,
     },
 })
 

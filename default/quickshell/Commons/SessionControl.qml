@@ -12,10 +12,11 @@
 // singleton imported into it shadows that singleton silently.
 //
 // The actions are the commands the rofi script this replaces ran, with one
-// change. Lock goes through `loginctl lock-session` rather than exec'ing
-// hyprlock, so it takes hypridle's `pidof hyprlock || hyprlock` guard -- the
-// same path idle and suspend already lock through -- instead of starting a
-// second hyprlock over one that is already up.
+// change. Lock is not a command at all: it is the shell's own lock screen,
+// qs.Commons.SessionLock, asked for in-process. That is the one path onto it
+// that cannot fail for want of a PATH or a running IPC server, and SessionLock
+// refuses to stack a second lock on one already up. Idle, suspend and the lid
+// reach the same lock screen through hypridle and bin/handaan-session-lock.
 
 pragma Singleton
 import QtQuick
@@ -34,7 +35,7 @@ Singleton {
     // `keywords` are what typing in the menu also matches, so the word you
     // reach for finds the action whichever name it goes by here.
     readonly property var actions: [
-        { id: "lock",     label: "Lock",      icon: "󰌾", confirm: false, keywords: "lock screen",                 command: ["loginctl", "lock-session"] },
+        { id: "lock",     label: "Lock",      icon: "󰌾", confirm: false, keywords: "lock screen",                 command: null },
         { id: "reboot",   label: "Restart",   icon: "󰜉", confirm: true,  keywords: "reboot",                      command: ["systemctl", "reboot"] },
         { id: "poweroff", label: "Shut down", icon: "󰐥", confirm: true,  keywords: "shutdown power off poweroff", command: ["systemctl", "poweroff"] },
         { id: "logout",   label: "Log out",   icon: "󰗽", confirm: true,  keywords: "logout sign out exit",        command: ["hyprctl", "dispatch", "exit"] },
@@ -59,7 +60,10 @@ Singleton {
         for (var i = 0; i < root.actions.length; i++) {
             if (root.actions[i].id === actionId) {
                 root.close();
-                Quickshell.execDetached(root.actions[i].command);
+                if (root.actions[i].id === "lock")
+                    SessionLock.lock();
+                else
+                    Quickshell.execDetached(root.actions[i].command);
                 return;
             }
         }

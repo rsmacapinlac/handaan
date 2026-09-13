@@ -17,10 +17,10 @@
 # hypridle runs its own lock_cmd -- the same path config/hypr/hypridle.conf
 # already uses for before_sleep_cmd.
 #
-# Lives beside the config it serves, like hyprlock-capslock. Wired up in
-# default/hypr/binds.lua (the lid itself) and default/hypr/monitors.lua (session
-# start and monitor hotplug -- the latter is what recovers the panel when the
-# dock is pulled while the lid is still shut, which fires no lid event).
+# Wired up in default/hypr/binds.lua (the lid itself) and
+# default/hypr/monitors.lua (session start and monitor hotplug -- the latter is
+# what recovers the panel when the dock is pulled while the lid is still shut,
+# which fires no lid event).
 #
 # Usage: lid-switch closed|open|sync
 

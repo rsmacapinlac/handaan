@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# handaan:summary=Lock the session with the shell's lock screen, or preview it.
+# handaan:args=[--preview]
+#
+# The lock screen is a Quickshell surface -- default/quickshell/Ui/LockScreen.qml,
+# driven through the SessionLock singleton's IPC target. With --preview it is
+# drawn over the desktop without locking anything, and Escape closes it.
+#
+# A real lock never depends on the shell being up. When it is not, this leaves
+# the lock marker and restarts the shell, which locks as soon as it starts.
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+usage() {
+    sed -n '5,10p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+ipc() {
+    qs -p "$HANDAAN_PATH/default/quickshell" ipc call sessionLock "$@" 2>/dev/null
+}
+
+# qs reports a connection failure with a nonzero exit, but an IPC-level failure
+# on stdout with exit 0; see handaan-apps.
+shell_answered() {
+    [[ $1 != "Target not found."* && $1 != "Function not found."* ]]
+}
+
+# There is no second locker to hand over to, so a lock that cannot happen is
+# said where it will be seen: hypridle runs this with no terminal to print to.
+fail_to_lock() {
+    log_error "$1 The session is NOT locked."
+    notify-send --urgency=critical "The session is not locked" "$1" 2>/dev/null || true
+    exit 1
+}
+
+# A shell that starts and finds the marker locks at once -- the same path that
+# puts the lock back after a crash -- so this locks without the shell having to
+# answer first. reset-failed is for a shell that has tripped StartLimitBurst,
+# which would otherwise refuse to start at all.
+lock_through_restart() {
+    log_warning "$1"
+    [[ -n ${XDG_RUNTIME_DIR:-} ]] || fail_to_lock "XDG_RUNTIME_DIR is not set, so there is nowhere to leave the lock marker."
+    touch "$XDG_RUNTIME_DIR/handaan-session-locked"
+    log_info "Restarting the shell to lock the session."
+    systemctl --user reset-failed quickshell.service 2>/dev/null || true
+    systemctl --user restart quickshell.service || fail_to_lock "quickshell.service would not start."
+}
+
+case ${1:-} in
+    -h | --help)
+        usage
+        ;;
+    --preview)
+        if ! output=$(ipc preview) || ! shell_answered "$output"; then
+            log_error "The shell has no lock screen to preview."
+            log_error "    systemctl --user restart quickshell.service"
+            exit 1
+        fi
+        echo "$output"
+        ;;
+    "")
+        if ! output=$(ipc lock); then
+            lock_through_restart "The Quickshell shell is not running."
+        elif ! shell_answered "$output"; then
+            lock_through_restart "This Quickshell session started before the lock screen existed."
+        fi
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
