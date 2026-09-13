@@ -1,8 +1,4 @@
 # The Hyprland desktop.
-#
-# waybar is installed but its unit is deliberately left un-enabled: it stays a
-# fallback bar while the Quickshell one grows to parity. See
-# docs/hyprland-startup.md.
 hyprland
 # Hyprland links liblua5.4.so.5.4 at runtime. extra/lua54 is a real package that
 # ships it -- do not substitute a `provides=('lua54')` shim, which satisfies
@@ -14,7 +10,6 @@ mako
 libnotify
 kitty
 rofi
-waybar
 quickshell
 xdg-desktop-portal-hyprland
 qt5-wayland

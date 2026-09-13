@@ -22,7 +22,6 @@ done
 
 # The Quickshell bar. Unlike the units above this one is ours, seeded into
 # ~/.config/systemd/user by the config phase, and its ExecStart points at the
-# QML in $HANDAAN_PATH/default/quickshell. waybar is deliberately left
-# un-enabled beside it as a fallback bar.
+# QML in $HANDAAN_PATH/default/quickshell.
 systemctl --user enable quickshell.service 2>/dev/null \
     || log_warning "Could not enable quickshell.service"

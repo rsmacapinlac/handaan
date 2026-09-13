@@ -25,6 +25,11 @@ QtObject {
     // "this one, right now".
     readonly property color active: Colors.mauve
 
+    // A summoned dialog drawn over windows rather than wallpaper. Less
+    // translucent than barSurface: nothing blurs behind it, and text over a
+    // busy window has to stay legible.
+    readonly property color dialogSurface: Qt.alpha(Colors.base, 0.9)
+
     // ------------------------------------------------------------- surfaces
     readonly property color surface: Colors.surface0
     readonly property color surfaceHover: Colors.surface1

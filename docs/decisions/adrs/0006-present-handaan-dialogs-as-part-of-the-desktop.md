@@ -26,6 +26,16 @@ The flow runs one way. `handaan apps` — or `SUPER+SHIFT+A` — calls `appCatal
 
 The dialog is a launcher rather than a form — type to narrow, arrows to move, `Enter` to install the row under the cursor. Multi-select was dropped because installing one app is the overwhelmingly common case and a checkbox list made it the slowest one, and because a tick that started checked on an already-installed app, and did nothing when cleared, was state with no meaning. `Install all pending` is a row in the same list and the only action that confirms, since it is the one whose cost — a full system upgrade plus every missing app — is not visible from the row.
 
+The power menu is the second dialog built this way, and replaced a rofi script that wrote a theme file into `~/.config/rofi` on every run and carried its own copy of Mocha:
+
+| piece | what it is |
+|---|---|
+| `default/quickshell/Commons/SessionControl.qml` | Singleton. Holds whether the menu is up, lists the five actions and their commands, runs one. Carries the `sessionControl` IPC target. |
+| `default/quickshell/Ui/PowerMenu.qml` | The dialog. Same surface, placement and dismissal as the installer: a compact card with a filter field, the actions in a single row, and a status line. |
+| `bin/handaan-session` | Toggles the menu. Nothing else. `Ctrl+Alt+Delete` calls it. |
+
+Typing filters the row, matching each action's label and a few synonyms (`reboot`, `sleep`, `shutdown`), and the arrows move through it. Lock and suspend act on the first `Enter`; log out, restart and shut down arm on the first and act on the second, because each ends every open window. The text field, the cursor highlight and the armed colour are the installer's own. The armed item turns warning and the status line carries the prompt, since an action's cell is too narrow to. Everything else about the card stays quiet so that the confirmation is the one loud thing on it. Lock runs `loginctl lock-session` rather than `hyprlock` directly, so it goes through hypridle's `lock_cmd` guard and cannot stack a second hyprlock on one already up. Because `Ctrl+Alt+Delete` is pressed when something is already wrong, `handaan-session` sends its failure as a desktop notification when there is no terminal to print to.
+
 Data crosses the boundary as **JSON produced by `jq`, with the fields passed as argv rather than interpolated into a filter**, so a summary is free text that cannot terminate a string or displace the field after it.
 
 Two rules fall out of putting a dialog in the shell, and both are load-bearing:

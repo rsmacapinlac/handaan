@@ -28,7 +28,7 @@ Decisions already made and living as prose in `README.md`, `AGENTS.md`, or `docs
 
 **Compositor and bar**
 - Hyprland configured in Lua, while hyprlock/hypridle/hyprpaper stay hyprlang
-- Quickshell replaces Waybar; Waybar stays installed but un-enabled
+- Quickshell replaces Waybar; Waybar stayed installed but un-enabled until the shell reached parity, then was removed
 - Bar layout declared in QML rather than read from a config file
 - `qs.*` module imports with an explicit `qmldir`, never relative paths
 - Per-monitor widget state via `BarWidget.screen`, never a session-wide global
