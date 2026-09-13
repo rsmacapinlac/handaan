@@ -57,5 +57,6 @@ Next steps, both done inside the client:
      xdg-desktop-autostart.target, so that entry is honoured. This script
      deliberately does not fabricate that file.
 
-On Linux the sync status icon appears in waybar's tray module.
+The sync status icon needs a system tray, which the Quickshell bar does
+not have yet; the client's own window still shows sync state.
 EOF

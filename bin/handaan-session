@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# handaan:summary=Open the lock, suspend, log out, restart and shut down menu.
+#
+# The menu is a Quickshell surface -- default/quickshell/Ui/PowerMenu.qml,
+# summoned through the SessionControl singleton's IPC target. This is the door
+# to it that Ctrl+Alt+Delete calls, and it does nothing
+# else. Calling it again while the menu is up closes it.
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '4,7p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+# Run from a keybind there is no terminal to print to, and Ctrl+Alt+Delete is
+# the key pressed when something is already wrong -- a failure that only goes
+# to stderr would look like the key doing nothing at all.
+fail() {
+    log_error "$1"
+    log_error "    $2"
+    if [[ ! -t 2 ]] && command -v notify-send >/dev/null; then
+        notify-send -u critical "$1" "$2" || true
+    fi
+    exit 1
+}
+
+# qs reports a connection failure with a nonzero exit, but an IPC-level failure
+# on stdout with exit 0; see handaan-apps.
+if ! output=$(qs -p "$HANDAAN_PATH/default/quickshell" ipc call sessionControl toggle 2>/dev/null); then
+    fail "The Quickshell shell is not running, so there is no menu to open." \
+        "systemctl --user start quickshell.service"
+fi
+
+case $output in
+    "Target not found."* | "Function not found."*)
+        fail "This Quickshell session started before the power menu existed." \
+            "systemctl --user restart quickshell.service"
+        ;;
+esac

@@ -399,7 +399,7 @@ systemctl --user list-units --state=failed                # expect none
 
 Hyprland and greetd do come up on software rendering, but a VM has no real GPU,
 so failures there usually mean the VM rather than the configuration. `battery`
-is absent, which is worth knowing when checking Waybar styling. Hardware checks
+is absent, which is worth knowing when checking the bar's battery widget. Hardware checks
 must remain vendor-neutral. Steam and virtualization are optional, large
 downloads and should be validated separately from the core rehearsal.
 

@@ -78,7 +78,6 @@ ships a unit.
 |---|---|
 | `hypridle`, `hyprpaper`, `mako`, `hyprpolkitagent` | packaged systemd user units, enabled by `install.sh` |
 | `quickshell` | our own user unit, enabled by `install.sh` |
-| `waybar` | nothing — started by hand, see below |
 | `nm-applet`, `blueman-applet`, `set_wallpaper` | `conf/autostart.lua`, wrapped in `uwsm-app` |
 
 `conf/autostart.lua` wraps each remaining command in `uwsm-app` so it lands in
@@ -112,23 +111,6 @@ Two properties of that unit are deliberate and worth not undoing:
   rescan for new registrations, so a newly added singleton fails with
   `ReferenceError: <Name> is not defined` even though the file is valid and in
   place.
-
-### waybar: installed, deliberately not enabled
-
-`waybar` ships a `graphical-session.target` unit like the four above, and
-`install.sh` installs the package — but deliberately does **not** enable the
-unit. It remains as a fallback bar while the Quickshell one grows to parity,
-and runs only when started by hand:
-
-```bash
-systemctl --user stop quickshell   # do not run two bars at once
-systemctl --user start waybar      # this session only
-```
-
-`config/waybar/` seeds `~/.config` once at install like everything else under
-`config/`, so it is ready the moment it is started. Do not add it to
-`conf/autostart.lua` — the unit is the supported path, and an exec there would
-be unsupervised.
 
 ### Caveat: PATH
 

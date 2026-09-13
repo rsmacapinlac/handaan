@@ -49,7 +49,7 @@ Avoid running the installer or `handaan-update` unless explicitly requested; the
 - Adding any QML type means restarting the shell before it exists: the type registry is built once at launch, and `QS_DISABLE_FILE_WATCHER=1` on the unit means no reload happens on its own. `systemctl --user restart quickshell.service`. This is not a migration -- see [0006](docs/decisions/adrs/0006-present-handaan-dialogs-as-part-of-the-desktop.md).
 - `default/quickshell/Commons/Colors.qml` is the generated raw palette; `Commons/Theme.qml` maps it to semantic roles. Widgets bind to `Theme`, never to `Colors` directly, so regenerating or swapping the palette never touches widget code. Do not name a singleton `Palette` -- QtQuick defines that type already and wins the lookup silently, leaving every colour `undefined` instead of erroring.
 - Document non-obvious setup and operational decisions in `docs/`.
-- When proposing a replacement tool or a new dependency, name what it replaces, what the switch costs, and which standard it serves better than the incumbent. The burden of argument sits with the replacement: Waybar is still installed and deliberately left un-enabled beside Quickshell, so the old path stays available until the new one has proven itself.
+- When proposing a replacement tool or a new dependency, name what it replaces, what the switch costs, and which standard it serves better than the incumbent. The burden of argument sits with the replacement: keep the incumbent installed beside it until the new one has proven itself, the way Waybar stayed installed but un-enabled beside Quickshell until the power menu, the last thing only it offered, moved into the shell.
 
 ## Security and privacy
 

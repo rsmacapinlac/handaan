@@ -27,8 +27,7 @@ XDG_RUNTIME_DIR=/run/user/1000 \
 
 Expected:
 
-- Hyprland is running. Waybar is installed but **not** running: core no
-  longer enables its unit, so the bar is started by hand.
+- Hyprland is running, and the Quickshell bar is up.
 - `hyprctl configerrors` prints no errors.
 - `Ctrl+Return` opens Kitty and `Ctrl+Space` opens Rofi.
 - Network, audio, brightness, lock, and display commands exist.
@@ -74,7 +73,7 @@ not running there is no idle timeout and no automatic lock.
 
 ```bash
 pacman -Q \
-  hyprland greetd waybar rofi mako kitty \
+  hyprland greetd quickshell rofi mako kitty \
   firefox \
   networkmanager bluez pipewire wireplumber bolt cups avahi \
   neovim ranger nautilus sushi gvfs-smb \

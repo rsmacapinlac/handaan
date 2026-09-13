@@ -14,7 +14,7 @@ local ctrlMod = "CTRL"
 
 local terminal  = "kitty"
 local menu      = home .. "/.config/rofi/rofi-dynamic.sh"
-local powermenu = home .. "/.config/waybar/scripts/powermenu.sh"
+local powermenu = handaan .. "/bin/handaan-session"
 local wallpaper = handaan .. "/bin/handaan-wallpaper-set"
 local installer = handaan .. "/bin/handaan-apps"
 local lid_switch = handaan .. "/bin/handaan-lid-switch"
