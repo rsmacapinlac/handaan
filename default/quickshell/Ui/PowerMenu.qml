@@ -1,4 +1,4 @@
-// The session menu: shut down, suspend, log out, restart, lock.
+// The session menu: lock, restart, shut down, log out, suspend.
 //
 // A view onto qs.Commons.SessionControl, which owns the open state and the
 // commands. It replaces a rofi script that wrote a theme file into

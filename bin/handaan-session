@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# handaan:summary=Open the lock, suspend, log out, restart and shut down menu.
+# handaan:summary=Open the lock, restart, shut down, log out and suspend menu.
 #
 # The menu is a Quickshell surface -- default/quickshell/Ui/PowerMenu.qml,
 # summoned through the SessionControl singleton's IPC target. This is the door
