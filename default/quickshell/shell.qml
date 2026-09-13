@@ -8,7 +8,8 @@
 // The installer and the power menu are the shell's other surfaces: dialogs
 // rather than bars, up only while summoned. They live here so they inherit
 // Theme -- see Ui/Installer.qml with Commons/AppCatalog.qml, and Ui/PowerMenu.qml
-// with Commons/SessionControl.qml.
+// with Commons/SessionControl.qml. The lock screen is the same arrangement:
+// Ui/LockScreen.qml with Commons/SessionLock.qml.
 
 import QtQuick
 import Quickshell
@@ -46,4 +47,6 @@ ShellRoot {
     Installer {}
 
     PowerMenu {}
+
+    LockScreen {}
 }

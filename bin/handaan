@@ -19,8 +19,8 @@ for file in "$HANDAAN_PATH"/bin/handaan-*; do
     [[ -x $file ]] || continue
     # A script opts out of the listing with its own `# handaan:hidden` line --
     # apps and service-* install or manage things beyond handaan itself, and
-    # hyprlock-capslock/lid-switch are internal helpers invoked by other
-    # config, not commands anyone runs by hand. All stay runnable directly.
+    # lid-switch is an internal helper invoked by other config, not a command
+    # anyone runs by hand. All stay runnable directly.
     grep -q '^# handaan:hidden' "$file" && continue
     name=$(basename "$file")
     summary=$(sed -n 's/^# handaan:summary=//p' "$file" | head -1)

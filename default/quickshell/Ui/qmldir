@@ -5,3 +5,5 @@ BarWidget 1.0 BarWidget.qml
 Tooltip 1.0 Tooltip.qml
 Installer 1.0 Installer.qml
 PowerMenu 1.0 PowerMenu.qml
+LockScreen 1.0 LockScreen.qml
+LockContent 1.0 LockContent.qml

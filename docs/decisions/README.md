@@ -27,7 +27,7 @@ Decisions already made and living as prose in `README.md`, `AGENTS.md`, or `docs
 - Suspend on lid close left to systemd-logind's own defaults, with clamshell handled in `handaan-lid-switch` by dropping the panel out of the layout — see [Monitors](../monitors.md)
 
 **Compositor and bar**
-- Hyprland configured in Lua, while hyprlock/hypridle/hyprpaper stay hyprlang
+- Hyprland configured in Lua, while hypridle/hyprpaper stay hyprlang
 - Quickshell replaces Waybar; Waybar stayed installed but un-enabled until the shell reached parity, then was removed
 - Bar layout declared in QML rather than read from a config file
 - `qs.*` module imports with an explicit `qmldir`, never relative paths

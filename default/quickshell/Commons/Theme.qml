@@ -30,6 +30,15 @@ QtObject {
     // busy window has to stay legible.
     readonly property color dialogSurface: Qt.alpha(Colors.base, 0.9)
 
+    // ----------------------------------------------------------------- lock
+    // Under the wallpaper, and all there is when there is no wallpaper. Opaque:
+    // whatever was on the screen when you walked away must not show through.
+    readonly property color lockBackground: Colors.crust
+    // Laid over the wallpaper so the clock and the password field stay legible
+    // on a bright image. Stronger than dialogSurface, because a wallpaper is
+    // busier than any window.
+    readonly property color lockScrim: Qt.alpha(Colors.crust, 0.55)
+
     // ------------------------------------------------------------- surfaces
     readonly property color surface: Colors.surface0
     readonly property color surfaceHover: Colors.surface1

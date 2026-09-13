@@ -14,7 +14,7 @@ The single most valuable convention here, and the one that varies most. Keep it 
 
 ## Shell
 
-**Shebang follows where the script runs.** `boot.sh`, `install.sh` and everything under `install/` use `#!/bin/bash`: they run on a known Arch system where the path is certain. Everything in `bin/` uses `#!/usr/bin/env bash`, since those run from a user's `PATH` on machines where bash may not be `/bin/bash` — the headless LXC target included. `bin/handaan-hyprlock-capslock` is `#!/bin/sh` on purpose — keep it POSIX, and do not reach for bash features in it.
+**Shebang follows where the script runs.** `boot.sh`, `install.sh` and everything under `install/` use `#!/bin/bash`: they run on a known Arch system where the path is certain. Everything in `bin/` uses `#!/usr/bin/env bash`, since those run from a user's `PATH` on machines where bash may not be `/bin/bash` — the headless LXC target included.
 
 **Every script that executes sets strict mode**, on the line after the shebang:
 
@@ -85,13 +85,12 @@ Widgets carry a file-header comment stating the question the widget answers befo
 
 ## hyprlang
 
-`hyprlock`, `hypridle` and `hyprpaper` stay in hyprlang while Hyprland itself is Lua. Two-space indent inside blocks, `#` comments, uppercase section headers, and `$variables` defined near the top after any `source =` line.
+`hypridle` and `hyprpaper` stay in hyprlang while Hyprland itself is Lua. Two-space indent inside blocks, `#` comments, uppercase section headers, and `$variables` defined near the top after any `source =` line.
 
 ## Generated files
 
-Three files are generated from `default/themed/mocha.json` by `bin/handaan-theme-generate` and must never be hand-edited:
+Two files are generated from `default/themed/mocha.json` by `bin/handaan-theme-generate` and must never be hand-edited:
 
-- `default/hypr/colors.conf`
 - `default/hypr/colors.lua`
 - `default/quickshell/Commons/Colors.qml`
 

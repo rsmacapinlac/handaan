@@ -1,5 +1,9 @@
 # ADR Changelog
 
+## 2026-09-13 (lock screen in the shell)
+
+- **0006** edited in place. The power menu's Lock no longer runs `loginctl lock-session`; it asks the shell's lock screen directly.
+
 ## 2026-09-13 (power menu in the shell)
 
 - **0006** edited in place. The rofi power menu, `config/waybar/scripts/powermenu.sh`, moved into the shell as `Commons/SessionControl.qml` and `Ui/PowerMenu.qml`, summoned by `bin/handaan-session`. It had written a temp theme into the user's `~/.config/rofi` on every run and hardcoded a Mocha a regenerate could not reach; it named a font no package installs; its lock bypassed hypridle's single-instance guard; and restart and shut down ran on one keypress. It is a filterable single row of actions, and log out, restart and shut down now confirm. That was the last thing only Waybar offered, so Waybar went with it: the package, its `config/waybar/` seed, and the fallback-bar wording in `AGENTS.md` and `docs/hyprland-startup.md`. `migrations/1789324024.sh` uninstalls it from installed machines and leaves `~/.config/waybar` to its owner.

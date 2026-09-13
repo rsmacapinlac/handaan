@@ -66,7 +66,7 @@ hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = tr
 -- drops the internal panel out of the layout. See that script for the split.
 --
 -- `locked` is load-bearing here rather than a nicety: without it neither bind
--- fires once hyprlock is up, which is precisely when a lid gets closed.
+-- fires once the session is locked, which is precisely when a lid gets closed.
 hl.bind("switch:on:Lid Switch",  hl.dsp.exec_cmd(lid_switch .. " closed"), { locked = true })
 hl.bind("switch:off:Lid Switch", hl.dsp.exec_cmd(lid_switch .. " open"),   { locked = true })
 
