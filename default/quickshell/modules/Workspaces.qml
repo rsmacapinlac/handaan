@@ -17,6 +17,17 @@
 // blind. Identity is cheap here because the pill already carries both answers
 // through size, shape and fill, so a muted numeral cannot be mistaken for one.
 //
+// The first answer carries one refinement: whether this screen also holds
+// focus. With two monitors, each is displaying a workspace, and drawing both as
+// the same filled pill left no way to tell which one the keyboard was on. So
+// the displayed workspace keeps the wide pill on every screen, and only the
+// focused monitor's pill is filled; the other is an outline in the same
+// colour. That is a third state against the two-strong-states rule in
+// docs/quickshell-widgets.md, and it is allowed because it is not a new
+// question: it is the same answer, drawn with or without fill. Width still says
+// "this screen is on it", so nothing reflows when focus crosses monitors, and
+// exactly one filled accent pill exists across the whole session.
+//
 // What is deliberately absent is whether a workspace holds windows, which
 // answers neither question: you are not on it, and it is not asking for you.
 //
@@ -80,6 +91,9 @@ BarWidget {
     readonly property int idleWidth: Style.space(5)
     readonly property int slotStrong: pillWidth
     readonly property int slotWeak: idleWidth
+    // The unfocused monitor's outline. Twice the chrome border, because a
+    // hairline around a filled-sized pill reads as idle at a glance.
+    readonly property int outlineWidth: Style.borderWidth * 2
 
     // Which workspace *this screen* is displaying.
     //
@@ -100,6 +114,9 @@ BarWidget {
             return -1;
         return root.monitor.activeWorkspace.id;
     }
+    // Whether this screen holds session focus. Read off this instance's own
+    // monitor, so exactly one bar answers true at a time.
+    readonly property bool monitorFocused: root.monitor !== null && root.monitor.focused
 
     // Positive ids only: Hyprland numbers special workspaces (scratchpads)
     // negatively, and those are summoned by name rather than picked out of a
@@ -169,16 +186,22 @@ BarWidget {
                 required property int modelData
 
                 readonly property var workspace: root.workspaceById(modelData)
-                readonly property bool focused: root.activeId === modelData
+                // On screen here, whether or not this monitor has focus. Not
+                // named `visible`: that is Item's own property.
+                readonly property bool displayed: root.activeId === modelData
+                readonly property bool focused: displayed && root.monitorFocused
                 // Hyprland clears urgency when you arrive, so the two strong
                 // states rarely coincide. If they do, focused wins: you are
                 // already looking at it, which is what urgency was asking for.
+                // Displayed without focus does not win: the keyboard is
+                // elsewhere, so the request has not been answered yet.
                 readonly property bool urgent: workspace !== null && workspace.urgent && !focused
                 readonly property bool strong: focused || urgent
+                readonly property bool wide: strong || displayed
 
                 // Animated so the row grows and shrinks as focus moves rather
                 // than snapping, which makes the change legible as movement.
-                property real slotWidth: strong ? root.slotStrong : root.slotWeak
+                property real slotWidth: wide ? root.slotStrong : root.slotWeak
 
                 Behavior on slotWidth {
                     NumberAnimation {
@@ -195,13 +218,20 @@ BarWidget {
                     id: shape
 
                     anchors.centerIn: parent
-                    width: slot.strong ? root.pillWidth : root.idleWidth
+                    width: slot.wide ? root.pillWidth : root.idleWidth
                     height: root.pillHeight
                     radius: height / 2
 
-                    // Fill is reserved for the two answers. An idle slot has
-                    // none; hover gives it a quiet surface so the click target
-                    // is discoverable, which is an affordance, not a state.
+                    // Displayed on the unfocused monitor: the pill's outline
+                    // without its fill. Suppressed when urgent, whose fill is
+                    // already the stronger signal.
+                    border.width: slot.displayed && !slot.strong ? root.outlineWidth : 0
+                    border.color: Theme.active
+
+                    // Fill is reserved for the two answers. An idle or merely
+                    // displayed slot has none; hover gives it a quiet surface
+                    // so the click target is discoverable, which is an
+                    // affordance, not a state.
                     color: {
                         if (slot.focused)
                             return Theme.active;
@@ -250,9 +280,16 @@ BarWidget {
                     Text {
                         anchors.centerIn: parent
                         text: String(slot.modelData)
-                        // Dark on the filled pill; muted when idle, so identity
-                        // is readable without competing with the answers.
-                        color: slot.strong ? Theme.barBackground : (mouse.containsMouse ? Theme.barText : Theme.barTextMuted)
+                        // Dark on the filled pill; accent inside the outline, so
+                        // it matches its border; muted when idle, so identity is
+                        // readable without competing with the answers.
+                        color: {
+                            if (slot.strong)
+                                return Theme.barBackground;
+                            if (slot.displayed)
+                                return Theme.active;
+                            return mouse.containsMouse ? Theme.barText : Theme.barTextMuted;
+                        }
                         font.family: Style.fontFamily
                         font.pixelSize: Style.fontSizeSmall
                         font.bold: slot.strong

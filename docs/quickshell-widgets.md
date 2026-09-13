@@ -33,6 +33,15 @@ The failure mode to watch for is a widget that encodes several states weakly —
 several shades of the same colour, several opacities — so that all of them
 require reading and none of them glance.
 
+A refinement of an answer is not a new state competing with it. The workspace
+widget draws the workspace a screen is displaying as a wide pill on every
+monitor, filled on the focused monitor and outlined on the others. That is
+still one answer — "which workspace is this screen on" — with focus carried by
+fill alone; width, the strongest channel, is unchanged, so the row does not
+reflow when focus crosses monitors, and exactly one filled pill exists in the
+session. The test is whether dropping the refinement leaves the answer intact:
+here it does, which is what keeps it from counting against the two.
+
 ## Motion is reserved for attention
 
 Colour, size and shape only work once you are already looking at the bar.
