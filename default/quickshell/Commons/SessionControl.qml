@@ -1,4 +1,4 @@
-// Ending or pausing the session: lock, suspend, log out, restart, shut down.
+// Ending or pausing the session: lock, restart, shut down, log out, suspend.
 //
 // A singleton for the reason AppCatalog is one: the surface that draws the
 // menu, Ui/PowerMenu.qml, is loaded on demand, and a thing that is not loaded
@@ -34,11 +34,11 @@ Singleton {
     // `keywords` are what typing in the menu also matches, so the word you
     // reach for finds the action whichever name it goes by here.
     readonly property var actions: [
-        { id: "poweroff", label: "Shut down", icon: "󰐥", confirm: true,  keywords: "shutdown power off poweroff", command: ["systemctl", "poweroff"] },
-        { id: "suspend",  label: "Suspend",   icon: "󰤄", confirm: false, keywords: "sleep",                       command: ["systemctl", "suspend"] },
-        { id: "logout",   label: "Log out",   icon: "󰗽", confirm: true,  keywords: "logout sign out exit",        command: ["hyprctl", "dispatch", "exit"] },
+        { id: "lock",     label: "Lock",      icon: "󰌾", confirm: false, keywords: "lock screen",                 command: ["loginctl", "lock-session"] },
         { id: "reboot",   label: "Restart",   icon: "󰜉", confirm: true,  keywords: "reboot",                      command: ["systemctl", "reboot"] },
-        { id: "lock",     label: "Lock",      icon: "󰌾", confirm: false, keywords: "lock screen",                 command: ["loginctl", "lock-session"] }
+        { id: "poweroff", label: "Shut down", icon: "󰐥", confirm: true,  keywords: "shutdown power off poweroff", command: ["systemctl", "poweroff"] },
+        { id: "logout",   label: "Log out",   icon: "󰗽", confirm: true,  keywords: "logout sign out exit",        command: ["hyprctl", "dispatch", "exit"] },
+        { id: "suspend",  label: "Suspend",   icon: "󰤄", confirm: false, keywords: "sleep",                       command: ["systemctl", "suspend"] }
     ]
 
     function open() {
