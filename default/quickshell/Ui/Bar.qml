@@ -23,7 +23,7 @@ Item {
     property bool hidden: false
 
     readonly property int barSize: Style.barSize
-    readonly property color background: Theme.barBackground
+    readonly property color background: Theme.barSurface
     readonly property color foreground: Theme.barText
 
     // Run a command without keeping a child process attached to the shell.

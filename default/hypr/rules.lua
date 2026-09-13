@@ -24,6 +24,17 @@ hl.window_rule({
     no_focus = true,
 })
 
+-- Blur behind the Quickshell bar, whose background is translucent
+-- (Theme.barSurface). Matched by the namespace Ui/Bar.qml sets, so the
+-- shell's other surfaces -- tooltips, the installer -- are unaffected. The bar
+-- reserves its strip, so what blurs behind it is normally the wallpaper.
+hl.layer_rule({
+    name  = "blur-quickshell-bar",
+    match = { namespace = "^quickshell-bar$" },
+
+    blur = true,
+})
+
 -- Float pulsemixer (launched via kitty --class pulsemixer) centred on whichever
 -- monitor the flyout opens on. `center` is used instead of an absolute `move`
 -- because coordinates are monitor-local: a position measured on the ultrawide
