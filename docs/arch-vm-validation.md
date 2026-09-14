@@ -64,19 +64,18 @@ obvious.
 for p in hypridle hyprpaper hyprpolkitagent quickshell; do
   printf '%-18s ' "$p"; pgrep -x "$p" >/dev/null && echo RUNNING || echo "NOT RUNNING"
 done
-systemctl --user is-enabled mako.service                  # expect: masked
 busctl --user status org.freedesktop.Notifications | grep '^Comm='   # expect: Comm=quickshell
 notify-send handaan-test "a popup at the top right"
 ```
 
-Expected: all four RUNNING, mako masked, and the shell owning notifications. `hypridle` in particular has no fallback — if it is
+Expected: all four RUNNING, and the shell owning notifications. `hypridle` in particular has no fallback — if it is
 not running there is no idle timeout and no automatic lock.
 
 ## Core package checks
 
 ```bash
 pacman -Q \
-  hyprland greetd quickshell rofi mako kitty \
+  hyprland greetd quickshell rofi kitty \
   firefox \
   networkmanager bluez pipewire wireplumber bolt cups avahi \
   neovim ranger nautilus sushi gvfs-smb \

@@ -1,7 +1,7 @@
 [Unit]
 Description=Quickshell desktop shell
 Documentation=https://quickshell.org/
-# Matches how the packaged hypridle/hyprpaper/mako units attach to the session:
+# Matches how the packaged hypridle/hyprpaper units attach to the session:
 # started by graphical-session.target, and stopped with it. uwsm is what
 # activates that target -- see docs/hyprland-startup.md.
 PartOf=graphical-session.target

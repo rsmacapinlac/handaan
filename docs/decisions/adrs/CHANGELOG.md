@@ -1,5 +1,9 @@
 # ADR Changelog
 
+## 2026-09-14 (mako removed)
+
+- **0008** edited in place. mako is no longer kept as a masked fallback: the package leaves `install/desktop.packages`, its `config/mako` seed and the mask in `install/post-install/services.sh` go with it, and `migrations/1789361075.sh` uninstalls it, removes the mask and removes `~/.config/mako/config` on installed machines.
+
 ## 2026-09-13 (terminal apps take the desktop's colours)
 
 - **0009** written. kitty, Neovim, btop, lazygit and nmtui take their colours from the wallpaper. The palette gains the terminal's sixteen (`ansi*`, held to their hues like the status colours), and `bin/handaan-theme-render` writes a colour file per app from templates in `default/theme/templates/` -- or an app's own `theme/` in `~/.config/handaan/apps` -- into `$HANDAAN_STATE/theme/` on every wallpaper change. Neovim reads the palette itself through `default/nvim/colors/handaan.lua`; lazygit and nmtui are pointed at their files from `default/shell/env-bootstrap`; btop through a link in its themes directory and a `config/btop/btop.conf` seed. `migrations/1789358448.sh` writes the files and links btop on installed machines.

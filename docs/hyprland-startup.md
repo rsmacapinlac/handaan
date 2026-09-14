@@ -54,7 +54,7 @@ user units declaring `WantedBy=graphical-session.target`:
 
 `hypridle`, `hyprpaper`, `hyprpolkitagent`
 
-`mako` ships one too, and is deliberately masked: notifications belong to the Quickshell shell, and mako's D-Bus activation would otherwise start it the moment anything notified before the shell was up. See [0008](decisions/adrs/0008-notifications-are-part-of-the-desktop-shell.md).
+No notification daemon is among them: notifications belong to the Quickshell shell, and a packaged daemon's D-Bus activation would start it the moment anything notified before the shell was up. See [0008](decisions/adrs/0008-notifications-are-part-of-the-desktop-shell.md).
 
 **Without a session manager that target never activates**, so those units are
 enabled but never started. This is not theoretical: `hypridle` was enabled and
@@ -80,7 +80,6 @@ ships a unit.
 |---|---|
 | `hypridle`, `hyprpaper`, `hyprpolkitagent` | packaged systemd user units, enabled by `install.sh` |
 | `quickshell` | our own user unit, enabled by `install.sh`. Also the notification daemon. |
-| `mako` | nothing: installed, unit masked |
 | `nm-applet`, `blueman-applet`, `set_wallpaper` | `conf/autostart.lua`, wrapped in `uwsm-app` |
 
 `conf/autostart.lua` wraps each remaining command in `uwsm-app` so it lands in
