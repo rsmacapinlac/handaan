@@ -35,3 +35,33 @@ case ":$PATH:" in
     *) PATH="$HANDAAN_PATH/bin:$PATH" ;;
 esac
 export PATH
+
+# Colours for the terminal apps that can only be pointed at a file from the
+# environment; handaan-theme-render writes both files. See ADR 0009.
+#
+# nmtui, and anything else drawn with newt. A missing file is simply ignored.
+: "${NEWT_COLORS_FILE:=$HANDAAN_STATE/theme/newt-colors}"
+export NEWT_COLORS_FILE
+
+# lazygit reads a list of config files, later ones winning, so the colours go
+# first and your own config.yml after them. But lazygit refuses to start when
+# any file on the list is missing, so each is listed only while it exists --
+# checked again every time this is sourced, which a new shell does. A list you
+# set yourself, one not starting with handaan's file, is left alone.
+handaan_lazygit_theme="$HANDAAN_STATE/theme/lazygit.yml"
+case "${LG_CONFIG_FILE:-}" in
+    "" | "$handaan_lazygit_theme" | "$handaan_lazygit_theme",*)
+        handaan_lazygit_user="${XDG_CONFIG_HOME:-$HOME/.config}/lazygit/config.yml"
+        if [ -r "$handaan_lazygit_theme" ] && [ -r "$handaan_lazygit_user" ]; then
+            LG_CONFIG_FILE="$handaan_lazygit_theme,$handaan_lazygit_user"
+            export LG_CONFIG_FILE
+        elif [ -r "$handaan_lazygit_theme" ]; then
+            LG_CONFIG_FILE="$handaan_lazygit_theme"
+            export LG_CONFIG_FILE
+        else
+            unset LG_CONFIG_FILE
+        fi
+        unset handaan_lazygit_user
+        ;;
+esac
+unset handaan_lazygit_theme

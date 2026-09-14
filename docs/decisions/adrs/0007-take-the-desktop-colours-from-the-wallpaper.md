@@ -35,7 +35,7 @@ The desktop's colours were Catppuccin Mocha, copied by hand or by a generator in
 
 **The palette is state, not a default and not a seed.** It changes at runtime and differs per machine, so a `git pull` must not replace it and a one-time copy could never update it. It lives beside `~/.wallpaper`, which was already the record of what is on screen.
 
-**Both files are flat `{"name": "rrggbb"}` objects under names that describe a place in the scheme** -- `background`, `surface`, `border`, `text`, `textMuted`, `accent`, `accentAlt`, `good`, `warning`, `critical` -- because a wallpaper has no "mauve". Flat because Hyprland's Lua has no JSON library and reads them with a pattern.
+**Both files are flat `{"name": "rrggbb"}` objects under names that describe a place in the scheme** -- `background`, `surface`, `border`, `text`, `textMuted`, `accent`, `accentAlt`, `good`, `warning`, `critical` -- because a wallpaper has no "mauve". The terminal's colours, `ansiBlack` to `ansiBrightWhite`, are the exception, since a terminal names its colours by hue; see [0009](0009-terminal-apps-take-the-desktop-colours.md). Flat because Hyprland's Lua has no JSON library and reads them with a pattern.
 
 **Recolouring a running session needs no reload and no restart.** The palette is renamed into place. Quickshell's `FileView` watches it and every `Theme` binding follows. Hyprland is told with `hyprctl eval 'require("hypr.theme").apply()'`, which runs in the config's own Lua state, so only the border colours change and the rest of the config is not re-run.
 
@@ -53,6 +53,6 @@ Nothing in the tree is generated any more, so the "never hand-edit" rule for pal
 
 A border colour set in your own `conf/` modules is overwritten at the next wallpaper change, because `apply()` runs after them. There is no supported override for the border colours today.
 
-rofi still carries its own colours. It is the next consumer, and would read the same state file. Notifications follow the palette already, being drawn by the shell -- see [0008](0008-notifications-are-part-of-the-desktop-shell.md).
+rofi still carries its own colours. It is the next consumer, and would read the same state file. The terminal apps handaan installs follow the palette through colour files of their own, and the palette gained the terminal's sixteen colours for them -- see [0009](0009-terminal-apps-take-the-desktop-colours.md). Notifications follow the palette already, being drawn by the shell -- see [0008](0008-notifications-are-part-of-the-desktop-shell.md).
 
 Existing machines need matugen, so `migrations/1789334342.sh` installs it. Without it the wallpaper still changes and the colours stay put, with a warning. The picker and `Colors`' new shape are QML, so the shell needs a restart to see them. Per [0006](0006-present-handaan-dialogs-as-part-of-the-desktop.md) that is not a migration: it happens at the next login, and `handaan-wallpaper` says so plainly until it does.

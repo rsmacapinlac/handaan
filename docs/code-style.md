@@ -66,6 +66,8 @@ hl.monitor({
 
 Align by eye when it makes a block scannable; do not treat it as mandatory, and do not reflow a neighbouring block to keep a column when adding one key. Each module opens with a title comment and the relevant wiki link.
 
+**`default/nvim/` — Neovim.** Two-space indent, as Neovim's own runtime Lua is. It holds only the `handaan` colorscheme, which a user's config puts on the runtimepath.
+
 Neovim's own Lua config no longer lives in this repository — it moved to the private companion tree, along with the rest of the app-preference configs that used to sit under `config/`. See [`docs/standards/privacy-policy.md`](standards/privacy-policy.md).
 
 `$HOME` does not expand anywhere in Lua config. Build paths with `os.getenv("HOME") .. "/..."`.
@@ -89,4 +91,6 @@ Widgets carry a file-header comment stating the question the widget answers befo
 
 ## The palette file
 
-The desktop's colours are not in the tree. `bin/handaan-wallpaper-set` derives them from the wallpaper and writes `$HANDAAN_STATE/theme/colors.json`; `default/theme/fallback.json` fills any colour that file lacks. Both are flat `{"name": "rrggbb"}` objects -- Hyprland reads them with a Lua pattern, not a JSON parser, so keep them flat. See [0007](decisions/adrs/0007-take-the-desktop-colours-from-the-wallpaper.md).
+The desktop's colours are not in the tree. `bin/handaan-wallpaper-set` derives them from the wallpaper and writes `$HANDAAN_STATE/theme/colors.json`; `default/theme/fallback.json` fills any colour that file lacks. Both are flat `{"name": "rrggbb"}` objects -- Hyprland reads them with a Lua pattern, not a JSON parser, so keep them flat.
+
+Templates under `default/theme/templates/` are the app's own format with `{{name}}` for a palette colour, which renders as bare `rrggbb`. Keep `{{` out of their comments: anything in braces that is not a palette name stops the file being written. See [0009](decisions/adrs/0009-terminal-apps-take-the-desktop-colours.md). See [0007](decisions/adrs/0007-take-the-desktop-colours-from-the-wallpaper.md).

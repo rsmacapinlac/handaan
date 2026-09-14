@@ -1,7 +1,7 @@
 # matugen's scheme onto handaan's palette names.
 #
-# Input:  `matugen image --json hex` output, run with good/warning/critical as
-#         custom colours blended toward the wallpaper.
+# Input:  `matugen image --json hex` output, run with good/warning/critical and
+#         the terminal's hues as custom colours blended toward the wallpaper.
 # Args:   $fallback (the parsed default/theme/fallback.json), $wallpaper.
 # Output: the flat {"name": "rrggbb"} object Hyprland and the shell read.
 #
@@ -18,6 +18,13 @@
 # the accent while it stands clear of them, and otherwise the scheme's key
 # colour standing furthest from them takes its place. Every accent is still one
 # of the wallpaper's own colours.
+#
+# The terminal's colours (ansi*) follow the status colours' rule. A red in a
+# diff has to read as red, so each hue is blended and held to its window like
+# good, warning and critical are; red and green are those two, so a failed
+# test and a critical notification are one colour. Bright hues are the same as
+# normal ones, as Catppuccin's are: only black and white get a brighter step,
+# and those come from the scheme's own greys.
 
 def role($name): .colors[$name].dark.color | ltrimstr("#") | ascii_downcase;
 
@@ -45,7 +52,16 @@ def hue_within($lo; $hi): if $lo <= $hi then . >= $lo and . <= $hi else . >= $lo
 
 # What each status colour has to stay. Wide enough for a blend to move it,
 # narrow enough that red never reads as pink and peach never as yellow.
-def windows: { good: [75, 165], warning: [10, 50], critical: [335, 20] };
+def windows: {
+    good: [75, 165], warning: [10, 50], critical: [335, 20],
+    ansiYellow: [35, 65], ansiCyan: [160, 195], ansiBlue: [195, 250], ansiMagenta: [280, 335]
+};
+
+# A blended colour while it keeps its hue, and the fixed one once it does not.
+def held($scheme; $fallback; $name):
+    ($scheme | role($name)) as $blended
+    | if ($blended | hsl.hue | hue_within(windows[$name][0]; windows[$name][1]))
+      then $blended else $fallback[$name] end;
 
 # How far a colour stands from the nearest status colour, in degrees of hue.
 # A grey stands apart from everything: it cannot be mistaken for a hue.
@@ -56,11 +72,7 @@ def clearance($status):
 
 . as $scheme
 | (["good", "warning", "critical"]
-   | map(. as $name
-         | ($scheme | role($name)) as $blended
-         | { key: $name,
-             value: (if ($blended | hsl.hue | hue_within(windows[$name][0]; windows[$name][1]))
-                     then $blended else $fallback[$name] end) })
+   | map({ key: ., value: held($scheme; $fallback; .) })
    | from_entries) as $status
 | ([role("primary"), role("tertiary"), role("secondary")]) as $keys
 | (if ($keys[0] | clearance($status)) >= 35 then $keys[0]
@@ -78,5 +90,17 @@ def clearance($status):
     accentAlt:      $accentAlt
   }
   + $status
+  + {
+    ansiBlack:       role("surface_container_highest"),
+    ansiRed:         $status.critical,
+    ansiGreen:       $status.good,
+    ansiYellow:      held($scheme; $fallback; "ansiYellow"),
+    ansiBlue:        held($scheme; $fallback; "ansiBlue"),
+    ansiMagenta:     held($scheme; $fallback; "ansiMagenta"),
+    ansiCyan:        held($scheme; $fallback; "ansiCyan"),
+    ansiWhite:       role("on_surface_variant"),
+    ansiBrightBlack: role("outline"),
+    ansiBrightWhite: role("on_surface")
+  }
 | if all(.[]; test("^[0-9a-f]{6}$")) then . else error("matugen output is missing a role") end
 | . + { wallpaper: $wallpaper }

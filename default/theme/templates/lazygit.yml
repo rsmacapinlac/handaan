@@ -1,0 +1,36 @@
+# lazygit's colours, taken from the wallpaper.
+#
+# Written by handaan-theme-render from $HANDAAN_PATH/default/theme/templates/lazygit.yml
+# on every wallpaper change -- edit the template, not this file. lazygit reads
+# it through LG_CONFIG_FILE, which default/shell/env-bootstrap sets with your
+# own config.yml after it, so anything you set there wins.
+gui:
+  theme:
+    activeBorderColor:
+      - "#{{accent}}"
+      - bold
+    inactiveBorderColor:
+      - "#{{border}}"
+    searchingActiveBorderColor:
+      - "#{{warning}}"
+      - bold
+    optionsTextColor:
+      - "#{{accentAlt}}"
+    selectedLineBgColor:
+      - "#{{surface}}"
+    inactiveViewSelectedLineBgColor:
+      - "#{{surface}}"
+    cherryPickedCommitFgColor:
+      - "#{{background}}"
+    cherryPickedCommitBgColor:
+      - "#{{accentAlt}}"
+    markedBaseCommitFgColor:
+      - "#{{background}}"
+    markedBaseCommitBgColor:
+      - "#{{warning}}"
+    unstagedChangesColor:
+      - "#{{critical}}"
+    defaultFgColor:
+      - "#{{text}}"
+  authorColors:
+    "*": "#{{accentAlt}}"
