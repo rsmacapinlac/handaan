@@ -1,0 +1,61 @@
+# btop's colours, taken from the wallpaper.
+#
+# Written by handaan-theme-render from $HANDAAN_PATH/default/theme/templates/btop.theme
+# on every wallpaper change -- edit the template, not this file. btop finds it
+# as the theme "handaan", through the link at ~/.config/btop/themes/handaan.theme.
+#
+# Meters run good to warning to critical wherever more is worse -- heat, load,
+# memory in use -- and on the accents where it is only a quantity.
+
+theme[main_bg]="#{{background}}"
+theme[main_fg]="#{{text}}"
+theme[title]="#{{text}}"
+theme[hi_fg]="#{{accent}}"
+theme[selected_bg]="#{{surface}}"
+theme[selected_fg]="#{{accent}}"
+theme[inactive_fg]="#{{textMuted}}"
+theme[graph_text]="#{{textMuted}}"
+theme[meter_bg]="#{{surfaceHover}}"
+theme[proc_misc]="#{{accentAlt}}"
+theme[div_line]="#{{border}}"
+
+theme[cpu_box]="#{{border}}"
+theme[mem_box]="#{{border}}"
+theme[net_box]="#{{border}}"
+theme[proc_box]="#{{border}}"
+
+theme[temp_start]="#{{good}}"
+theme[temp_mid]="#{{warning}}"
+theme[temp_end]="#{{critical}}"
+
+theme[cpu_start]="#{{good}}"
+theme[cpu_mid]="#{{warning}}"
+theme[cpu_end]="#{{critical}}"
+
+theme[used_start]="#{{good}}"
+theme[used_mid]="#{{warning}}"
+theme[used_end]="#{{critical}}"
+
+theme[free_start]="#{{accentAlt}}"
+theme[free_mid]="#{{accentAlt}}"
+theme[free_end]="#{{accent}}"
+
+theme[cached_start]="#{{accentAlt}}"
+theme[cached_mid]="#{{accentAlt}}"
+theme[cached_end]="#{{accent}}"
+
+theme[available_start]="#{{accentAlt}}"
+theme[available_mid]="#{{accentAlt}}"
+theme[available_end]="#{{accent}}"
+
+theme[download_start]="#{{accentAlt}}"
+theme[download_mid]="#{{accentAlt}}"
+theme[download_end]="#{{accent}}"
+
+theme[upload_start]="#{{accent}}"
+theme[upload_mid]="#{{accent}}"
+theme[upload_end]="#{{accentAlt}}"
+
+theme[process_start]="#{{accentAlt}}"
+theme[process_mid]="#{{accent}}"
+theme[process_end]="#{{critical}}"

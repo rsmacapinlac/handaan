@@ -10,5 +10,15 @@
   "accentAlt": "89b4fa",
   "good": "a6e3a1",
   "warning": "fab387",
-  "critical": "f38ba8"
+  "critical": "f38ba8",
+  "ansiBlack": "45475a",
+  "ansiRed": "f38ba8",
+  "ansiGreen": "a6e3a1",
+  "ansiYellow": "f9e2af",
+  "ansiBlue": "89b4fa",
+  "ansiMagenta": "f5c2e7",
+  "ansiCyan": "94e2d5",
+  "ansiWhite": "bac2de",
+  "ansiBrightBlack": "585b70",
+  "ansiBrightWhite": "a6adc8"
 }

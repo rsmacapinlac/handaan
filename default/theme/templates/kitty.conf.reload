@@ -1,0 +1,3 @@
+# kitty re-reads its whole config, includes and all, on SIGUSR1, so every open
+# terminal takes the new colours without a restart.
+pkill -USR1 -u "$(id -u)" -x kitty || true

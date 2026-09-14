@@ -1,5 +1,10 @@
 # ADR Changelog
 
+## 2026-09-13 (terminal apps take the desktop's colours)
+
+- **0009** written. kitty, Neovim, btop, lazygit and nmtui take their colours from the wallpaper. The palette gains the terminal's sixteen (`ansi*`, held to their hues like the status colours), and `bin/handaan-theme-render` writes a colour file per app from templates in `default/theme/templates/` -- or an app's own `theme/` in `~/.config/handaan/apps` -- into `$HANDAAN_STATE/theme/` on every wallpaper change. Neovim reads the palette itself through `default/nvim/colors/handaan.lua`; lazygit and nmtui are pointed at their files from `default/shell/env-bootstrap`; btop through a link in its themes directory and a `config/btop/btop.conf` seed. `migrations/1789358448.sh` writes the files and links btop on installed machines.
+- **0007** edited in place. Its palette names and its note on the next consumers point to 0009.
+
 ## 2026-09-13 (bell shows what is waiting)
 
 - **0008** edited in place. The bell is no longer always on the bar: it is present while anything is kept in history, or while do-not-disturb is on, and coloured by the most urgent notification kept (critical red, normal the accent, low grey) rather than by whether anything is unseen. Opening the history still marks everything seen, but only dismissing takes the bell away.

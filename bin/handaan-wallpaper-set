@@ -104,16 +104,18 @@ log_success "Wallpaper set to ${image##*/}"
 
 command -v matugen >/dev/null 2>&1 || { log_warning "matugen is not installed; the colours were not changed"; exit 0; }
 
-# matugen blends the status colours toward the wallpaper as custom colours. Its
-# config is written from the fallback on each run rather than kept as a second
-# copy of those three hex values; it must carry a [templates] table, even empty.
+# matugen blends the status colours and the terminal's hues toward the
+# wallpaper as custom colours. Its config is written from the fallback on each
+# run rather than kept as a second copy of those hex values; it must carry a
+# [templates] table, even empty.
 config="$(mktemp "$THEME_DIR/matugen.XXXXXX")"
 tmp="$(mktemp "$THEME_DIR/colors.XXXXXX")"
 trap 'rm -f "$config" "$tmp"' EXIT
 
 jq -r '
     "[config.custom_colors]",
-    (to_entries[] | select(.key == "good" or .key == "warning" or .key == "critical")
+    (to_entries[] | select(.key | IN("good", "warning", "critical",
+                                     "ansiYellow", "ansiBlue", "ansiMagenta", "ansiCyan"))
      | "\(.key) = { color = \"#\(.value)\", blend = true }"),
     "",
     "[templates]"
@@ -147,5 +149,8 @@ if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
     result="$(hyprctl eval 'require("hypr.theme").apply()' 2>&1 || true)"
     [[ $result == ok ]] || log_warning "Hyprland did not take the new colours: $result"
 fi
+
+# Terminal apps read colour files of their own, written from the palette.
+"$HANDAAN_PATH/bin/handaan-theme-render" || log_warning "Some app colour files were not written"
 
 log_success "Colours taken from ${image##*/}"

@@ -34,8 +34,9 @@ There is no registry to add yourself to. The directory existing is the registrat
 | `install.sh` | optional | Sourced once, each time the app is selected. One-time setup. |
 | `update.sh` | optional | Sourced on every `handaan update`. Ongoing maintenance. |
 | `config/` | optional | Mirrors `$HOME`. Copied in without clobbering, when the app is selected. |
+| `theme/` | optional | Colour templates, written from the desktop's palette on every wallpaper change. See [Colours from the wallpaper](#colours-from-the-wallpaper). |
 
-Only `meta` is required. The other four are independent of each other — an app can be a package list and nothing else, or a `config/` tree and nothing else. Anything else you keep in the directory (a `README.md`, a helper script, a wallpaper) is ignored by handaan and available to your own scripts.
+Only `meta` is required. The other five are independent of each other — an app can be a package list and nothing else, or a `config/` tree and nothing else. Anything else you keep in the directory (a `README.md`, a helper script, a wallpaper) is ignored by handaan and available to your own scripts.
 
 When an app is installed, the three steps run in this order: **packages, then `install.sh`, then `config/`.** So `install.sh` cannot assume its own `config/` files have landed yet.
 
@@ -123,6 +124,31 @@ The copy is **no-clobber**. A file that already exists in `$HOME` is left exactl
 The consequence catches everyone once. **Editing a file in your app's `config/` does not change a machine where the app is already installed.** The copy in `$HOME` already exists and wins. To take the new version, delete or move your local copy and re-run `handaan apps-install <name>`, or just apply the edit to `$HOME` yourself.
 
 Note also that `.desktop` overrides for your applications belong here, not in handaan — handaan seeds only overrides for packages it installs itself.
+
+### `theme/`
+
+Colour templates, so your app follows the wallpaper the way the desktop does. Each file is the app's own colour format, with `{{name}}` wherever a palette colour goes:
+
+```
+# ~/.config/handaan/apps/tmux/theme/tmux.conf
+set -g status-style "fg=#{{text}},bg=#{{surface}}"
+set -g pane-active-border-style "fg=#{{accent}}"
+```
+
+On every wallpaper change, and at login, `handaan-theme-render` writes it to `$HANDAAN_STATE/theme/tmux.conf` (`~/.local/state/handaan/theme/tmux.conf`) with each `{{name}}` replaced by bare `rrggbb` -- hence `#{{accent}}` where the app wants a hash. Your app's config then reads that file, which is a line you add yourself:
+
+```
+source-file ~/.local/state/handaan/theme/tmux.conf
+```
+
+A `<file>.reload` beside the template is run with bash after the file is written, to recolour copies already running:
+
+```bash
+# ~/.config/handaan/apps/tmux/theme/tmux.conf.reload
+tmux source-file ~/.local/state/handaan/theme/tmux.conf 2>/dev/null || true
+```
+
+The names are the palette's, listed in `$HANDAAN_PATH/default/theme/fallback.json`: `background`, `surface`, `text`, `accent`, `good`, `warning`, `critical` and the rest, plus the terminal's `ansiBlack` to `ansiBrightWhite`. A template naming a colour the palette does not have is skipped with a warning and the previous file is kept. A file with the same name as one of handaan's -- `kitty.conf`, `btop.theme`, `lazygit.yml`, `newt-colors` -- replaces handaan's, so name yours after your app. Unlike `config/`, `theme/` needs no install: it is read on every wallpaper change whether or not the app was installed, and a new template takes effect at the next one.
 
 ## A worked example
 
@@ -254,6 +280,23 @@ Any `.jpg`, `.png` or `.webp` there, at any depth, appears in the wallpaper pick
 To have the picker show who made an image, put a credit beside it: `sunset.jpg.credit` next to `sunset.jpg`, with `title:`, `artist:`, `via:`, `source:` and `license:` lines. It is optional in your folder, since nothing there is published. In handaan's own `default/wallpapers` it is required, along with a licence that allows redistribution; the format and the rules are in `$HANDAAN_PATH/default/wallpapers/README.md`.
 
 Choosing a wallpaper also sets the desktop's colours, which are derived from the image. See [0007](decisions/adrs/0007-take-the-desktop-colours-from-the-wallpaper.md).
+
+## Colours from the wallpaper
+
+The terminal apps handaan installs follow the wallpaper too ([0009](decisions/adrs/0009-terminal-apps-take-the-desktop-colours.md)). lazygit and nmtui need nothing; btop needs `color_theme = "handaan"`, which handaan seeds when you have no `btop.conf`. Two read their colours only from your own config, so your dotfiles add a line each:
+
+```
+# kitty.conf -- colours you set after this line still win
+include ~/.local/state/handaan/theme/kitty.conf
+```
+
+```lua
+-- Neovim
+vim.opt.rtp:append((vim.env.HANDAAN_PATH or vim.env.HOME .. "/.local/share/handaan") .. "/default/nvim")
+vim.cmd.colorscheme("handaan")
+```
+
+Drop any Catppuccin (or other) theme those configs load, or it will paint over these. Anything that draws with the terminal's own colours -- fzf, htop, ranger, git, your prompt -- then follows kitty. For an app of your own, see [`theme/`](#theme).
 
 ## Things that will bite you
 

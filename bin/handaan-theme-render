@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# handaan:summary=Write each app's colour file from the desktop's palette.
+# handaan:hidden=called by handaan-wallpaper-set, not by hand
+#
+# Terminal apps cannot read the palette the way Hyprland and the shell do, so
+# each gets a colour file in its own format, written from a template:
+#
+#   $HANDAAN_PATH/default/theme/templates/<file>         handaan's, for its own apps
+#   ~/.config/handaan/apps/<app>/theme/<file>            yours, for apps you add
+#
+# Each is written to $HANDAAN_STATE/theme/<file>, with every {{name}} replaced
+# by that palette colour as bare rrggbb. A <file>.reload beside a template is
+# run afterwards, to recolour copies of the app already running. See ADR 0009.
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+HANDAAN_STATE="${HANDAAN_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '5,13p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+readonly THEME_DIR="$HANDAAN_STATE/theme"
+readonly PALETTE="$THEME_DIR/colors.json"
+readonly FALLBACK="$HANDAAN_PATH/default/theme/fallback.json"
+readonly APPS="${XDG_CONFIG_HOME:-$HOME/.config}/handaan/apps"
+
+mkdir -p "$THEME_DIR"
+
+# The derived palette over the fallback, key by key, the way Hyprland and the
+# shell read them -- so a machine that has never set a wallpaper still gets
+# every file, in Mocha. A mangled derived file costs its colours, not the run.
+derived='{}'
+if [[ -r $PALETTE ]] && jq -e 'type == "object"' "$PALETTE" >/dev/null 2>&1; then
+    derived="$(< "$PALETTE")"
+fi
+palette="$(jq -n --argjson fallback "$(< "$FALLBACK")" --argjson derived "$derived" '
+    $fallback + $derived
+    | with_entries(select(.value | type == "string" and test("^[0-9a-fA-F]{6}$")))
+')"
+
+# handaan's first, then yours, so one of yours with the same file name replaces
+# handaan's -- the same precedence your config has over a default everywhere
+# else.
+declare -A templates=()
+for template in "$HANDAAN_PATH"/default/theme/templates/* "$APPS"/*/theme/*; do
+    [[ -f $template && $template != *.reload ]] || continue
+    name="${template##*/}"
+    if [[ $name == colors.json ]]; then
+        log_warning "Skipping $template: colors.json is the palette itself"
+        continue
+    fi
+    [[ -n ${templates[$name]:-} ]] && log_info "$template replaces ${templates[$name]}"
+    templates[$name]="$template"
+done
+
+failed=0
+for name in "${!templates[@]}"; do
+    template="${templates[$name]}"
+
+    rendered="$(jq -Rsj --argjson palette "$palette" '
+        reduce ($palette | to_entries[]) as $colour (.;
+            gsub("\\{\\{\\s*" + $colour.key + "\\s*\\}\\}"; $colour.value))
+    ' "$template")" || { log_warning "Could not read $template"; failed=1; continue; }
+
+    # A name the palette does not have would reach the app as a literal
+    # "{{name}}", which most apps reject as a whole file rather than one line.
+    # Keep the last good file instead.
+    if unknown="$(grep -oE '\{\{[^}]*\}\}' <<< "$rendered" | sort -u | paste -sd ' ')" && [[ -n $unknown ]]; then
+        log_warning "Skipping $template: no palette colour for $unknown"
+        failed=1
+        continue
+    fi
+
+    # Renamed into place, so an app starting mid-write never reads half a file.
+    tmp="$(mktemp "$THEME_DIR/.$name.XXXXXX")"
+    printf '%s\n' "$rendered" > "$tmp"
+    chmod 644 "$tmp"
+    mv -f "$tmp" "$THEME_DIR/$name"
+
+    if [[ -f $template.reload ]]; then
+        bash "$template.reload" || log_warning "$template.reload failed; running copies keep their old colours"
+    fi
+done
+
+exit "$failed"

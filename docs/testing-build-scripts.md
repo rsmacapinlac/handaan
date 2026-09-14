@@ -31,7 +31,9 @@ without spending time on a rebuild:
 ```bash
 bash -n boot.sh install.sh install/lib/*.sh install/*/*.sh \
   install/archinstall/install.sh bin/* test/vm-send-keys test/*.sh
-luac -p config/hypr/hyprland.lua config/hypr/conf/*.lua default/hypr/*.lua
+luac -p config/hypr/hyprland.lua config/hypr/conf/*.lua default/hypr/*.lua default/nvim/colors/*.lua
+sh -n default/shell/env-bootstrap
+HANDAAN_STATE=$(mktemp -d) bin/handaan-theme-render   # every template renders, with no palette colour missing
 jq empty install/archinstall/urakara.json install/archinstall/vm-test.json
 test/vm-send-keys-test.sh
 test/wallpaper-credits.sh   # every shipped wallpaper credited, under a licence that allows it
