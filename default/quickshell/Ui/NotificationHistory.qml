@@ -13,8 +13,9 @@
 // the difference from a popup's close: the popup was on its way to history, and
 // this is history.
 //
-// Opening it is reading it -- NotificationCenter marks everything seen, and the
-// bell goes quiet -- so there is no per-card "mark read" to manage.
+// Opening it is reading it -- NotificationCenter marks everything seen -- so
+// there is no per-card "mark read" to manage. Reading is not dealing with,
+// though: the bell stays until a card is closed here or the history cleared.
 
 import QtQuick
 import QtQuick.Layouts

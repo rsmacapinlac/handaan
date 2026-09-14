@@ -1,5 +1,9 @@
 # ADR Changelog
 
+## 2026-09-13 (bell shows what is waiting)
+
+- **0008** edited in place. The bell is no longer always on the bar: it is present while anything is kept in history, or while do-not-disturb is on, and coloured by the most urgent notification kept (critical red, normal the accent, low grey) rather than by whether anything is unseen. Opening the history still marks everything seen, but only dismissing takes the bell away.
+
 ## 2026-09-13 (notifications in the shell)
 
 - **0008** written. The Quickshell shell is the notification daemon: popups top right of the focused monitor, a session-only history, and do-not-disturb, in `Commons/NotificationCenter.qml` with `Ui/NotificationToasts.qml`, `Ui/NotificationHistory.qml` and the bar's always-present `modules/Bell.qml`, reached by `Super+Shift+N` and `bin/handaan-notifications`. mako stays installed as the fallback but its unit is masked, because its D-Bus activation file would otherwise start it before the shell and keep the shell from ever owning the name; `migrations/1789334343.sh` masks it on installed machines.

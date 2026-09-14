@@ -30,10 +30,11 @@ ShellRoot {
         ]
 
         rightWidgets: [
-            // Updates comes and goes, so it leads: nothing to its right shifts
-            // when it appears. Network and Battery sit together as the state
-            // of the machine, then the Bell beside the Clock -- and next to
-            // the corner where its popups and history open.
+            // Network and Battery sit together as the state of the machine,
+            // then the Bell beside the Clock -- next to the corner where its
+            // popups and history open. Updates and the Bell both come and go;
+            // the row is anchored right, so either arriving shifts what is to
+            // its left and the Clock never moves.
             Component {
                 Modules.Updates {}
             },

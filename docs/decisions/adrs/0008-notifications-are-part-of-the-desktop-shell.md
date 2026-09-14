@@ -18,7 +18,7 @@ Everything else handaan draws already lives in one Quickshell process and follow
 | `default/quickshell/Ui/NotificationCard.qml` | One notification: app, age, summary, body, action buttons. The same card as a popup and in the history. |
 | `default/quickshell/Ui/NotificationToasts.qml` | Popups, top right of the focused monitor, at most four. |
 | `default/quickshell/Ui/NotificationHistory.qml` | The history panel, with the do-not-disturb switch and Clear all. |
-| `default/quickshell/modules/Bell.qml` | The bar indicator, always present: grey when nothing is unseen, the accent when something is, a slashed bell while do-not-disturb is on. |
+| `default/quickshell/modules/Bell.qml` | The bar indicator, present while anything is kept or do-not-disturb is on. Coloured by the most urgent notification kept -- critical red, normal the accent, low grey -- and slashed while do-not-disturb is on. |
 | `bin/handaan-notifications` | Toggles the panel; `dnd on\|off\|toggle`, `clear`, `status`. `Super+Shift+N` calls it. |
 | `$HANDAAN_STATE/notifications/do-not-disturb` | Whether do-not-disturb is on. The only notification state written to disk. |
 
@@ -28,11 +28,11 @@ Everything else handaan draws already lives in one Quickshell process and follow
 
 **History lives in memory.** Notifications carry message previews and senders, so none of that is written to disk; a shell restart or a logout starts the history empty. Do-not-disturb is remembered, since forgetting it at login would undo it.
 
-**Do-not-disturb holds popups, not notifications.** They still arrive in the history, unseen, and the bell says so. Critical still pops up.
+**Do-not-disturb holds popups, not notifications.** They still arrive in the history, and the bell appears in their colour. Critical still pops up.
 
 **Nothing pops up over the lock screen.** A notification arriving while locked goes to the history unseen, and nothing replays as a popup on unlock.
 
-**Opening the history is reading it.** Every notification is marked seen the moment the panel opens, which is what quiets the bell; there is no per-card read state.
+**Opening the history is reading it.** Every notification is marked seen the moment the panel opens; there is no per-card read state. Seen does not take the bell away -- only dismissing does, because a notification you have read but not dealt with is still waiting.
 
 **mako is masked, not removed.** Only one program can own `org.freedesktop.Notifications`. Disabling `mako.service` is not enough: mako's package ships a D-Bus activation file naming that service, so the first notification sent before the shell is up would start mako, mako would take the name, and the shell's server would silently fail to register. Masking the unit makes that activation fail. The package stays installed as the fallback until the shell's notifications have proven themselves, the way waybar stayed beside the Quickshell bar; `~/.config/mako` is the user's and is left alone.
 
