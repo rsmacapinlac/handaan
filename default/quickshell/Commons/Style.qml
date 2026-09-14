@@ -41,6 +41,12 @@ QtObject {
     // Horizontal padding inside a single widget's hit area.
     readonly property int widgetPadding: space(2.5)
 
+    // Hyprland's outer gap, general.gaps_out in default/hypr/look.lua. A
+    // surface that sits beside windows -- the notification popups and history
+    // -- keeps this distance from the bar and the screen edge, so its border
+    // lines up with the windows' borders. Change the two together.
+    readonly property int windowGap: 3
+
     // -------------------------------------------------------------- motion
     readonly property int animationFast: 120
     readonly property int animationNormal: 240

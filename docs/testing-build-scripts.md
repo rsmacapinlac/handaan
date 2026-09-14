@@ -34,6 +34,7 @@ bash -n boot.sh install.sh install/lib/*.sh install/*/*.sh \
 luac -p config/hypr/hyprland.lua config/hypr/conf/*.lua default/hypr/*.lua
 jq empty install/archinstall/urakara.json install/archinstall/vm-test.json
 test/vm-send-keys-test.sh
+test/wallpaper-credits.sh   # every shipped wallpaper credited, under a licence that allows it
 ```
 
 Cursor's `keybindings.json` is JSONC, not strict JSON, and must not be passed to

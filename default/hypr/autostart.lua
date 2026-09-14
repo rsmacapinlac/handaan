@@ -8,7 +8,9 @@
 -- exec here would start a second, unsupervised copy.
 --
 -- Started as units, deliberately absent below:
---   hypridle, hyprpaper, mako, hyprpolkitagent, quickshell
+--   hypridle, hyprpaper, hyprpolkitagent, quickshell
+--
+-- quickshell is also the notification daemon; mako is installed but masked.
 --
 -- quickshell is the bar. Its unit is ours rather than packaged -- it lives in
 -- config/systemd/user/quickshell.service -- but it attaches to
@@ -28,7 +30,7 @@ end
 hl.on("hyprland.start", function()
     launch("nm-applet")
     launch("blueman-applet")
-    launch(handaan .. "/bin/handaan-wallpaper-set --initial")
+    launch(handaan .. "/bin/handaan-wallpaper-set --restore")
 end)
 
 -- Monitor hotplug and blank-screen recovery, which is session wiring like the

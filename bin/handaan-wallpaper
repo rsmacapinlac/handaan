@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# handaan:summary=Choose a wallpaper; the desktop's colours follow it.
+#
+# The picker is a Quickshell surface -- default/quickshell/Ui/WallpaperPicker.qml,
+# summoned through the Wallpapers singleton's IPC target. This is the door to it
+# that Super+Shift+W calls, and it does nothing else. Calling it again while
+# the picker is up closes it. Wallpapers come from ~/.config/handaan/wallpapers
+# and handaan's own set; see handaan-wallpaper-manifest.
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '4,8p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+# Run from a keybind there is no terminal to print to, so a failure that only
+# went to stderr would look like the key doing nothing at all.
+fail() {
+    log_error "$1"
+    log_error "    $2"
+    if [[ ! -t 2 ]] && command -v notify-send >/dev/null; then
+        notify-send -u critical "$1" "$2" || true
+    fi
+    exit 1
+}
+
+# qs reports a connection failure with a nonzero exit, but an IPC-level failure
+# on stdout with exit 0; see handaan-apps.
+if ! output=$(qs -p "$HANDAAN_PATH/default/quickshell" ipc call wallpapers toggle 2>/dev/null); then
+    fail "The Quickshell shell is not running, so there is no picker to open." \
+        "systemctl --user start quickshell.service"
+fi
+
+case $output in
+    "Target not found."* | "Function not found."*)
+        fail "This Quickshell session started before the wallpaper picker existed." \
+            "systemctl --user restart quickshell.service"
+        ;;
+esac

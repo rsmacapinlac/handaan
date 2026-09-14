@@ -1,19 +1,14 @@
 -- Look and feel
 -- See https://wiki.hypr.land/Configuring/Basics/Variables/
 
-local c = require("hypr.colors")
-
 hl.config({
     general = {
         gaps_in  = 3,
+        -- Style.windowGap in default/quickshell/Commons/Style.qml matches this,
+        -- so the notification surfaces line up with windows. Change both.
         gaps_out = 3,
 
         border_size = 1,
-
-        col = {
-            active_border   = { colors = { c.mauve, c.blue }, angle = 45 },
-            inactive_border = c.surface0,
-        },
 
         resize_on_border = false,
         allow_tearing    = false,
@@ -65,6 +60,9 @@ hl.config({
         allow_session_lock_restore = true,
     },
 })
+
+-- Border colours come from the wallpaper. See theme.lua.
+require("hypr.theme").apply()
 
 -- See https://wiki.hypr.land/Configuring/Advanced-and-Cool/Animations/
 hl.curve("easeOutQuint",   { type = "bezier", points = { {0.23, 1},    {0.32, 1} } })

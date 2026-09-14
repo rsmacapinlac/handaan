@@ -15,7 +15,8 @@ local ctrlMod = "CTRL"
 local terminal  = "kitty"
 local menu      = home .. "/.config/rofi/rofi-dynamic.sh"
 local powermenu = handaan .. "/bin/handaan-session"
-local wallpaper = handaan .. "/bin/handaan-wallpaper-set"
+local wallpaper = handaan .. "/bin/handaan-wallpaper"
+local notifications = handaan .. "/bin/handaan-notifications"
 local installer = handaan .. "/bin/handaan-apps"
 local lid_switch = handaan .. "/bin/handaan-lid-switch"
 
@@ -26,7 +27,8 @@ hl.bind(mainMod .. " + SHIFT + Q",     hl.dsp.window.close())
 hl.bind(mainMod .. " + V", hl.dsp.window.float({ action = "toggle" }))
 
 hl.bind(mainMod .. " + SHIFT + A",     hl.dsp.exec_cmd(installer))
-hl.bind(ctrlMod .. " + SHIFT + W",     hl.dsp.exec_cmd(wallpaper))
+hl.bind(mainMod .. " + SHIFT + W",     hl.dsp.exec_cmd(wallpaper))
+hl.bind(mainMod .. " + SHIFT + N",     hl.dsp.exec_cmd(notifications))
 hl.bind(ctrlMod .. " + ALT + Delete",  hl.dsp.exec_cmd(powermenu))
 
 -- Switch workspaces with ctrlMod + [0-9]

@@ -1,5 +1,16 @@
 # ADR Changelog
 
+## 2026-09-13 (notifications in the shell)
+
+- **0008** written. The Quickshell shell is the notification daemon: popups top right of the focused monitor, a session-only history, and do-not-disturb, in `Commons/NotificationCenter.qml` with `Ui/NotificationToasts.qml`, `Ui/NotificationHistory.qml` and the bar's always-present `modules/Bell.qml`, reached by `Super+Shift+N` and `bin/handaan-notifications`. mako stays installed as the fallback but its unit is masked, because its D-Bus activation file would otherwise start it before the shell and keep the shell from ever owning the name; `migrations/1789334343.sh` masks it on installed machines.
+- **0007** edited in place. Its note that mako carried its own colours no longer holds.
+
+## 2026-09-13 (colours from the wallpaper)
+
+- **0007** written. The desktop's colours are derived from the wallpaper with matugen, into `$HANDAAN_STATE/theme/colors.json`, and read live by Hyprland (`default/hypr/theme.lua`, applied through `hyprctl eval`) and the shell (`Commons/Colors.qml`, watching the file). There is no theme to choose. `bin/handaan-theme-generate`, `default/themed/mocha.json` and the two palette files it generated are gone; Mocha survives as `default/theme/fallback.json`. The status colours are blended toward the wallpaper but held to their hue, and the accent yields to them when the two would collide (`default/theme/palette.jq`). Wallpapers come from `~/.config/handaan/wallpapers` as well as handaan's own set, the monthly-calendar rule is dropped and its calendars moved out of `default/wallpapers` to the private repository, and login restores the wallpaper you chose rather than picking a new one.
+- **0007** also covers wallpaper credits. Every image in `default/wallpapers` needs a `.credit` sidecar with an artist, source and a redistributable licence, checked by `test/wallpaper-credits.sh` and shown in the picker. No image handaan carried qualified, so all 39 moved to the private repository.
+- **0006** edited in place. The wallpaper picker, `Commons/Wallpapers.qml` and `Ui/WallpaperPicker.qml` summoned by `bin/handaan-wallpaper` on `Super+Shift+W`, is the third dialog built this way.
+
 ## 2026-09-13 (lock screen in the shell)
 
 - **0006** edited in place. The power menu's Lock no longer runs `loginctl lock-session`; it asks the shell's lock screen directly.

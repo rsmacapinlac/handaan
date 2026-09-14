@@ -241,6 +241,20 @@ Two things to keep in mind about what you put there. First, `install.sh` and `up
 
 handaan's full policy is at `$HANDAAN_PATH/docs/standards/privacy-policy.md`.
 
+## Your own wallpapers
+
+Wallpapers are the other thing your dotfiles repository can hand to handaan, and they need no app around them. Deploy images to:
+
+```
+~/.config/handaan/wallpapers/
+```
+
+Any `.jpg`, `.png` or `.webp` there, at any depth, appears in the wallpaper picker (`Super+Shift+W`) ahead of handaan's own set. Symlinks are followed, so linking the directory from your repository works. There is nothing to install and no marker: the picker re-reads both folders every time it opens. `handaan-wallpaper-manifest` prints exactly what it sees.
+
+To have the picker show who made an image, put a credit beside it: `sunset.jpg.credit` next to `sunset.jpg`, with `title:`, `artist:`, `via:`, `source:` and `license:` lines. It is optional in your folder, since nothing there is published. In handaan's own `default/wallpapers` it is required, along with a licence that allows redistribution; the format and the rules are in `$HANDAAN_PATH/default/wallpapers/README.md`.
+
+Choosing a wallpaper also sets the desktop's colours, which are derived from the image. See [0007](decisions/adrs/0007-take-the-desktop-colours-from-the-wallpaper.md).
+
 ## Things that will bite you
 
 - **A failing command anywhere in `install.sh` or `update.sh` ends the entire run.** Strict mode is inherited. Guard anything allowed to fail.

@@ -87,11 +87,6 @@ Widgets carry a file-header comment stating the question the widget answers befo
 
 `hypridle` and `hyprpaper` stay in hyprlang while Hyprland itself is Lua. Two-space indent inside blocks, `#` comments, uppercase section headers, and `$variables` defined near the top after any `source =` line.
 
-## Generated files
+## The palette file
 
-Two files are generated from `default/themed/mocha.json` by `bin/handaan-theme-generate` and must never be hand-edited:
-
-- `default/hypr/colors.lua`
-- `default/quickshell/Commons/Colors.qml`
-
-Edit the source and regenerate. An edit made directly to one of these survives until the next regenerate and then vanishes, which is a confusing way to lose an afternoon.
+The desktop's colours are not in the tree. `bin/handaan-wallpaper-set` derives them from the wallpaper and writes `$HANDAAN_STATE/theme/colors.json`; `default/theme/fallback.json` fills any colour that file lacks. Both are flat `{"name": "rrggbb"}` objects -- Hyprland reads them with a Lua pattern, not a JSON parser, so keep them flat. See [0007](decisions/adrs/0007-take-the-desktop-colours-from-the-wallpaper.md).

@@ -11,4 +11,5 @@ Identities and user preferences / configuration should not be part of this repos
 - Do not add secrets, tokens, private keys, passwords, or local-only network share details.
 - Internal hostnames are covered by that rule. Do not commit anything under a private domain, including in browser bookmarks, docs, or example configs.
 - Be careful with files under `gnupg/`, mail configs, SSH/GPG setup sections, and setup scripts that copy sensitive material.
+- Do not add images, fonts or other media you may not redistribute. Being in an MIT repository does not license someone else's work. Wallpapers carry a credit and an open licence; see `default/wallpapers/README.md`.
 - Tracked build artifacts can outlive the source they came from. A `.pyc` kept both hostnames as string constants after `config.py` was cleaned, and `.gitignore` does not untrack what git already tracks.
