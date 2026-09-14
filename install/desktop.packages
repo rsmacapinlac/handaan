@@ -6,10 +6,7 @@ hyprland
 # start with "cannot open shared object file" and greetd restart-loops.
 lua54
 uwsm
-# Notifications moved into the Quickshell shell. mako stays installed, its unit
-# masked, as the fallback until that has proven itself -- the way waybar stayed
-# beside the Quickshell bar. See install/post-install/services.sh.
-mako
+# notify-send. The Quickshell shell is the notification daemon itself; see ADR 0008.
 libnotify
 kitty
 rofi

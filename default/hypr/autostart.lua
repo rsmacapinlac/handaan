@@ -10,7 +10,7 @@
 -- Started as units, deliberately absent below:
 --   hypridle, hyprpaper, hyprpolkitagent, quickshell
 --
--- quickshell is also the notification daemon; mako is installed but masked.
+-- quickshell is also the notification daemon.
 --
 -- quickshell is the bar. Its unit is ours rather than packaged -- it lives in
 -- config/systemd/user/quickshell.service -- but it attaches to

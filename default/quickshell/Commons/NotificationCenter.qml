@@ -2,8 +2,8 @@
 //
 // This process is the session's notification daemon. NotificationServer claims
 // org.freedesktop.Notifications on the session bus, which only one program can
-// own, so mako is masked rather than merely disabled -- its D-Bus activation
-// file would otherwise start it the first time anything notified before the
+// own, so no other notification daemon is installed: any that ships a D-Bus
+// activation file would be started by the first notification sent before the
 // shell was up, and the shell would never get the name. See ADR 0008.
 //
 // A singleton for the reason every always-resident thing here is one: the
