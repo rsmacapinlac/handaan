@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# handaan:summary=Open notification history, or set do-not-disturb.
+# handaan:args=[dnd on|off|toggle | clear | status]
+#
+# Notifications are the shell's -- Commons/NotificationCenter.qml is the
+# session's notification daemon, and Ui/NotificationHistory.qml the panel. This
+# is the door to them that Super+Shift+N calls, and it does nothing else.
+#
+#   (no argument)          open the history, or close it if it is up
+#   dnd on|off|toggle      do-not-disturb: only critical notifications pop up
+#   clear                  dismiss every notification in the history
+#   status                 what the shell is holding
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '5,13p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+case ${1:-} in
+    "")      call=(toggle) ;;
+    dnd)     call=(dnd "${2:-toggle}") ;;
+    clear)   call=(clear) ;;
+    status)  call=(status) ;;
+    *)
+        log_error "Usage: handaan-notifications [dnd on|off|toggle | clear | status]"
+        exit 2
+        ;;
+esac
+
+# Run from a keybind there is no terminal to print to, and the usual way to
+# report a failure -- a notification -- is the thing that is not working.
+fail() {
+    log_error "$1"
+    log_error "    $2"
+    exit 1
+}
+
+# qs reports a connection failure with a nonzero exit, but an IPC-level failure
+# on stdout with exit 0; see handaan-apps.
+if ! output=$(qs -p "$HANDAAN_PATH/default/quickshell" ipc call notificationCenter "${call[@]}" 2>/dev/null); then
+    fail "The Quickshell shell is not running, so nothing is receiving notifications." \
+        "systemctl --user start quickshell.service"
+fi
+
+case $output in
+    "Target not found."* | "Function not found."*)
+        fail "This Quickshell session started before notifications moved into the shell." \
+            "systemctl --user restart quickshell.service"
+        ;;
+esac
+
+[[ ${1:-} == "" ]] || printf '%s\n' "$output"

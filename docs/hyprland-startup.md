@@ -52,7 +52,9 @@ processes. Concretely, uwsm activates `graphical-session-pre.target`,
 That last point is the whole reason this repo moved to it. Arch packages ship
 user units declaring `WantedBy=graphical-session.target`:
 
-`hypridle`, `hyprpaper`, `mako`, `hyprpolkitagent`
+`hypridle`, `hyprpaper`, `hyprpolkitagent`
+
+`mako` ships one too, and is deliberately masked: notifications belong to the Quickshell shell, and mako's D-Bus activation would otherwise start it the moment anything notified before the shell was up. See [0008](decisions/adrs/0008-notifications-are-part-of-the-desktop-shell.md).
 
 **Without a session manager that target never activates**, so those units are
 enabled but never started. This is not theoretical: `hypridle` was enabled and
@@ -76,8 +78,9 @@ ships a unit.
 
 | Program | Started by |
 |---|---|
-| `hypridle`, `hyprpaper`, `mako`, `hyprpolkitagent` | packaged systemd user units, enabled by `install.sh` |
-| `quickshell` | our own user unit, enabled by `install.sh` |
+| `hypridle`, `hyprpaper`, `hyprpolkitagent` | packaged systemd user units, enabled by `install.sh` |
+| `quickshell` | our own user unit, enabled by `install.sh`. Also the notification daemon. |
+| `mako` | nothing: installed, unit masked |
 | `nm-applet`, `blueman-applet`, `set_wallpaper` | `conf/autostart.lua`, wrapped in `uwsm-app` |
 
 `conf/autostart.lua` wraps each remaining command in `uwsm-app` so it lands in
@@ -125,10 +128,11 @@ broken idle timeout. Check the target and the processes:
 
 ```bash
 systemctl --user is-active graphical-session.target    # expect: active
-for p in hypridle hyprpaper mako hyprpolkitagent quickshell; do
+for p in hypridle hyprpaper hyprpolkitagent quickshell; do
   printf '%-18s ' "$p"; pgrep -x "$p" >/dev/null && echo RUNNING || echo "NOT RUNNING"
 done
 systemctl --user list-units --state=failed             # expect: none
+busctl --user status org.freedesktop.Notifications | grep '^Comm='   # expect: Comm=quickshell
 ```
 
 If `graphical-session.target` is inactive, the session did not come up through

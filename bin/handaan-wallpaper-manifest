@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# handaan:summary=List the wallpapers on offer, as JSON.
+# handaan:hidden=read by the wallpaper picker and handaan-wallpaper-set, not by hand
+#
+# The one answer to "which wallpapers can I choose from". Two folders:
+#
+#   ~/.config/handaan/wallpapers       yours, deployed by your own dotfiles
+#   $HANDAAN_PATH/default/wallpapers   handaan's curated set
+#
+# Every image in either, at any depth, is on offer. An image's credit is read
+# from the sidecar beside it, <image>.credit; see default/wallpapers/README.md.
+#
+# Prints [{ path, name, origin, credit }], yours first, each folder by name.
+# origin is "yours" or "handaan"; credit is { title, artist, via, source, license }
+# with whichever fields the sidecar gave, or null.
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '4,15p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+command -v jq >/dev/null 2>&1 || { log_error "jq is required"; exit 1; }
+
+# One object per image. The path and folder go to jq as argv, never
+# interpolated into a filter, so a filename is free text that cannot break the
+# JSON around it; the sidecar is read as raw lines on stdin.
+entry() {
+    local origin=$1 path=$2 credit=/dev/null
+    [[ -r $path.credit ]] && credit=$path.credit
+
+    jq -Rn --arg path "$path" --arg origin "$origin" '
+        [ inputs
+          | select(test("^\\s*(#|$)") | not)
+          | capture("^\\s*(?<key>title|artist|via|source|license)\\s*:\\s*(?<value>.*?)\\s*$")?
+          | { (.key): .value } ]
+        | add as $credit
+        | { path: $path,
+            name: ($path | split("/")[-1] | sub("\\.[^.]+$"; "")),
+            origin: $origin,
+            credit: $credit }
+    ' < "$credit"
+}
+
+list_folder() {
+    local origin=$1 root=$2 path
+    [[ -d $root ]] || return 0
+
+    while IFS= read -r -d '' path; do
+        entry "$origin" "$path"
+    done < <(find -L "$root" -type f \
+        \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) -print0)
+}
+
+{
+    list_folder yours "$HOME/.config/handaan/wallpapers"
+    list_folder handaan "$HANDAAN_PATH/default/wallpapers"
+} | jq -s '
+    sort_by([(if .origin == "yours" then 0 else 1 end), (.name | ascii_downcase)])
+'

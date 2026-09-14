@@ -36,6 +36,16 @@ The power menu is the second dialog built this way, and replaced a rofi script t
 
 Typing filters the row, matching each action's label and a few synonyms (`reboot`, `sleep`, `shutdown`), and the arrows move through it. Lock and suspend act on the first `Enter`; log out, restart and shut down arm on the first and act on the second, because each ends every open window. The text field, the cursor highlight and the armed colour are the installer's own. The armed item turns warning and the status line carries the prompt, since an action's cell is too narrow to. Everything else about the card stays quiet so that the confirmation is the one loud thing on it. Lock asks the shell's own lock screen, `Commons/SessionLock.qml`, for a lock in-process rather than running a command. Because `Ctrl+Alt+Delete` is pressed when something is already wrong, `handaan-session` sends its failure as a desktop notification when there is no terminal to print to.
 
+The wallpaper picker is the third, and replaced a key that set a random wallpaper with no way to choose one:
+
+| piece | what it is |
+|---|---|
+| `default/quickshell/Commons/Wallpapers.qml` | Singleton. Reads the list from `handaan-wallpaper-manifest`, holds whether the picker is up and which wallpaper is current, and hands a choice to `handaan-wallpaper-set`. Carries the `wallpapers` IPC target. |
+| `default/quickshell/Ui/WallpaperPicker.qml` | The dialog. Same surface and dismissal as the other two: a filter field, a grid of thumbnails with Random first, and a status line naming the one under the cursor. |
+| `bin/handaan-wallpaper` | Toggles the picker. Nothing else. `Super+Shift+W` calls it. |
+
+It opens on the wallpaper you have, arrows move in two dimensions, and `Enter` sets. Nothing confirms, because a wallpaper you did not want is one more choice away. It has no scrim, since the wallpaper behind the card is what the thumbnails are being compared against. Choosing a wallpaper is also how the desktop's colours change; see [0007](0007-take-the-desktop-colours-from-the-wallpaper.md).
+
 Data crosses the boundary as **JSON produced by `jq`, with the fields passed as argv rather than interpolated into a filter**, so a summary is free text that cannot terminate a string or displace the field after it.
 
 Two rules fall out of putting a dialog in the shell, and both are load-bearing:

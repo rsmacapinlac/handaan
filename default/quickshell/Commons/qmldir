@@ -8,3 +8,5 @@ singleton NetworkPreview 1.0 NetworkPreview.qml
 singleton AppCatalog 1.0 AppCatalog.qml
 singleton SessionControl 1.0 SessionControl.qml
 singleton SessionLock 1.0 SessionLock.qml
+singleton Wallpapers 1.0 Wallpapers.qml
+singleton NotificationCenter 1.0 NotificationCenter.qml

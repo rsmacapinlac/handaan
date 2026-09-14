@@ -111,6 +111,12 @@ render as the same colour at the same rhythm. And if the channel starts feeling
 like noise, this is the pulse to remove first, because it is the one carrying
 the least.
 
+### Notification bell
+
+The bell asks two questions: "did something notify me that I have not seen?" and "am I going to be told when something does?" Unlike Updates it is always on the bar, because it is also the way into the history, and a door that vanishes whenever nothing is new is one you have to remember exists. Presence therefore carries nothing, and each question gets one channel so they never compete: shape is do-not-disturb (a bell with a slash), colour is unseen (`Theme.active` while something is unseen, `Theme.barTextMuted` grey otherwise). Grey means "nothing new" rather than "nothing kept" -- opening the history is reading it. There is no count on the glance layer; one unseen notification and six ask the same thing of you, and the number is on hover, along with how many are still kept.
+
+It does not move, deliberately. A notification that needs a response now is critical, and critical already stays on screen until dismissed, so a pulse here would be another holder of the attention channel saying less than the popup does. Click opens the history, which is the obvious action for both questions and destroys nothing.
+
 ### Network indicator
 
 The network widget asks "does my connected network have internet access?" A
@@ -125,8 +131,10 @@ the limitation that without motion their distinction depends on colour.
 Disconnected is a steady gray globe (`Theme.barTextMuted`) with a "Not
 connected" tooltip; clicking still opens `nmtui`. Connected networks with
 unknown internet status are hidden, including their spacing. The
-widget sits between Updates and Battery, so its disappearance leaves Battery
-and Clock in place. Hover says "Internet reachable" or "No internet access",
+widget sits between Updates and Battery, so its disappearance leaves Battery,
+the Bell and Clock in place. The right section reads Updates, Network, Battery,
+Bell, Clock: the one that comes and goes first, machine state together, then
+the Bell beside the Clock, next to the corner where notifications open. Hover says "Internet reachable" or "No internet access",
 with "Wi-Fi connection", "Wired connection", or both underneath, plus
 "Sign-in required" for a captive portal. This is an explicit extension of
 the hover rule: transport detail is available on hover while the globe keeps

@@ -5,10 +5,13 @@
 // instantiated once per importing file, so every consumer silently gets its
 // own empty copy. Only a type in a declared module is process-wide.
 
-// The installer and the power menu are the shell's other surfaces: dialogs
+// The installer, the power menu and the wallpaper picker are the shell's other surfaces: dialogs
 // rather than bars, up only while summoned. They live here so they inherit
 // Theme -- see Ui/Installer.qml with Commons/AppCatalog.qml, and Ui/PowerMenu.qml
-// with Commons/SessionControl.qml. The lock screen is the same arrangement:
+// with Commons/SessionControl.qml, and Ui/WallpaperPicker.qml with
+// Commons/Wallpapers.qml. Notifications are Ui/NotificationToasts.qml and
+// Ui/NotificationHistory.qml over Commons/NotificationCenter.qml, which is also
+// the session's notification daemon. The lock screen is the same arrangement:
 // Ui/LockScreen.qml with Commons/SessionLock.qml.
 
 import QtQuick
@@ -27,8 +30,10 @@ ShellRoot {
         ]
 
         rightWidgets: [
-            // Optional indicators lead the right section, keeping Battery
-            // and Clock in place when either indicator appears or disappears.
+            // Updates comes and goes, so it leads: nothing to its right shifts
+            // when it appears. Network and Battery sit together as the state
+            // of the machine, then the Bell beside the Clock -- and next to
+            // the corner where its popups and history open.
             Component {
                 Modules.Updates {}
             },
@@ -39,6 +44,9 @@ ShellRoot {
                 Modules.Battery {}
             },
             Component {
+                Modules.Bell {}
+            },
+            Component {
                 Modules.Clock {}
             }
         ]
@@ -47,6 +55,12 @@ ShellRoot {
     Installer {}
 
     PowerMenu {}
+
+    WallpaperPicker {}
+
+    NotificationToasts {}
+
+    NotificationHistory {}
 
     LockScreen {}
 }

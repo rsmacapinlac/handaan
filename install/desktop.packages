@@ -6,6 +6,9 @@ hyprland
 # start with "cannot open shared object file" and greetd restart-loops.
 lua54
 uwsm
+# Notifications moved into the Quickshell shell. mako stays installed, its unit
+# masked, as the fallback until that has proven itself -- the way waybar stayed
+# beside the Quickshell bar. See install/post-install/services.sh.
 mako
 libnotify
 kitty
@@ -22,3 +25,5 @@ hyprpicker
 hypridle
 hyprcursor
 hyprpolkitagent
+# Derives the desktop palette from the wallpaper (bin/handaan-wallpaper-set).
+matugen

@@ -1,17 +1,76 @@
 #!/usr/bin/env bash
-# handaan:summary=Set the desktop wallpaper through hyprpaper.
-# handaan:args=[--initial|--random]
-# handaan:hidden=called from default/hypr/binds.lua (Ctrl+Shift+W), not by hand
+# handaan:summary=Set the desktop wallpaper, and colour the desktop from it.
+# handaan:args=[--restore|--random|<image>]
+# handaan:hidden=called by the wallpaper picker and at login, not by hand
+#
+# Sets the wallpaper on every monitor and derives the desktop's colours from it.
+# There is no separate theme to choose: the colours are whatever this wallpaper
+# gives.
+#
+#   <image>     this one
+#   --random    any wallpaper on offer (the default)
+#   --restore   at login: the wallpaper you last had, else --random
+#
+# What is "on offer" is handaan-wallpaper-manifest's answer.
 
-filename="$HOME/.wallpaper"
-mode="${1:-random}"
+set -euo pipefail
 
-: "${HANDAAN_PATH:=$HOME/.local/share/handaan}"
-WALLPAPER_DIR="$HANDAAN_PATH/default/wallpapers"
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+HANDAAN_STATE="${HANDAAN_STATE:-${XDG_STATE_HOME:-$HOME/.local/state}/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
 
-# Start hyprpaper if not running. Under uwsm it is a systemd user unit, so go
-# through systemd rather than forking a second unsupervised copy beside it.
-if ! pgrep -x "hyprpaper" > /dev/null; then
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '5,14p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+# The record of what is on screen. The lock screen reads it back.
+readonly CURRENT="$HOME/.wallpaper"
+readonly THEME_DIR="$HANDAAN_STATE/theme"
+readonly PALETTE="$THEME_DIR/colors.json"
+readonly FALLBACK="$HANDAAN_PATH/default/theme/fallback.json"
+
+mkdir -p "$THEME_DIR"
+
+# Two picks in quick succession must land in order, or the colours can end up
+# derived from the wallpaper that lost. One at a time, start to finish.
+exec 9> "$THEME_DIR/.lock"
+flock -w 30 9 || { log_error "Another wallpaper change is still running"; exit 1; }
+
+pick_random() {
+    "$HANDAAN_PATH/bin/handaan-wallpaper-manifest" | jq -r '.[].path' | shuf -n 1
+}
+
+mode="${1:---random}"
+case $mode in
+    --restore)
+        # A wallpaper you chose stays chosen across a login. One that has since
+        # been deleted is not an error, just a reason to pick again.
+        image=""
+        [[ -r $CURRENT ]] && image="$(< "$CURRENT")"
+        [[ -n $image && -r $image ]] || image="$(pick_random)"
+        ;;
+    --random)
+        image="$(pick_random)"
+        ;;
+    -*)
+        log_error "Usage: handaan-wallpaper-set [--restore|--random|<image>]"
+        exit 2
+        ;;
+    *)
+        image="$(realpath -- "$mode")"
+        ;;
+esac
+
+[[ -n ${image:-} ]] || { log_error "No wallpapers found; see handaan-wallpaper-manifest"; exit 1; }
+[[ -r $image ]] || { log_error "Cannot read $image"; exit 1; }
+
+# ------------------------------------------------------------------ wallpaper
+
+# Under uwsm hyprpaper is a systemd user unit, so start it through systemd
+# rather than forking a second, unsupervised copy beside it.
+if ! pgrep -x hyprpaper >/dev/null; then
     if systemctl --user --quiet is-enabled hyprpaper.service 2>/dev/null; then
         systemctl --user start hyprpaper.service
     else
@@ -19,71 +78,74 @@ if ! pgrep -x "hyprpaper" > /dev/null; then
     fi
 fi
 
-# Wait for hyprpaper IPC to be ready before issuing commands.  Newer
-# hyprpaper versions do not support the old listpreloaded request, but
-# listactive is enough to confirm the IPC socket is responding.
+# listactive is enough to confirm the IPC socket answers; newer hyprpaper no
+# longer supports listpreloaded.
+ready=0
 for _ in $(seq 1 20); do
-    hyprctl hyprpaper listactive &>/dev/null && break
+    if hyprctl hyprpaper listactive &>/dev/null; then
+        ready=1
+        break
+    fi
     sleep 0.5
 done
+(( ready )) || { log_error "hyprpaper is not answering; the wallpaper was not set"; exit 1; }
 
-# create the filename if it doesn't exist
-if [[ ! -e $filename ]]
-then
-  touch $filename
+while IFS= read -r monitor; do
+    hyprctl hyprpaper wallpaper "$monitor,$image" >/dev/null
+done < <(hyprctl monitors -j | jq -r '.[].name')
+
+printf '%s\n' "$image" > "$CURRENT"
+log_success "Wallpaper set to ${image##*/}"
+
+# --------------------------------------------------------------------- colours
+#
+# A failure from here on leaves the wallpaper set and the previous colours in
+# place, which is a working desktop -- so warn and stop, but do not fail.
+
+command -v matugen >/dev/null 2>&1 || { log_warning "matugen is not installed; the colours were not changed"; exit 0; }
+
+# matugen blends the status colours toward the wallpaper as custom colours. Its
+# config is written from the fallback on each run rather than kept as a second
+# copy of those three hex values; it must carry a [templates] table, even empty.
+config="$(mktemp "$THEME_DIR/matugen.XXXXXX")"
+tmp="$(mktemp "$THEME_DIR/colors.XXXXXX")"
+trap 'rm -f "$config" "$tmp"' EXIT
+
+jq -r '
+    "[config.custom_colors]",
+    (to_entries[] | select(.key == "good" or .key == "warning" or .key == "critical")
+     | "\(.key) = { color = \"#\(.value)\", blend = true }"),
+    "",
+    "[templates]"
+' "$FALLBACK" > "$config"
+
+# Always dark: every surface in the shell was designed on a dark ground, and the
+# lock screen's scrim and the bar's translucency both assume one.
+# --source-color-index 0 takes the dominant colour instead of prompting, and
+# --dry-run keeps matugen from rendering templates or setting a wallpaper of
+# its own.
+if ! scheme="$(matugen -c "$config" image "$image" --mode dark --source-color-index 0 --json hex --dry-run --quiet 2>/dev/null)"; then
+    log_warning "matugen could not read a palette from ${image##*/}; the colours were not changed"
+    exit 0
 fi
 
-cd "$WALLPAPER_DIR"
-
-# Get current month for monthly wallpapers
-month=$( date '+%Y-%m' )
-monthly_wallpaper="Monthly/$month*"
-
-# Collect candidate wallpapers. On Hyprland startup, prefer a current-month
-# calendar if one exists; otherwise fall back to generic non-calendar images.
-# Manual changes use the normal random rotation: Generic/ plus any current-month
-# Monthly/YYYY-MM* matches.
-declare -a wallpapers
-shopt -s nullglob
-case "$mode" in
-  --initial|initial|--startup|startup)
-    wallpapers=( $monthly_wallpaper )
-    if [[ ${#wallpapers[@]} -eq 0 ]]; then
-      wallpapers=( Generic/* )
-    fi
-    ;;
-  random|--random)
-    wallpapers=( Generic/* $monthly_wallpaper )
-    ;;
-  *)
-    echo "Usage: $0 [--initial|--random]" >&2
-    exit 2
-    ;;
-esac
-shopt -u nullglob
-wallpaper_count=${#wallpapers[*]}
-
-if [[ $wallpaper_count -eq 0 ]]; then
-  echo "No wallpapers found under $PWD" >&2
-  exit 1
+# Which of matugen's colours becomes which of handaan's, and how the status
+# colours are kept honest, is default/theme/palette.jq.
+if ! jq --argjson fallback "$(< "$FALLBACK")" --arg wallpaper "$image" \
+        -f "$HANDAAN_PATH/default/theme/palette.jq" <<< "$scheme" > "$tmp"; then
+    log_warning "matugen's palette was not in the expected shape; the colours were not changed"
+    exit 0
 fi
 
-# Select random wallpaper (shuf returns 0 to count-1)
-index=$( shuf -i 0-$((wallpaper_count - 1)) -n 1 )
-if [[ $index -lt $wallpaper_count ]]
-then
-  current_wallpaper="$PWD/${wallpapers[$index]}"
+# Renamed into place: the shell watches this file, and must never read half of it.
+chmod 644 "$tmp"
+mv -f "$tmp" "$PALETTE"
 
-  # Save absolute path so hyprpaper.conf can preload it on next boot
-  echo "$current_wallpaper" > "$filename"
-
-  while IFS= read -r monitor; do
-    hyprctl hyprpaper wallpaper "$monitor,$current_wallpaper"
-  done < <(hyprctl monitors -j | jq -r '.[].name')
-
-  # Optional: Generate color scheme using wal if available
-  if command -v wal &> /dev/null; then
-    wal -c
-    wal -i "$current_wallpaper" -q
-  fi
+# The shell follows the file on its own. Hyprland is told, through eval in its
+# own Lua state -- see default/hypr/theme.lua.
+if [[ -n ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+    result="$(hyprctl eval 'require("hypr.theme").apply()' 2>&1 || true)"
+    [[ $result == ok ]] || log_warning "Hyprland did not take the new colours: $result"
 fi
+
+log_success "Colours taken from ${image##*/}"
