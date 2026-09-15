@@ -1,5 +1,9 @@
 # ADR Changelog
 
+## 2026-09-15 (tinted bar)
+
+- **0007** edited in place. The bar strip is drawn on a new palette name, `tint` (matugen's `secondary_container`), rather than on `background`, which on a dark scheme is near black whatever the wallpaper. `default/theme/palette.jq`, `default/theme/fallback.json`, `Commons/Colors.qml` and `Theme.barSurface` carry it. No migration: `--restore` re-derives the palette at login, and until then the missing name falls back to Mocha's surface.
+
 ## 2026-09-14 (mako removed)
 
 - **0008** edited in place. mako is no longer kept as a masked fallback: the package leaves `install/desktop.packages`, its `config/mako` seed and the mask in `install/post-install/services.sh` go with it, and `migrations/1789361075.sh` uninstalls it, removes the mask and removes `~/.config/mako/config` on installed machines.

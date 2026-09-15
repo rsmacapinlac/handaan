@@ -83,6 +83,7 @@ def clearance($status):
     backgroundDeep: role("surface_container_lowest"),
     surface:        role("surface_container_high"),
     surfaceHover:   role("surface_container_highest"),
+    tint:           role("secondary_container"),
     border:         role("outline_variant"),
     text:           role("on_surface"),
     textMuted:      role("outline"),

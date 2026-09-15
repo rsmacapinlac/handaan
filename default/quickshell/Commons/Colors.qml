@@ -28,6 +28,7 @@ Singleton {
     readonly property color backgroundDeep: root.pick("backgroundDeep")
     readonly property color surface: root.pick("surface")
     readonly property color surfaceHover: root.pick("surfaceHover")
+    readonly property color tint: root.pick("tint")
     readonly property color border: root.pick("border")
     readonly property color text: root.pick("text")
     readonly property color textMuted: root.pick("textMuted")
