@@ -21,7 +21,10 @@ QtObject {
     // (default/hypr/rules.lua). A separate role from barBackground on purpose:
     // that one is also used as solid ink -- the numeral on the focused
     // workspace pill, the installer's panels -- and must stay opaque there.
-    readonly property color barSurface: Qt.alpha(Colors.background, 0.8)
+    // Tinted rather than the neutral background, which on a dark scheme is
+    // near black whatever the wallpaper: this is the colour that shows the bar
+    // belongs to it. Dark enough that every text and status colour still reads.
+    readonly property color barSurface: Qt.alpha(Colors.tint, 0.8)
     readonly property color barText: Colors.text
     readonly property color barTextMuted: Colors.textMuted
 
