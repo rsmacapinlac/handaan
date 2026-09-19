@@ -9,6 +9,11 @@ configuration {
   click-to-exit: true;
   icon-theme: "Oranchelo";
   drun-display-format: "{icon} {name}";
+  // rofi gives a D-Bus launch 1.5s, then also runs Exec; an app slower to
+  // start than that (Nautilus) opens two windows.
+  drun {
+    DBusActivatable: false;
+  }
 }
 
 @import "catppuccin-mocha"
