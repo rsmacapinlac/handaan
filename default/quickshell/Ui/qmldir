@@ -2,6 +2,7 @@ module qs.Ui
 
 Bar 1.0 Bar.qml
 BarWidget 1.0 BarWidget.qml
+BarCard 1.0 BarCard.qml
 Tooltip 1.0 Tooltip.qml
 Installer 1.0 Installer.qml
 PowerMenu 1.0 PowerMenu.qml

@@ -31,6 +31,21 @@
 // What is deliberately absent is whether a workspace holds windows, which
 // answers neither question: you are not on it, and it is not asking for you.
 //
+// All of that describes the top bar, where the row can grow sideways for as
+// long as it likes. A side bar cannot: five slots divide a fixed width budget
+// (Style.barSideSize), which leaves each one around eighteen pixels. At that
+// size width has nothing left to say -- the strong pill and the idle dot would
+// differ by a few pixels, which is no longer a channel that survives
+// peripheral vision -- so every slot there is drawn the same width, and the
+// two answers are carried by fill, outline and colour alone. That is a real
+// loss against the reasoning above, accepted because the alternative is a
+// bar wide enough to matter: five pills at their top-bar size need 184px of
+// screen where the whole side bar is 120.
+//
+// Holding the width still has a second benefit on a bar that narrow: nothing
+// reflows as focus moves. The bar's width is taken from this widget, so a slot
+// that grew and shrank would pull the whole bar with it.
+//
 // An earlier version separated states by colour alone -- accent fill for
 // focused, opacity 0.45 vs 1.0 for empty vs occupied, every numeral the same
 // weight. The empty and occupied numerals composited about 21/255 apart, so
@@ -73,7 +88,6 @@
 // That is a known and accepted mismatch, not an oversight.
 
 import QtQuick
-import QtQuick.Layouts
 import Quickshell.Hyprland
 import qs.Commons
 import qs.Ui
@@ -170,12 +184,36 @@ BarWidget {
         Hyprland.dispatch('hl.dsp.focus({ workspace = "' + id + '" })');
     }
 
-    implicitWidth: row.implicitWidth
+    // One row on a top bar, a grid five wide on a side one. Five is what the
+    // bar is sized around: wider and it starts eating the screen, and
+    // a row of five is still short enough to take in at a glance.
+    readonly property int columnsAcross: 5
+    readonly property int acrossGap: Style.space(1)
+    // The slot size five-across implies, taken from the side bar's width
+    // budget rather than from the top bar's pill: at the top the row grows
+    // sideways for free, while here five have to fit a fixed bar.
+    readonly property int slotAcross: Math.floor((Style.barSideSize - Style.barSidePadding * 2 - root.acrossGap * (root.columnsAcross - 1)) / root.columnsAcross)
+    readonly property int acrossWidth: root.slotAcross * root.columnsAcross + root.acrossGap * (root.columnsAcross - 1)
 
-    RowLayout {
+    // The side bar holds room for all five whether or not five exist. The row
+    // is emergent -- Hyprland destroys a workspace with its last window -- so
+    // a widget sized to the live count would change the bar's width, and with
+    // it every window's geometry, each time one came or went.
+    implicitWidth: root.vertical ? root.acrossWidth : row.implicitWidth
+    implicitHeight: root.vertical ? row.implicitHeight : root.barSize
+
+    // A positioner rather than a layout. A GridLayout shares its width out
+    // between the columns it is using, so a row holding two workspaces spaced
+    // them across the whole bar and a full row of five packed them tight --
+    // the gap moved with the count. Grid gives every child its own size and
+    // one spacing, so five across and two across sit at the same pitch.
+    Grid {
         id: row
-        anchors.fill: parent
-        spacing: Style.space(1.5)
+        anchors.left: root.vertical ? parent.left : undefined
+        anchors.fill: root.vertical ? undefined : parent
+        anchors.verticalCenter: root.vertical ? parent.verticalCenter : undefined
+        columns: root.vertical ? root.columnsAcross : Math.max(1, root.workspaceIds.length)
+        spacing: root.vertical ? root.acrossGap : Style.space(1.5)
 
         Repeater {
             model: root.workspaceIds
@@ -210,15 +248,22 @@ BarWidget {
                     }
                 }
 
-                Layout.preferredWidth: slotWidth
-                Layout.preferredHeight: root.barSize
-                Layout.alignment: Qt.AlignVCenter
+                // On a side bar the slot keeps one width whatever it is
+                // doing, so neither the pitch of the row nor the width of the
+                // bar -- which is taken from this widget -- moves with focus.
+                width: root.vertical ? root.slotAcross : slot.slotWidth
+                height: root.vertical ? root.pillHeight : root.barSize
 
                 Rectangle {
                     id: shape
 
                     anchors.centerIn: parent
-                    width: slot.wide ? root.pillWidth : root.idleWidth
+                    // One width for every slot on a side bar. See the note on
+                    // the grid above: the shapes are too small there for width
+                    // to say anything, and a row that reflowed as focus moved
+                    // would be the only motion in a bar whose whole point is
+                    // to sit still.
+                    width: root.vertical ? root.slotAcross : (slot.wide ? root.pillWidth : root.idleWidth)
                     height: root.pillHeight
                     radius: height / 2
 
@@ -291,7 +336,12 @@ BarWidget {
                             return mouse.containsMouse ? Theme.barText : Theme.barTextMuted;
                         }
                         font.family: Style.fontFamily
-                        font.pixelSize: Style.fontSizeSmall
+                        // Larger on a side bar, where the numeral is most of
+                        // what is left to read: the pill lost its width cue to
+                        // the bar's budget. Capped by that same budget --
+                        // a two-digit workspace has to sit inside an 18px
+                        // slot, which the body size just manages.
+                        font.pixelSize: root.vertical ? Style.fontSize : Style.fontSizeSmall
                         font.bold: slot.strong
 
                         Behavior on color {

@@ -43,6 +43,13 @@ Item {
     readonly property int barSize: bar ? bar.barSize : Style.barSize
     readonly property color foreground: bar ? bar.foreground : Theme.barText
 
+    // Which edge the bar is on, and whether that makes it vertical.
+    // A widget on a side bar has the screen's height to spend and almost none
+    // of its width, so anything laid out as a row has to know to stack. The
+    // fallback is the top bar, for the same construction-order reason as above.
+    readonly property string barPosition: bar ? bar.position : "top"
+    readonly property bool vertical: barPosition === "left" || barPosition === "right"
+
     implicitHeight: barSize
 
     // Read one value from this widget's settings, with a fallback for missing

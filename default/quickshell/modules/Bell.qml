@@ -49,7 +49,9 @@ BarWidget {
 
     active: NotificationCenter.history.length > 0 || root.quiet
 
-    implicitWidth: icon.implicitWidth
+    // A card. No line beside the glyph: one notification and six ask the same
+    // thing of you, which the rail having room does not change.
+    implicitWidth: card.implicitWidth
 
     // How many kept notifications are at each urgency, read once per change
     // to the history rather than once per property that wants a figure.
@@ -107,31 +109,38 @@ BarWidget {
         onClicked: NotificationCenter.toggleHistory()
     }
 
-    Text {
-        id: icon
-        anchors.centerIn: parent
-        // Nerd Font U+F1F6 bell slash, U+F0F3 bell. Escaped so the glyphs
-        // survive edits; see modules/Updates.qml for what losing one cost.
-        text: root.quiet ? "" : ""
-        color: root.tint
-        font.family: Style.fontFamily
-        font.pixelSize: Math.round(Style.fontSize * 1.12)
+    BarCard {
+        id: card
 
-        Behavior on color {
-            ColorAnimation {
-                duration: Style.animationFast
+        anchors.fill: parent
+        vertical: root.vertical
+
+        Text {
+            id: icon
+            anchors.centerIn: parent
+            // Nerd Font U+F1F6 bell slash, U+F0F3 bell. Escaped so the glyphs
+            // survive edits; see modules/Updates.qml for what losing one cost.
+            text: root.quiet ? "" : ""
+            color: root.tint
+            font.family: Style.fontFamily
+            font.pixelSize: Math.round(Style.fontSize * 1.12)
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Style.animationFast
+                }
             }
-        }
 
-        // A transition, not motion: the bell fading in as the first
-        // notification lands reads as an arrival rather than a glyph you had
-        // missed. The same beat Updates uses.
-        opacity: root.active ? 1 : 0
+            // A transition, not motion: the bell fading in as the first
+            // notification lands reads as an arrival rather than a glyph you had
+            // missed. The same beat Updates uses.
+            opacity: root.active ? 1 : 0
 
-        Behavior on opacity {
-            NumberAnimation {
-                duration: Style.animationNormal
-                easing.type: Easing.OutCubic
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Style.animationNormal
+                    easing.type: Easing.OutCubic
+                }
             }
         }
     }

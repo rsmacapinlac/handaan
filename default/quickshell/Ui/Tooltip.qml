@@ -38,15 +38,25 @@ PopupWindow {
     // immediately.
     property bool settled: false
 
+    // A tooltip opens away from the bar, so which way that is depends on the
+    // edge the bar is on. Read off the widget being anchored to rather than
+    // passed in by every caller: a bar widget already knows, and a tooltip on
+    // something else keeps the top bar's downwards default.
+    readonly property string barPosition: root.anchorItem && "barPosition" in root.anchorItem ? root.anchorItem.barPosition : "top"
+    readonly property int openEdge: barPosition === "right" ? Edges.Left : barPosition === "left" ? Edges.Right : Edges.Bottom
+
     anchor {
         item: root.anchorItem
-        edges: Edges.Bottom
-        gravity: Edges.Bottom
-        margins.top: Style.space(1.5)
+        edges: root.openEdge
+        gravity: root.openEdge
+        margins.top: root.openEdge === Edges.Bottom ? Style.space(1.5) : 0
+        margins.right: root.openEdge === Edges.Left ? Style.space(1.5) : 0
+        margins.left: root.openEdge === Edges.Right ? Style.space(1.5) : 0
         // Bar widgets sit at the screen edges, where a tooltip centred on the
         // widget would hang off the display. Slide it back inside instead of
-        // letting the compositor clip it.
-        adjustment: PopupAdjustment.SlideX
+        // letting the compositor clip it -- along the bar, whichever way that
+        // runs.
+        adjustment: root.openEdge === Edges.Bottom ? PopupAdjustment.SlideX : PopupAdjustment.SlideY
     }
 
     implicitWidth: body.implicitWidth

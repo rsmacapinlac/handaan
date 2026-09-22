@@ -79,13 +79,19 @@ BarWidget {
     // depending on that coincidence.
     active: Maintenance.polled && Maintenance.updates > 0
 
-    // The glyph's own width, with nothing added. Battery and Clock are both a
-    // bare row width, so padding here made this the only widget in the section
-    // wider than its content -- measured at 44px between this and the battery
-    // against 20px between the battery and the clock, and half that excess was
-    // this. The click target keeps the padding, as a negative margin on the
-    // MouseArea below, because a hit area is not a layout size.
-    implicitWidth: icon.implicitWidth
+    // A card, so on a side bar this is the bar's full width and the glyph
+    // centres in the rail with every other card's. On a top bar the card gives
+    // the empty text column back and this is the glyph's own width again, with
+    // nothing added: padding here once made this the only widget in the
+    // section wider than its content. The click target keeps the padding, as a
+    // negative margin on the MouseArea below, because a hit area is not a
+    // layout size.
+    //
+    // There is no line beside the glyph. The card has room for one and that is
+    // not a reason to write one: the count was left off the glance layer
+    // because two updates and forty prompt the same act, and a rail with space
+    // next to it does not change that. See the header.
+    implicitWidth: card.implicitWidth
 
     // Severity by the kind of thing waiting, not the amount -- the same shape
     // as the battery's ladder, where 40% and 10% differ in kind (plan to act,
@@ -194,65 +200,72 @@ BarWidget {
         onClicked: Maintenance.refresh()
     }
 
-    Text {
-        id: icon
-        anchors.centerIn: parent
-        // Nerd Font U+F019, "arrow down into tray": the shape the desktop
-        // already uses for "there is something to fetch and apply".
-        //
-        // Written as an escape rather than the literal glyph. A private-use
-        // codepoint is invisible in most diffs and editors, and this one was
-        // silently lost once already when the file was rewritten -- the widget
-        // went on reporting itself active while drawing an empty Text, so it
-        // had zero width and never appeared, with nothing in any log to say
-        // why. The escape is greppable, survives a rewrite, and names the
-        // codepoint it means.
-        text: "\uf019"
-        color: root.tint
-        font.family: Style.fontFamily
-        // Drawn at what the pulse used to peak at, so the glyph reads at that
-        // size all the time rather than only for a moment every 1.2s. The
-        // multiplier is the pulse's own amplitude rather than a second number
-        // to keep in sync: change one and the other follows.
-        font.pixelSize: Math.round(Style.fontSize * root.pulseScale)
+    BarCard {
+        id: card
 
-        // Same cycle and amplitude as the workspace and battery pulses, so the
-        // bar has one vocabulary for "look at this" rather than three.
-        //
-        // Bound to the top of the ladder rather than to the widget existing,
-        // which is the battery's discipline: it pulses at critical, not
-        // whenever it is drawn. The reservation recorded at the top of the file
-        // still stands, and is sharper here than for the battery -- package
-        // updates are available most days and never clear on their own, so the
-        // top level is where this widget spends most of its visible life.
-        SequentialAnimation on scale {
-            running: root.level >= 3
-            loops: Animation.Infinite
-            alwaysRunToEnd: true
+        anchors.fill: parent
+        vertical: root.vertical
 
-            NumberAnimation {
-                to: root.pulseScale
-                duration: 620
-                easing.type: Easing.InOutSine
+        Text {
+            id: icon
+            anchors.centerIn: parent
+            // Nerd Font U+F019, "arrow down into tray": the shape the desktop
+            // already uses for "there is something to fetch and apply".
+            //
+            // Written as an escape rather than the literal glyph. A private-use
+            // codepoint is invisible in most diffs and editors, and this one was
+            // silently lost once already when the file was rewritten -- the widget
+            // went on reporting itself active while drawing an empty Text, so it
+            // had zero width and never appeared, with nothing in any log to say
+            // why. The escape is greppable, survives a rewrite, and names the
+            // codepoint it means.
+            text: "\uf019"
+            color: root.tint
+            font.family: Style.fontFamily
+            // Drawn at what the pulse used to peak at, so the glyph reads at that
+            // size all the time rather than only for a moment every 1.2s. The
+            // multiplier is the pulse's own amplitude rather than a second number
+            // to keep in sync: change one and the other follows.
+            font.pixelSize: Math.round(Style.fontSize * root.pulseScale)
+
+            // Same cycle and amplitude as the workspace and battery pulses, so the
+            // bar has one vocabulary for "look at this" rather than three.
+            //
+            // Bound to the top of the ladder rather than to the widget existing,
+            // which is the battery's discipline: it pulses at critical, not
+            // whenever it is drawn. The reservation recorded at the top of the file
+            // still stands, and is sharper here than for the battery -- package
+            // updates are available most days and never clear on their own, so the
+            // top level is where this widget spends most of its visible life.
+            SequentialAnimation on scale {
+                running: root.level >= 3
+                loops: Animation.Infinite
+                alwaysRunToEnd: true
+
+                NumberAnimation {
+                    to: root.pulseScale
+                    duration: 620
+                    easing.type: Easing.InOutSine
+                }
+                NumberAnimation {
+                    to: 1.0
+                    duration: 620
+                    easing.type: Easing.InOutSine
+                }
             }
-            NumberAnimation {
-                to: 1.0
-                duration: 620
-                easing.type: Easing.InOutSine
-            }
-        }
 
-        // A transition, not motion: the widget appears when a poll lands, and
-        // fading it in over a beat makes the arrival legible as a change
-        // rather than a glyph that was always there and you had missed.
-        // Bounded and over before you look, which is what the doc separates
-        // from the sustained kind.
-        opacity: root.active ? 1 : 0
+            // A transition, not motion: the widget appears when a poll lands, and
+            // fading it in over a beat makes the arrival legible as a change
+            // rather than a glyph that was always there and you had missed.
+            // Bounded and over before you look, which is what the doc separates
+            // from the sustained kind.
+            opacity: root.active ? 1 : 0
 
-        Behavior on opacity {
-            NumberAnimation {
-                duration: Style.animationNormal
-                easing.type: Easing.OutCubic
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Style.animationNormal
+                    easing.type: Easing.OutCubic
+                }
             }
         }
     }
