@@ -13,13 +13,22 @@ StartLimitIntervalSec=60
 
 [Service]
 Type=simple
-# Quickshell's own file watcher is off: an update or a package upgrade rewriting
-# the config mid-write would reload the shell against a half-written tree, and
-# a failed reload leaves a second engine generation behind. Reload deliberately
-# with `systemctl --user restart quickshell.service` instead. A newly added
-# singleton needs that restart regardless -- the type registry is built once at
-# launch, so a hot reload would not see it.
-Environment=QS_DISABLE_FILE_WATCHER=1
+# Quickshell's own file watcher is on, which is the default: writing to the QML
+# under default/quickshell reloads the shell in place. Nothing sets
+# QS_DISABLE_FILE_WATCHER here, and setting it to 0 would not turn the watcher
+# back on -- quickshell tests whether the variable is set, not what it says.
+#
+# It used to be set, and the reason it was is still true: handaan-update pulls
+# into this very tree, so a reload can land against a half-written config. What
+# changed is the weight given to that. A failed reload keeps the generation
+# that is already running and reports the error rather than tearing the session
+# down, the next complete write reloads it correctly, and the unit restarts on
+# failure if it does come apart -- against which the bar being editable without
+# a restart in the loop is worth more than the window it closes.
+#
+# A restart is still required, not merely tidier, after adding a new QML type
+# or singleton: the type registry is built once at launch, so a hot reload does
+# not rescan for new registrations.
 ExecStart=/usr/bin/quickshell --no-duplicate -p %h/.local/share/handaan/default/quickshell
 Restart=on-failure
 RestartSec=1s

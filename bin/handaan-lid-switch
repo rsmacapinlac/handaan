@@ -94,10 +94,11 @@ internal_disabled() {
 # follow. The bar keeps drawing at the monitor's old coordinates, which puts
 # everything right of the workspace pills off the edge of the screen.
 #
-# Restarting the shell re-anchors every surface. It is the same deliberate
-# restart config/systemd/user/quickshell.service documents for a config change,
-# and it only happens on an actual clamshell transition, not on the no-op
-# reconciles that the hotplug hooks fire constantly.
+# Restarting the shell re-anchors every surface. A reload is not enough and the
+# file watcher does not help here -- nothing in the tree changed, the layout
+# did -- so this is a real restart, and it only happens on an actual clamshell
+# transition, not on the no-op reconciles that the hotplug hooks fire
+# constantly. See default/systemd/user/quickshell.service.
 bar_misplaced() {
     local mons
     mons=$(hyprctl monitors -j) || return 1

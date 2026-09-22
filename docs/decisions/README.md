@@ -23,7 +23,7 @@ Decisions already made and living as prose in `README.md`, `AGENTS.md`, or `docs
 **Session**
 - uwsm wrapping `start-hyprland`, so packaged user units actually start
 - Packaged systemd user units rather than `exec-once`, for hypridle, hyprpaper and hyprpolkitagent
-- Quickshell gets a unit of its own, with `QS_DISABLE_FILE_WATCHER=1` set on it
+- Quickshell gets a unit of its own; its file watcher was disabled on that unit and later left on, trading a mid-pull reload against an editable bar
 - Suspend on lid close left to systemd-logind's own defaults, with clamshell handled in `handaan-lid-switch` by dropping the panel out of the layout — see [Monitors](../monitors.md)
 
 **Compositor and bar**
