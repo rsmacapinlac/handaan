@@ -1,6 +1,6 @@
 # Quickshell Widget Design
 
-This document governs the bar widget.
+This document governs the design language of the bar widget.
 
 ## The principle: Each widget on the bar should be glance-able
 
@@ -8,39 +8,81 @@ This document governs the bar widget.
 
 When building a widget, you *must* follow these principles.
 
-1. *What the question does the module answer before you design it.* Examples: Battery: "do I need to find a cable." Network: "is my connection working." Workspaces: Which workspace am I on? A widget cannot be built without this. 
+Each widget has to have a defined purpose and its purpose is supported by these questions:
 
+1. *What question does the module answer before you design it.* Examples: Battery: "do I need to find a cable." Network: "is my connection working." Workspaces: Which workspace am I on? A widget cannot be built without this. 
 2. **Information you would never act on does not belong in the bar.** Remove any "extra" information, design elements unless they directly serve the question. Question every element that is displayed.
 
 ### States compete for legibility
 
-A widget communicates by making states *distinguishable*. Each additional state
-it tries to distinguish makes every other state harder to pick out, because the
-available signals — colour, brightness, size, shape — are shared and finite.
+A widget communicates by making states *distinguishable*. Each additional state it tries to distinguish makes every other state harder to pick out, because the available signals (ie. colour, brightness, size, shape) are shared and finite.
 
 So:
 
-- **Two states may be strong. Everything else recedes.** The strong states are
-  the answers to the widget's questions; the rest is context and should be quiet
-  enough that it never competes.
-- **Do not encode a state the questions did not ask for.** A state that answers
-  no question is spending legibility for nothing.
-- **A question with no encoding is a bug.** If a widget claims to answer "which
-  workspace wants attention" and urgency is not visible, the widget does not do
-  its job, however good it looks.
+- **Two states may be strong. Everything else recedes.** The strong states are the answers to the widget's questions.
+- **Do not encode a state the questions did not ask for.** A state that answers no question is spending legibility for nothing.
+- **A question with no encoding is a bug.** A widget is not doing its job if it does not expose the necessary information that answers the key question and purpose.
 
-The failure mode to watch for is a widget that encodes several states weakly —
-several shades of the same colour, several opacities — so that all of them
-require reading and none of them glance.
+## Every widget is a card
 
-A refinement of an answer is not a new state competing with it. The workspace
-widget draws the workspace a screen is displaying as a wide pill on every
-monitor, filled on the focused monitor and outlined on the others. That is
-still one answer — "which workspace is this screen on" — with focus carried by
-fill alone; width, the strongest channel, is unchanged, so the row does not
-reflow when focus crosses monitors, and exactly one filled pill exists in the
-session. The test is whether dropping the refinement leaves the answer intact:
-here it does, which is what keeps it from counting against the two.
+A card is one widget's answer to its questions, in a shape it shares with every other card. `Ui/BarCard.qml` is that shape. A bar whose widgets each solved their own layout would be a stack of unrelated things that happen to share an edge, and the shared shape is what makes it a column instead.
+
+Cards stack. The bar runs vertically by default, so a card is read down the bar with its neighbours — which is where the shared shape earns itself: five cards whose text all begins at the same x read as one column, and five centred on their own differing widths read as five widgets. The same card lays out as a row on a top bar, icon then the lines beside each other, so a widget's content is declared once rather than twice. One visible consequence there: the accessory follows the icon instead of preceding it, so the battery reads body-then-bolt rather than bolt-then-body. The card puts the icon first, always.
+
+### Two columns
+
+A card is two columns: **an icon, and the information it introduces.** The icon sits in a fixed rail; the information column takes the majority of the width, because the information is what the card is for.
+
+Three numbers, in `Commons/Style.qml`:
+
+| token | value | where it comes from |
+|---|---|---|
+| `barCardWidth` | 108 | `barSideSize` less the side padding either side |
+| `barCardRail` | 24 | the battery's body and cap — the widest icon, and the only one that is a drawn shape rather than a glyph |
+| `barCardText` | 78 | what is left |
+
+The rail is reserved whether or not a card has an icon for it, and the majority is reserved whether or not a card has a line to put there. Both reservations *are* the alignment: a card that reclaimed the width it was not using would put its rail at a different x from the card above it, which is the one thing the shared shape exists to prevent. Reserved is not the same as occupied — the majority is the card's budget for information, not a quota it has to meet.
+
+### The icon says what the card is and how it stands
+
+The icon carries two things: **what the card is, and how that thing stands right now.** Identity alone would be a label, and a label answers nothing — you already know which card is the battery, so a glyph that only says "battery" is spending the rail to tell you what you came in knowing. The icon earns its column by encoding state as well: the battery's fill length and ladder colour, the Bell's colour and its slash.
+
+That is a change, and not every card meets it yet. Network and Updates encode state in colour alone, which is the weakest form of the rule — their shape is identical across every state they distinguish, so the encoding holds only as long as the hues stay apart. The Clock has no icon at all, and is an exception below. The battery is the one card that meets the rule in full, and needs revisiting for the opposite reason: fill length, ladder colour and the `68%` numeral are three encodings of one answer, and the clause that used to license a refinement as not-a-new-state is no longer in this document.
+
+### Two lines is a ceiling, not a quota
+
+A card with nothing worth saying is an icon and an empty information column, and that is the correct shape for it: Updates, Network and the Bell are all icon-only. What belongs on the glance layer is settled by the rules above, and having somewhere to put a line is not a reason to find one. This is the rule the card exists to make visible — **room is never an argument for a new answer.** It is only ever an argument for stopping the hiding of one the widget already gives, which is *Detail is progressively disclosed*, below.
+
+The ceiling is enforced rather than trusted. There are two line properties and no third; each is capped at `barCardText` and elides. What that prevents is a widget quietly growing a third line, or a line too long for its column, and widening the bar for every other card at once — it takes its thickness from the widest thing in it, so one card's greed is charged to all of them. For scale, 78px holds a ten-character date at `fontSizeSmall` with 11px to spare, and about nine characters at `fontSize`. The cap applies down a vertical bar; a card on a top bar is as wide as it needs to be.
+
+The lines are named by position rather than by rank, because which one carries the answer differs by card: the battery leads with its figure, the clock leads with its date and puts the time underneath. So the card takes a colour and a size per line instead of ranking them itself. Beside line one there is one more slot, the **accessory**: a component, for the one thing a string cannot carry — a glyph needing a colour of its own. The battery's bolt is green while it is gaining charge, next to a numeral on the severity ladder, and one `Text` cannot be both.
+
+### A card with nothing to say disappears 
+
+A card leaves the bar when it has nothing relevant to show. `BarWidget.active` drops the widget **and its spacing**, so an up-to-date machine carries no update chrome whatsoever.
+
+Absence is an encoding, not a tidy-up — presence is the whole of Updates' glance layer, and the strongest signal available, because the two states are "a card" and "no card" and nothing else has to be read to tell them apart. But absence says two different things and they are worth keeping apart: *there is nothing to do* (Updates, the Bell) and *there is no answer to give* (the battery on a machine without one, Network while connectivity is unknown). Both render as the same absence. So a card may only use presence as its answer when its question is of the first kind; a card that disappears because it does not know is silent about the fact that it does not know.
+
+### Cards can reveal more
+
+A card answers at a glance and can be asked for more. The asking has two forms and they must not be confused:
+
+- **Hover sharpens the answer.** The same question at higher resolution, taking no focus and destroying nothing. `Ui/Tooltip.qml`, governed by *Detail is progressively disclosed* below.
+- **Click opens somewhere to act on the card's subject.** Not more detail — somewhere to do something about it. The Bell's history is the worked example: it dismisses, clears and toggles do-not-disturb, which is why it holds keyboard focus and why a tooltip could never have been it. A card with nothing to act on gets no click handler, which is why the battery has none.
+
+**The drawer is an experiment.** What a card opens is a drawer: full height, against the bar's inner edge, one fixed width, in the same place whichever card opened it. One position, learned once. It was chosen over anchoring the panel to the card — which moves with the card's place in the bar and with the height of its content, leaving nowhere to learn — and over the centred dialog the installer, power menu and wallpaper picker share, which covers the window being read and is the heaviest gesture available for "show me a bit more".
+
+Nothing is built yet. The notification history is the surface that would move first, and it is the reason this came up: it is anchored top right, from when the bar was on top, while the Bell that opens it now sits at the bottom of a right-hand bar, so clicking the bell throws a panel diagonally across the screen.
+
+Revisit this once a second card has something to reveal. One drawer is not evidence; the question is whether two of them in the same place read as one habit or as a surface that keeps showing unrelated things. If it is the second, anchoring to the card is what to try next. Until then this section describes an intention rather than the shell.
+
+### Breaking the pattern
+
+A card follows the shape unless there is a reason not to, and **a reason not to is written down here.** An undocumented deviation cannot be told apart from an oversight, and the next person to look at it — including the one who wrote it — has no way to know whether they are reading a decision or a bug.
+
+**Workspaces is not a card.** It is a grid of pills with no icon and no text, and wrapping it in a rail it would never use would be the standard applied for its own sake.
+
+**The Clock has no icon**, on the argument that a clock face beside a time answers nothing the time did not already say. That predates the rule above, and whether it survives it is open: the icon that would satisfy both halves is a face with real hands, which is also the only icon on the bar that would say exactly what the line beside it says.
 
 ## Motion is reserved for attention
 
@@ -254,6 +296,23 @@ It is derived from a fact the glance layer never shows — the current draw rate
 — and it is still legal, because it resolves "do I need to plug in?" rather
 than asking something new. That is the rule doing real work: it is about the
 question, not the datum.
+
+**Where the boundary between the two layers sits is not fixed, and the side bar
+is what showed it.** A vertical bar gives the battery a 78px text column
+beside its icon, so the numeral there costs width nothing else was going to
+spend — and the argument that kept it off a 34px top bar was, in the half that
+was about width, an argument about a bar that no longer exists. So on a side
+bar the percentage is drawn on the card, and the tooltip gives up restating it
+and leads with the estimate instead. On a top bar nothing changed.
+
+Note what did *not* move. The question is the same on both bars, and so is the
+ranking: shape first, precision second, and the shape alone still answers it.
+Only the line between the layers moved, and it moved because the room did.
+That is the whole of what extra space licenses — **it is never a licence to add
+a question the widget does not answer, only a licence to stop hiding an answer
+it already gives.** The counts on Updates and the Bell stayed off their cards
+for exactly this reason: two updates and forty prompt the same act, which a
+wider bar does not change.
 
 ## Interaction rules
 

@@ -18,6 +18,12 @@ QtObject {
 
     // ----------------------------------------------------------- dimensions
     readonly property int barSize: 34
+    // A side bar's thickness. Unlike barSize, which is the height a row of
+    // widgets needs, this is a budget: the screen width given up to a vertical
+    // bar, which the widgets in it divide between them. The workspace grid is
+    // what spends it -- five pills across, sized from this number rather than
+    // fixed, so changing it here resizes them instead of clipping them.
+    readonly property int barSideSize: 120
     readonly property int radius: 8
     readonly property int borderWidth: 1
 
@@ -38,8 +44,30 @@ QtObject {
     readonly property int widgetSpacing: space(5)
     // Inset from the bar's leading and trailing screen edges.
     readonly property int barPadding: space(3)
+    // The same inset along a side bar's short axis, where the budget above is
+    // tight enough that the wider one would cost a pill's worth of width.
+    readonly property int barSidePadding: space(1.5)
     // Horizontal padding inside a single widget's hit area.
     readonly property int widgetPadding: space(2.5)
+
+    // ------------------------------------------------------- side-bar cards
+    // Every widget on a side bar is one card: an icon in a fixed rail on the
+    // left, and up to two lines beside it. The rail is reserved whether or not
+    // a card has an icon to put in it, because the alignment is the point --
+    // five cards whose text all starts at the same x read as one column, and
+    // five centred on their own differing widths read as five unrelated
+    // widgets that happen to be stacked.
+    //
+    // The rail is sized from the battery's body, the widest icon and the only
+    // one that is a drawn shape rather than a glyph. Everything else centres
+    // in it.
+    readonly property int barCardRail: space(6)
+    readonly property int barCardGap: space(1.5)
+    readonly property int barCardWidth: barSideSize - barSidePadding * 2
+    // What is left for text: the ceiling every line has to fit, which is what
+    // makes "maximum two lines" a rule the card can actually enforce rather
+    // than a habit each widget keeps on its own.
+    readonly property int barCardText: barCardWidth - barCardRail - barCardGap
 
     // Hyprland's outer gap, general.gaps_out in default/hypr/look.lua. A
     // surface that sits beside windows -- the notification popups and history

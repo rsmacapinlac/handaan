@@ -48,6 +48,12 @@ Item {
     component BarSurface: PanelWindow {
         id: surface
 
+        // Which way the bar runs. A side bar spans the screen's height and
+        // takes its thickness from implicitWidth; a top or bottom one is the
+        // other way round. Everything below that differs between the two reads
+        // this rather than testing position again.
+        readonly property bool vertical: root.position === "left" || root.position === "right"
+
         // Hiding parks the surface just past the screen edge instead of
         // unmapping it. Unmapping frees the layer surface and the entire scene
         // graph, so every reveal has to rebuild both; a negative margin leaves
@@ -57,16 +63,29 @@ Item {
         margins {
             top: root.hidden && root.position === "top" ? -root.barSize : 0
             bottom: root.hidden && root.position === "bottom" ? -root.barSize : 0
+            left: root.hidden && root.position === "left" ? -root.barSize : 0
+            right: root.hidden && root.position === "right" ? -root.barSize : 0
         }
 
+        // Anchored to both ends of the axis it spans, and to the edge it sits
+        // on. The layer surface takes its length from those two anchors, so
+        // only the thickness is given below.
         anchors {
-            top: root.position === "top"
-            bottom: root.position === "bottom"
-            left: true
-            right: true
+            top: surface.vertical || root.position === "top"
+            bottom: surface.vertical || root.position === "bottom"
+            left: !surface.vertical || root.position === "left"
+            right: !surface.vertical || root.position === "right"
         }
 
-        implicitHeight: root.barSize
+        // A top bar's thickness is barSize, the height a row of widgets needs.
+        // A side bar's is Style.barSideSize, the width budget its widgets are
+        // sized from. The content is still measured, as a floor: a widget that
+        // cannot shrink to the budget widens the bar rather than being
+        // clipped by it.
+        readonly property int contentThickness: Math.max(leftRow.implicitWidth, centerRow.implicitWidth, rightRow.implicitWidth)
+
+        implicitWidth: surface.vertical ? Math.max(Style.barSideSize, surface.contentThickness + Style.barSidePadding * 2) : 0
+        implicitHeight: surface.vertical ? 0 : root.barSize
         color: root.background
         WlrLayershell.namespace: "quickshell-bar"
         WlrLayershell.layer: WlrLayer.Top
@@ -75,23 +94,33 @@ Item {
         // surface rather than placed between the other two, so whatever sits
         // in it stays centred on the screen: a long window title growing on
         // the left would otherwise shove it sideways.
+        //
+        // On a side bar the same three sections read top, middle and bottom:
+        // leftWidgets is the leading edge of the bar whichever way it runs.
         Item {
             anchors.fill: parent
-            anchors.leftMargin: Style.barPadding
-            anchors.rightMargin: Style.barPadding
+            anchors.leftMargin: surface.vertical ? Style.barSidePadding : Style.barPadding
+            anchors.rightMargin: surface.vertical ? Style.barSidePadding : Style.barPadding
+            anchors.topMargin: surface.vertical ? Style.barPadding : 0
+            anchors.bottomMargin: surface.vertical ? Style.barPadding : 0
 
             WidgetRow {
                 id: leftRow
                 widgets: root.leftWidgets
                 screen: surface.screen
-                anchors.left: parent.left
-                anchors.verticalCenter: parent.verticalCenter
+                vertical: surface.vertical
+                anchors.left: surface.vertical ? undefined : parent.left
+                anchors.top: surface.vertical ? parent.top : undefined
+                anchors.verticalCenter: surface.vertical ? undefined : parent.verticalCenter
+                anchors.horizontalCenter: surface.vertical ? parent.horizontalCenter : undefined
             }
 
+            // Centred on both axes either way, so this one needs no case.
             WidgetRow {
                 id: centerRow
                 widgets: root.centerWidgets
                 screen: surface.screen
+                vertical: surface.vertical
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.verticalCenter: parent.verticalCenter
             }
@@ -100,21 +129,37 @@ Item {
                 id: rightRow
                 widgets: root.rightWidgets
                 screen: surface.screen
-                anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
+                vertical: surface.vertical
+                anchors.right: surface.vertical ? undefined : parent.right
+                anchors.bottom: surface.vertical ? parent.bottom : undefined
+                anchors.verticalCenter: surface.vertical ? undefined : parent.verticalCenter
+                anchors.horizontalCenter: surface.vertical ? parent.horizontalCenter : undefined
             }
         }
     }
 
-    component WidgetRow: RowLayout {
+    // A GridLayout rather than a RowLayout because the section has to run
+    // either way: one row on a top bar, one column on a side one. A layout
+    // cannot change its base type at runtime, but a single-row grid and a
+    // single-column grid are the same type with different counts.
+    component WidgetRow: GridLayout {
         id: row
 
         property list<Component> widgets
         // Forwarded to every widget in the row. See BarWidget.screen.
         property var screen: null
+        property bool vertical: false
 
-        spacing: Style.widgetSpacing
-        height: root.barSize
+        // Counted from the declared widgets rather than the loaded ones: a
+        // widget that reports itself inactive is dropped by the layout, and
+        // the spare cell it leaves behind costs nothing.
+        columns: row.vertical ? 1 : row.widgets.length
+        rows: row.vertical ? row.widgets.length : 1
+
+        rowSpacing: Style.widgetSpacing
+        columnSpacing: Style.widgetSpacing
+        height: row.vertical ? implicitHeight : root.barSize
+        width: implicitWidth
 
         Repeater {
             model: row.widgets
@@ -123,7 +168,7 @@ Item {
                 required property Component modelData
 
                 sourceComponent: modelData
-                Layout.alignment: Qt.AlignVCenter
+                Layout.alignment: row.vertical ? Qt.AlignHCenter : Qt.AlignVCenter
 
                 // A widget that reports itself inactive leaves the row. This
                 // reads BarWidget.active rather than the item's own visible,

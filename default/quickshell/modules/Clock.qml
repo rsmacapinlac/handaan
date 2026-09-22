@@ -30,7 +30,6 @@
 // polling, so it neither drifts nor spins between ticks.
 
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import qs.Commons
 import qs.Ui
@@ -44,6 +43,12 @@ BarWidget {
         precision: SystemClock.Minutes
     }
 
+    // The full ISO date on both bars. It was cut to month-and-day on a side
+    // bar for width, back when each widget was centred on its own content and
+    // the date had the whole bar to fit across. The card gives it a fixed
+    // text column instead -- Style.barCardText, 78px against the 66px ten
+    // monospace characters need at this size -- so the year fits and there is
+    // nothing left to buy by dropping it.
     readonly property string dateText: Qt.formatDateTime(clock.date, "yyyy-MM-dd")
     readonly property string timeText: Qt.formatDateTime(clock.date, "HH:mm")
     // The weekday is the one thing the ISO form cannot tell you, which is what
@@ -51,7 +56,7 @@ BarWidget {
     // today's date -- answered more fully, never a new one.
     readonly property string longDate: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy")
 
-    implicitWidth: row.implicitWidth
+    implicitWidth: card.implicitWidth
 
     Tooltip {
         anchorItem: root
@@ -66,25 +71,28 @@ BarWidget {
         acceptedButtons: Qt.NoButton
     }
 
-    RowLayout {
-        id: row
+    // Date then time either way: on a side bar the same order reads top to
+    // bottom. The date keeps the muted colour and the smaller size that mark
+    // it as the secondary field.
+    //
+    // The only card with no icon. Its rail is empty and still reserved, which
+    // is the standard doing its job rather than a gap in it: the date starts
+    // at the same x as the battery's percentage, and the column reads as one
+    // set. A glyph here would be decoration -- a clock face next to a time
+    // answers nothing the time did not already say, and the doc's rule is to
+    // question every element that is drawn.
+    BarCard {
+        id: card
+
         anchors.fill: parent
-        spacing: Style.space(2)
+        vertical: root.vertical
 
-        Text {
-            Layout.alignment: Qt.AlignVCenter
-            text: root.dateText
-            color: Theme.barTextMuted
-            font.family: Style.fontFamily
-            font.pixelSize: Style.fontSize
-        }
+        lineOne: root.dateText
+        lineOneColor: Theme.barTextMuted
+        lineOneSize: root.vertical ? Style.fontSizeSmall : Style.fontSize
 
-        Text {
-            Layout.alignment: Qt.AlignVCenter
-            text: root.timeText
-            color: root.foreground
-            font.family: Style.fontFamily
-            font.pixelSize: Style.fontSize
-        }
+        lineTwo: root.timeText
+        lineTwoColor: root.foreground
+        lineTwoSize: Style.fontSize
     }
 }

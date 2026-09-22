@@ -20,16 +20,26 @@
 // try to say *which* cause; from here they are indistinguishable, and the
 // glyph reports what is observable.
 //
-// There is no numeral. The percentage was the obvious thing to draw and it is
-// the thing this widget deliberately does not: fill length and the colour
-// ladder already answer "do I need to plug in", and a digit sitting next to
-// them is a fourth thing to parse that changes no decision the shape did not
-// already prompt. Losing it also bought the width the body now spends on fill
-// range, which is what makes the shape answer legible in the first place.
-// The number lives on hover instead, where the doc says it belongs: detail on
-// request, never the answer itself. Nothing below the pointer is required to
-// read the widget -- the tooltip only ever restates, more precisely, what the
-// shape already said.
+// Whether there is a numeral depends on which bar this is, and it is the one
+// thing here decided by room rather than by the question.
+//
+// On a top bar there is none. Fill length and the colour ladder already answer
+// "do I need to plug in", a digit beside them is a fourth thing to parse that
+// changes no decision the shape did not already prompt, and dropping it is
+// what bought the width the body spends on fill range -- which is what makes
+// the shape answer legible at all.
+//
+// A side bar has no such trade to make. The body is 30px in a bar over three
+// times that wide, so the numeral costs width nothing else was going to use.
+// And 40% and 25% are both peach while only one of them sends you looking for
+// a cable: that precision sits on hover elsewhere because hover is usually the
+// only place there is for it, not because it belongs behind the pointer.
+//
+// So the boundary between the two layers moves and the rule does not. Where
+// the numeral is on the bar, the tooltip stops restating it and leads with the
+// estimate instead; hover still only ever sharpens what the shape already
+// said, and nothing below the pointer is required to read the widget either
+// way. See docs/quickshell-widgets.md, which records the same split.
 //
 // Nothing is clickable. There is no obvious action for "the battery is at
 // 40%", and the doc's rule is that a widget without one does not need a click
@@ -41,7 +51,6 @@
 // Component.onCompleted would see zeroes and latch there.
 
 import QtQuick
-import QtQuick.Layouts
 import Quickshell.Services.UPower
 import qs.Commons
 import qs.Ui
@@ -127,6 +136,11 @@ BarWidget {
         return rest + "m";
     }
 
+    // Rounded to the whole point. 68.4% and 68% prompt the same decision, and
+    // a decimal here would be the false precision formatDuration already
+    // refuses on the figure beside it.
+    readonly property string percentText: Math.round(root.charge * 100) + "%"
+
     readonly property color tint: {
         if (root.critical)
             return Theme.critical;
@@ -136,17 +150,24 @@ BarWidget {
     }
 
     // ------------------------------------------------------------- geometry
-    // Wider than a battery glyph would be, because fill length is the only
-    // thing encoding how much is left: every pixel of body is resolution on
-    // the widget's primary question.
-    readonly property int bodyWidth: Style.space(7)
+    // On a top bar, wider than a battery glyph would be, because fill length
+    // is the only thing encoding how much is left: every pixel of body is
+    // resolution on the widget's primary question.
+    //
+    // On a side bar it is the card's icon rail instead, which is narrower --
+    // and that is the same argument rather than an exception to it. Fill
+    // length is no longer the only encoding there: the numeral is beside it,
+    // so the pixels the body gives up are pixels whose resolution is now
+    // carried in a form that does not need them. The rail is sized from this
+    // body in the first place, so the two cannot drift apart.
+    readonly property int bodyWidth: root.vertical ? Style.barCardRail - root.capWidth : Style.space(7)
     readonly property int bodyHeight: Style.space(3.5)
     readonly property int capWidth: Style.space(0.5)
     readonly property int capHeight: Style.space(1.5)
     readonly property int fillInset: Style.space(0.5)
 
     active: present
-    implicitWidth: row.implicitWidth
+    implicitWidth: card.implicitWidth
 
     // Measured rather than assumed: the two glyphs are not the same advance
     // width in this font (9px against 8px), so the slot takes the larger.
@@ -167,11 +188,16 @@ BarWidget {
     // Detail on demand: the exact charge, and how long it buys you. Both are
     // redundant -- the fill length and the bolt already answered the widget's
     // two questions -- which is the only reason they are allowed here.
+    //
+    // On a side bar the charge is on the bar, so a tooltip opening with it
+    // would restate what the pointer is sitting next to. The estimate takes
+    // the top line there instead: the same question still, still sharper than
+    // the shape, and the only half of the pair the glance layer cannot give.
     Tooltip {
         anchorItem: root
         open: hover.containsMouse
-        text: Math.round(root.charge * 100) + "%"
-        detail: root.estimate
+        text: root.vertical ? root.estimate : root.percentText
+        detail: root.vertical ? "" : root.estimate
     }
 
     // Hover only. There is no click action, and swallowing button presses over
@@ -183,55 +209,43 @@ BarWidget {
         acceptedButtons: Qt.NoButton
     }
 
-    RowLayout {
-        id: row
-        anchors.fill: parent
-        spacing: Style.space(1.5)
+    // Bolt or plug, as the card's accessory rather than as a column of the
+    // row. Null when there is no supply attached, which is what collapses the
+    // slot: a Loader with no component takes no width.
+    //
+    // That collapse is the same trade the row made before the card, and it
+    // still costs the same thing -- the glyph appearing on a dock shifts what
+    // is beside it -- judged against a permanently reserved slot leaving a
+    // hole in the card in every state but one. What it did lose is the fade:
+    // the glyph used to cross-fade in and now it is created and destroyed
+    // with the supply. Worth restoring if the appearance ever reads as a jump
+    // rather than as a plug going in.
+    Component {
+        id: chargeGlyph
 
-        // The slot collapses on battery and reappears on mains, so the widget
-        // is only as wide as it has something to show.
-        //
-        // It used to be reserved permanently, sized to the wider of the two
-        // glyphs, on the argument that the bar's right section is
-        // right-anchored and a glyph appearing or vanishing shoves everything
-        // left of it sideways on every dock and undock -- several times a day,
-        // for a state change you can already see. That is still true and is
-        // the cost of this: the update indicator, when it is up, moves about
-        // 14px each way with the plug.
-        //
-        // It was changed anyway, deliberately. Reserved, the empty slot put
-        // 34px between the battery and its left neighbour against 20px on the
-        // right, and a permanent asymmetry in every state was judged worse
-        // than movement in the moment the state actually changes. Sized to the
-        // wider glyph still, so swapping plug for bolt moves nothing.
         Item {
-            visible: root.present && root.onMains
-            Layout.preferredWidth: Math.max(boltMetrics.width, plugMetrics.width)
-            Layout.preferredHeight: indicator.implicitHeight
-            Layout.alignment: Qt.AlignVCenter
+            implicitWidth: Math.max(boltMetrics.width, plugMetrics.width)
+            implicitHeight: indicator.implicitHeight
 
             Text {
                 id: indicator
+
                 anchors.centerIn: parent
-                // Bolt when gaining charge, plug when merely connected.
-                text: root.charging ? "" : ""
+                // Nerd Font U+F0E7 bolt when gaining charge, U+F1E6 plug when
+                // merely connected. Escaped rather than written literally --
+                // see modules/Updates.qml for what losing a private-use
+                // codepoint to a rewrite cost once already.
+                text: root.charging ? "\uf0e7" : "\uf1e6"
                 // Green is reserved for the good case, so a plug cannot be
                 // mistaken for one at a glance; connected-but-static is a
-                // neutral fact, not a reassurance.
+                // neutral fact, not a reassurance. This is why the glyph is an
+                // accessory item rather than part of the line's string: one
+                // Text cannot be green while the numeral beside it is on the
+                // severity ladder.
                 color: root.charging ? Theme.good : Theme.barTextMuted
                 font.family: Style.fontFamily
                 font.pixelSize: Style.fontSizeSmall
-                // Gated on `present` as well as `onMains`, so the glyph can
-                // never claim a supply during the window before UPower has
-                // answered -- onBattery reads false until it does.
-                opacity: root.present && root.onMains ? 1 : 0
 
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: Style.animationNormal
-                        easing.type: Easing.OutCubic
-                    }
-                }
                 Behavior on color {
                     ColorAnimation {
                         duration: Style.animationFast
@@ -239,13 +253,33 @@ BarWidget {
                 }
             }
         }
+    }
 
+    BarCard {
+        id: card
+
+        anchors.fill: parent
+        vertical: root.vertical
+        // The numeral only exists on a side bar. See the header for why the
+        // top bar keeps the shape alone.
+        lineOne: root.vertical ? root.percentText : ""
+        // Tinted with the body rather than given a colour of its own, so it
+        // joins the existing ladder instead of opening a fourth channel: the
+        // numeral is the same answer at higher resolution and should look
+        // like it.
+        lineOneColor: root.tint
+        accessory: root.present && root.onMains ? chargeGlyph : null
+
+        // The icon. Centred in the card's rail, which is sized from it, and
+        // deliberately outside the line beside it: the shape pulses and the
+        // figure holds still, so the motion reads as one thing moving rather
+        // than the whole card breathing.
         Item {
             id: graphic
 
-            Layout.preferredWidth: root.bodyWidth + root.capWidth
-            Layout.preferredHeight: root.bodyHeight
-            Layout.alignment: Qt.AlignVCenter
+            anchors.centerIn: parent
+            width: root.bodyWidth + root.capWidth
+            height: root.bodyHeight
 
             // Motion means "this needs a response", and it stops when the
             // condition clears. Critical *and* discharging is the only state

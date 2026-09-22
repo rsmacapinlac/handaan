@@ -48,7 +48,10 @@ BarWidget {
     }
 
     active: !connected || verified
-    implicitWidth: icon.implicitWidth
+    // A card. No line beside the glyph: transport detail is a hover-layer
+    // decision rather than a width one, so the room a side bar leaves does not
+    // buy it a place here. See docs/quickshell-widgets.md.
+    implicitWidth: card.implicitWidth
 
     Tooltip {
         anchorItem: root
@@ -68,43 +71,50 @@ BarWidget {
         onClicked: root.run("kitty --title 'Network' -e nmtui")
     }
 
-    Text {
-        id: icon
-        anchors.centerIn: parent
-        // Nerd Font U+F0AC: globe. Escaped so the glyph survives text edits.
-        text: "\uf0ac"
-        font.family: Style.fontFamily
-        font.pixelSize: Math.round(Style.fontSize * root.pulseScale)
-        color: !root.connected ? Theme.barTextMuted : (root.online ? Theme.good : Theme.warning)
-        opacity: root.active ? 1 : 0
+    BarCard {
+        id: card
 
-        SequentialAnimation on scale {
-            running: root.needsAttention
-            loops: Animation.Infinite
-            // Stop immediately on recovery or disconnect, even mid-pulse.
-            onStopped: icon.scale = 1.0
+        anchors.fill: parent
+        vertical: root.vertical
 
-            NumberAnimation {
-                to: root.pulseScale
-                duration: 620
-                easing.type: Easing.InOutSine
-            }
-            NumberAnimation {
-                to: 1.0
-                duration: 620
-                easing.type: Easing.InOutSine
-            }
-        }
+        Text {
+            id: icon
+            anchors.centerIn: parent
+            // Nerd Font U+F0AC: globe. Escaped so the glyph survives text edits.
+            text: "\uf0ac"
+            font.family: Style.fontFamily
+            font.pixelSize: Math.round(Style.fontSize * root.pulseScale)
+            color: !root.connected ? Theme.barTextMuted : (root.online ? Theme.good : Theme.warning)
+            opacity: root.active ? 1 : 0
 
-        Behavior on color {
-            ColorAnimation {
-                duration: Style.animationFast
+            SequentialAnimation on scale {
+                running: root.needsAttention
+                loops: Animation.Infinite
+                // Stop immediately on recovery or disconnect, even mid-pulse.
+                onStopped: icon.scale = 1.0
+
+                NumberAnimation {
+                    to: root.pulseScale
+                    duration: 620
+                    easing.type: Easing.InOutSine
+                }
+                NumberAnimation {
+                    to: 1.0
+                    duration: 620
+                    easing.type: Easing.InOutSine
+                }
             }
-        }
-        Behavior on opacity {
-            NumberAnimation {
-                duration: Style.animationNormal
-                easing.type: Easing.OutCubic
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Style.animationFast
+                }
+            }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Style.animationNormal
+                    easing.type: Easing.OutCubic
+                }
             }
         }
     }

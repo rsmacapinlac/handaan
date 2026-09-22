@@ -17,7 +17,7 @@ QtObject {
 
     // ------------------------------------------------------------------ bar
     readonly property color barBackground: Colors.background
-    // The bar strip itself, translucent so the compositor's blur shows through
+    // The bar itself, translucent so the compositor's blur shows through
     // (default/hypr/rules.lua). A separate role from barBackground on purpose:
     // that one is also used as solid ink -- the numeral on the focused
     // workspace pill, the installer's panels -- and must stay opaque there.
