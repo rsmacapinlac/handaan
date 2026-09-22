@@ -102,17 +102,29 @@ systemctl --user status quickshell
 journalctl --user -u quickshell -b
 ```
 
-Two properties of that unit are deliberate and worth not undoing:
+Two properties of that unit are deliberate:
 
-- `QS_DISABLE_FILE_WATCHER=1`. Quickshell would otherwise hot-reload on any
-  file change, and a `git pull` or a package upgrade rewriting the tree mid-write
-  reloads it against a half-written config. Apply changes with an explicit
-  `systemctl --user restart quickshell.service`.
-- A restart is *required*, not merely tidier, after adding a new QML singleton.
-  Quickshell builds its type registry once at launch; a hot reload does not
-  rescan for new registrations, so a newly added singleton fails with
+- **The file watcher is on**, which is Quickshell's default: writing to the QML
+  under `default/quickshell` reloads the shell in place, with no restart in the
+  iteration loop. The unit sets no `QS_DISABLE_FILE_WATCHER`, and setting it to
+  `0` would not undo this — Quickshell tests whether the variable is *set*, not
+  what it holds, so turning the watcher off means removing the line rather than
+  changing its value.
+
+  It was off until now, and the reason it was is still true: `handaan-update`
+  pulls into this very tree, so a reload can land against a half-written config.
+  That was traded away deliberately rather than solved. A failed reload keeps
+  the generation already running and reports the error instead of tearing the
+  session down, the next complete write reloads correctly, and `Restart=on-failure`
+  covers the case where it does come apart. If a mid-pull reload ever does leave
+  the bar wrong, `systemctl --user restart quickshell.service` is still the
+  cure, and it is worth reporting rather than living with.
+- A restart is *required*, not merely tidier, after adding a new QML type or
+  singleton. Quickshell builds its type registry once at launch; a hot reload
+  does not rescan for new registrations, so a newly added singleton fails with
   `ReferenceError: <Name> is not defined` even though the file is valid and in
-  place.
+  place. This is the one case the watcher does not cover, and the one case where
+  a reload that appears to do nothing is not a bug.
 
 ### Caveat: PATH
 
