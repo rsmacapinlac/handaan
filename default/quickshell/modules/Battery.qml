@@ -39,11 +39,11 @@
 // the numeral is on the bar, the tooltip stops restating it and leads with the
 // estimate instead; hover still only ever sharpens what the shape already
 // said, and nothing below the pointer is required to read the widget either
-// way. See docs/quickshell-widgets.md, which records the same split.
+// way. docs/quickshell-widgets.md has the layers; where this widget puts the
+// boundary between them is recorded here rather than there.
 //
 // Nothing is clickable. There is no obvious action for "the battery is at
-// 40%", and the doc's rule is that a widget without one does not need a click
-// handler. Power actions live behind the keyboard, not in the bar.
+// 40%", and a widget without one does not need a click handler. Power actions live behind the keyboard, not in the bar.
 //
 // The service connects lazily: UPower's fields read empty until a QML binding
 // reads them, because the read is what opens the D-Bus connection. Everything

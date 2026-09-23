@@ -5,7 +5,7 @@
 // network with unverified internet status takes no space.
 // The same bare glyph size as Updates and the Battery/Updates pulse keep one
 // visual vocabulary. Pulsing at peach and sharing the motion channel are
-// deliberate exceptions recorded in docs/quickshell-widgets.md.
+// deliberate exceptions recorded in docs/quickshell/widgets/network-indicator.md.
 //
 // Networking is a process-wide service, read through bindings so every bar
 // observes the same answer without launching per-monitor checks. NetworkManager
