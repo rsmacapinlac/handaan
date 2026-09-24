@@ -47,6 +47,8 @@ The rail is reserved whether or not a card has an icon for it, and the majority 
 
 The icon carries two things: **what the card is and how it stands.** Identity alone would be a label, and a label answers nothing — you already know which card is the battery, so a glyph that only says "battery" is spending the rail to tell you what you came in knowing. The icon earns its column by encoding state as well: the battery's fill length and ladder colour, the Bell's colour and its slash.
 
+**Where a widget has no state, the icon is identity alone and says so.** The Clock is the case: its two lines already carry everything it answers, so there is nothing left for the rail to encode. That is not licence to skip the second half wherever it is inconvenient — the test is whether a state exists that the icon *could* carry, not whether one was easy to find. The failure to avoid is an icon that manufactures a state to comply: an hour-hand clock face encodes the hour the time already prints, at a resolution the rail cannot show, and would let the card claim the rule while carrying a worse version of its own line.
+
 ### A card with nothing to say disappears 
 
 A card leaves the bar when it has nothing relevant to show. `BarWidget.active` drops the widget **and its spacing**, so an up-to-date machine carries no update chrome whatsoever.
@@ -68,10 +70,11 @@ Revisit this once a second card has something to reveal. One drawer is not evide
 
 ### Breaking the pattern
 
-A card follows the shape unless there is a reason not to, and **a reason not to is written down in that widget's record.** An undocumented deviation cannot be told apart from an oversight, and the next person to look at it — including the one who wrote it — has no way to know whether they are reading a decision or a bug. Two are standing today:
+A card follows the shape unless there is a reason not to, and **a reason not to is written down in that widget's record.** An undocumented deviation cannot be told apart from an oversight, and the next person to look at it — including the one who wrote it — has no way to know whether they are reading a decision or a bug. One is standing today:
 
 - **Workspaces is not a card** — a grid of pills with no icon and no text, and wrapping it in a rail it would never use would be the standard applied for its own sake. [Record](quickshell/widgets/workspaces.md).
-- **The Clock has no icon** — a clock face beside a time answers nothing the time did not already say. That predates the rule above and may not survive it. [Record](quickshell/widgets/clock.md).
+
+The Clock used to be the second, as the one card with an empty rail. It is not a deviation any more: it takes an icon like every other card, and the rule above carries the identity-only case its argument turned out to be about.
 
 ## Motion is reserved for attention
 
@@ -91,6 +94,12 @@ A widget shows one thing at a glance and can be asked for more. That gives it th
 1. **The glance layer** is always visible and answers the widget's questions.
 2. **The hover layer** answers the *same questions*, more precisely. It is detail on request.
 3. **Post action layer** holds everything else.
+
+The hover layer is a speech bubble with a tail on the edge facing the bar, `Ui/Tooltip.qml`. The tail says which card is talking, which a floating panel beside a column of five cannot: they are one widget-spacing apart, and a bubble that merely appeared near them would leave you counting. **The tail points at the widget, not at the middle of the bubble** — a bubble too tall for the room beside its card is slid back onto the screen, and a tail fixed to the centre would then point at a neighbour. It is read from where the bubble was actually placed rather than predicted.
+
+**The bubble stands clear of the bar rather than growing out of it.** A tail whose tip meets the bar reads as a panel the bar has extruded, and the shape stops saying "this card is answering" the moment it becomes continuous with every other card's edge. The clearance is measured from the bar's own edge, not from the widget: on a side bar the card is inset by `barSidePadding`, so a gap measured from the card spends most of itself crossing that inset and arrives at nothing. `barClearance` is the number, and it is deliberately larger than `Style.windowGap` — the notification surfaces sit at the window gap because they line up with the window borders beside them, while this one has to read as detached from the bar it points at.
+
+Two things this section has already been got wrong on, both worth keeping in front of the next reader. The gap is reserved as transparent window on the bar-facing side, **not** asked for as an anchor margin; `PopupAnchor.margins` applies to the anchor rect and does not move the popup, so asking that way left the tail flush against the bar while the arithmetic said otherwise. And the tail's size is what makes it legible against a 34px card, so it is not free to shrink: below about eight pixels of protrusion it disappears into the bubble's own corner radius.
 
 ## Interaction rules
 

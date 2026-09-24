@@ -1,49 +1,9 @@
 // Battery.
 //
-// Two questions, per docs/quickshell-widgets.md:
-//   1. Do I need to plug in?
-//   2. Am I gaining charge, holding, or running down?
-//
-// One channel per question, so neither answer has to be read out of the
-// other. Fill length and colour answer the first; the glyph answers the
-// second, and sits outside the battery body so it never competes with the
-// colour that carries severity.
-//
-// The second question used to be "am I on mains", answered by the presence of
-// a bolt. That conflated two situations worth telling apart: a charger that
-// is filling the battery, and one that is connected but delivering nothing.
-// The second is common -- an underpowered supply, a cable that negotiated a
-// low USB-C contract, a threshold, a firmware inhibit -- and it looks exactly
-// like charging if the only signal is "something is plugged in", while the
-// battery quietly drains. So the glyph now distinguishes them: a green bolt
-// means gaining, a muted plug means connected but static. The widget does not
-// try to say *which* cause; from here they are indistinguishable, and the
-// glyph reports what is observable.
-//
-// Whether there is a numeral depends on which bar this is, and it is the one
-// thing here decided by room rather than by the question.
-//
-// On a top bar there is none. Fill length and the colour ladder already answer
-// "do I need to plug in", a digit beside them is a fourth thing to parse that
-// changes no decision the shape did not already prompt, and dropping it is
-// what bought the width the body spends on fill range -- which is what makes
-// the shape answer legible at all.
-//
-// A side bar has no such trade to make. The body is 30px in a bar over three
-// times that wide, so the numeral costs width nothing else was going to use.
-// And 40% and 25% are both peach while only one of them sends you looking for
-// a cable: that precision sits on hover elsewhere because hover is usually the
-// only place there is for it, not because it belongs behind the pointer.
-//
-// So the boundary between the two layers moves and the rule does not. Where
-// the numeral is on the bar, the tooltip stops restating it and leads with the
-// estimate instead; hover still only ever sharpens what the shape already
-// said, and nothing below the pointer is required to read the widget either
-// way. docs/quickshell-widgets.md has the layers; where this widget puts the
-// boundary between them is recorded here rather than there.
-//
-// Nothing is clickable. There is no obvious action for "the battery is at
-// 40%", and a widget without one does not need a click handler. Power actions live behind the keyboard, not in the bar.
+// The design record is docs/quickshell/widgets/battery.md -- the two questions
+// this answers, the channel each one gets, why the glyph distinguishes gaining
+// from merely connected, and why the numeral comes and goes with the bar's
+// edge. Only the implementation reasoning is here.
 //
 // The service connects lazily: UPower's fields read empty until a QML binding
 // reads them, because the read is what opens the D-Bus connection. Everything
@@ -185,14 +145,8 @@ BarWidget {
         text: ""
     }
 
-    // Detail on demand: the exact charge, and how long it buys you. Both are
-    // redundant -- the fill length and the bolt already answered the widget's
-    // two questions -- which is the only reason they are allowed here.
-    //
-    // On a side bar the charge is on the bar, so a tooltip opening with it
-    // would restate what the pointer is sitting next to. The estimate takes
-    // the top line there instead: the same question still, still sharper than
-    // the shape, and the only half of the pair the glance layer cannot give.
+    // Which of the pair leads depends on whether the numeral is already on the
+    // bar. Both are redundant, which is the only reason either is allowed.
     Tooltip {
         anchorItem: root
         open: hover.containsMouse
@@ -281,17 +235,9 @@ BarWidget {
             width: root.bodyWidth + root.capWidth
             height: root.bodyHeight
 
-            // Motion means "this needs a response", and it stops when the
-            // condition clears. Critical *and* discharging is the only state
-            // here that qualifies: on mains at 10% the battery is recovering
-            // and needs nothing from you, so it stays still. The same cycle
-            // and amplitude as the workspace pulse, so the bar has one
-            // vocabulary for urgency rather than two.
-            //
-            // An urgent workspace could in principle pulse at the same moment.
-            // Both are genuinely "needs a response" and neither is worth
-            // demoting to avoid a collision that requires a window shouting
-            // while the battery is nearly flat.
+            // Critical and discharging only, on the bar's one 620ms cycle for
+            // urgency. The record has why that is the single state here that
+            // earns the motion channel, and what it accepts by sharing it.
             SequentialAnimation on scale {
                 running: root.critical
                 loops: Animation.Infinite

@@ -1,9 +1,18 @@
 # Clock
 
-Two questions: *what time is it?* and *what is today's date?* The implementation reasoning is in the header of `default/quickshell/modules/Clock.qml` — why there are no seconds, why the format is ISO, and why there is no click handler.
+Purpose: Tells the user what date, time and day it is.
 
-## It has no icon
+Notes:
 
-The Clock is a card whose icon rail is empty, on the argument that a clock face beside a time answers nothing the time did not already say. That predates *The icon says what the card is and how it stands*, and whether it survives the rule is open: the icon that would satisfy both halves is a face with real hands, which is also the only icon on the bar that would say exactly what the line beside it says.
+- Its position is reserved on the bar. The clock is anchored to the bar's end.
+- No seconds as that creates movement. Movement is reserved for notifying the user.
+- Use the SystemClock rather than a timer.
+- Two lines. Weekday and date on the first, muted; the time on the second, at full contrast. 
+- The icon is identity only. 
+- ISO date ordering. It sorts, it is unambiguous about day-versus-month, and it reads the same way as everything else in a terminal-first setup.
+- The year is not on the bar. The weekday beside a full ISO date needs fourteen monospace characters and the card's text column holds eleven, so the year gives way to the day the purpose asks for. It is on hover.
+- No click handler. There is no action behind "it is Wednesday", and a calendar popup would be a second interface for something `cal` already does.
 
-The rail is reserved anyway. A card that reclaimed the width it was not using would put its text at a different x from the card above it, which is the one thing the shared shape exists to prevent.
+Extra Information:
+
+- Current month's calendar, on hover, under the full date in words. Monday first to match the ISO ordering, today in brackets. It answers the same question the bar does -- what is today's date -- with the week and the month it sits in.

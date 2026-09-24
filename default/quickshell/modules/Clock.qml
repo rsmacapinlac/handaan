@@ -1,33 +1,12 @@
 // Clock.
 //
-// Two questions, per docs/quickshell-widgets.md:
-//   1. What time is it?
-//   2. What is today's date?
-//
-// A clock is unusual for this bar: it has no states. Nothing about it is ever
-// urgent, nothing needs a response, and there is no "which one, right now" to
-// answer. So the section on states competing for legibility applies to its
-// *fields* instead. The time is what you look at many times an hour and the
-// date is what you look at a few times a day, so the time is given full
-// contrast and the date recedes to muted. Same principle, different axis.
-//
-// No seconds. A digit that changes every second is sustained change in the
-// bar, and sustained change is the one channel reserved for "this needs a
-// response". Spending it on a clock that is never urgent is exactly the
-// permanent animation the doc warns trains you to ignore the signal. It would
-// also wake the process sixty times as often for information that changes no
-// decision -- you do not act on the difference between 12:35:10 and 12:35:40.
-//
-// The format is ISO, matching the `date '+%Y-%m-%d %H:%M'` the waybar config
-// used before this. It sorts, it is unambiguous about day-vs-month, and it
-// reads the same way as everything else in a terminal-first setup.
-//
-// There is no click handler. A clock has no obvious action, and the
-// conventional one -- a calendar popup -- would be a second interface in the
-// bar for something `cal` already does better.
+// The design record is docs/quickshell/widgets/clock.md -- the questions this
+// answers, what the glance layer carries and what hover adds. Only the
+// implementation reasoning is here.
 //
 // SystemClock rather than a Timer: it wakes on the minute boundary instead of
-// polling, so it neither drifts nor spins between ticks.
+// polling, so it neither drifts nor spins between ticks. Minute precision is
+// also what keeps seconds off the bar.
 
 import QtQuick
 import Quickshell
@@ -43,25 +22,75 @@ BarWidget {
         precision: SystemClock.Minutes
     }
 
-    // The full ISO date on both bars. It was cut to month-and-day on a side
-    // bar for width, back when each widget was centred on its own content and
-    // the date had the whole bar to fit across. The card gives it a fixed
-    // text column instead -- Style.barCardText, 78px against the 66px ten
-    // monospace characters need at this size -- so the year fits and there is
-    // nothing left to buy by dropping it.
-    readonly property string dateText: Qt.formatDateTime(clock.date, "yyyy-MM-dd")
     readonly property string timeText: Qt.formatDateTime(clock.date, "HH:mm")
-    // The weekday is the one thing the ISO form cannot tell you, which is what
-    // makes it the right thing to put on hover: the same question -- what is
-    // today's date -- answered more fully, never a new one.
+    // Weekday and date as one field: both answer "what day is it", and they
+    // share the card's one muted line. The year is off the glance layer
+    // because it will not fit beside the weekday -- Style.barCardText is 78px,
+    // eleven monospace characters at this size, and "Wed 2026-09-23" needs
+    // fourteen. It survives on hover and in the calendar.
+    readonly property string dateText: Qt.formatDateTime(clock.date, "ddd MM-dd")
     readonly property string longDate: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy")
+
+    // Changes once a day, which is what the calendar binding hangs off: bound
+    // to clock.date directly it would rebuild the grid every minute.
+    readonly property string dayKey: Qt.formatDateTime(clock.date, "yyyy-MM-dd")
+    readonly property string calendar: root.monthGrid(root.dayKey)
+
+    // One day, five columns wide. The digits sit in the same two columns
+    // whether or not the day is marked, and the brackets take the padding
+    // either side rather than the number's own place -- right-aligning
+    // "[23]" as one token shifts its digits a column left of the 16 above it
+    // and the 30 below, which is the whole reason this is not a plain pad.
+    function cell(value, marked) {
+        if (marked)
+            return ("     [" + value + "]").slice(-5);
+        return ("    " + value).slice(-4) + " ";
+    }
+
+    // The current month as monospace text, Monday first to match the ISO date
+    // beside it. The key is split by hand rather than handed to Date():
+    // new Date("2026-09-23") parses as UTC and lands on the previous day west
+    // of Greenwich.
+    function monthGrid(key) {
+        var parts = key.split("-");
+        var year = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10) - 1;
+        var today = parseInt(parts[2], 10);
+
+        // getDay() counts from Sunday; shift it to Monday.
+        var lead = (new Date(year, month, 1).getDay() + 6) % 7;
+        var days = new Date(year, month + 1, 0).getDate();
+
+        var names = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+        var head = "";
+        for (var i = 0; i < 7; i++)
+            head += root.cell(names[i], false);
+        var lines = [head.replace(/\s+$/, "")];
+
+        var line = "";
+        for (var i = 0; i < lead; i++)
+            line += root.cell("", false);
+        for (var d = 1; d <= days; d++) {
+            line += root.cell(d, d === today);
+            if ((lead + d) % 7 === 0) {
+                lines.push(line.replace(/\s+$/, ""));
+                line = "";
+            }
+        }
+        if (line !== "")
+            lines.push(line.replace(/\s+$/, ""));
+        return lines.join("\n");
+    }
 
     implicitWidth: card.implicitWidth
 
+    // The grid needs no layout: Style.fontFamily is monospace, so the columns
+    // line up as text.
     Tooltip {
         anchorItem: root
         open: hover.containsMouse
         text: root.longDate
+        detail: root.calendar
     }
 
     MouseArea {
@@ -71,21 +100,29 @@ BarWidget {
         acceptedButtons: Qt.NoButton
     }
 
-    // Date then time either way: on a side bar the same order reads top to
-    // bottom. The date keeps the muted colour and the smaller size that mark
-    // it as the secondary field.
-    //
-    // The only card with no icon. Its rail is empty and still reserved, which
-    // is the standard doing its job rather than a gap in it: the date starts
-    // at the same x as the battery's percentage, and the column reads as one
-    // set. A glyph here would be decoration -- a clock face next to a time
-    // answers nothing the time did not already say, and the doc's rule is to
-    // question every element that is drawn.
     BarCard {
         id: card
 
         anchors.fill: parent
         vertical: root.vertical
+
+        // Identity only. The Clock has no state for the rail to carry -- the
+        // two lines beside it already hold everything this widget answers --
+        // so the glyph says which card this is and nothing more. An hour-hand
+        // face was rejected rather than overlooked: it would encode the hour
+        // that line two prints exactly, at a resolution 15px cannot show.
+        //
+        // Nerd Font U+F017: clock. Escaped rather than written literally --
+        // see modules/Updates.qml for what losing a private-use codepoint to
+        // a rewrite cost once already.
+        Text {
+            anchors.centerIn: parent
+            text: "\uf017"
+            color: Theme.barTextMuted
+            font.family: Style.fontFamily
+            // The size the bar's other bare glyphs are drawn at.
+            font.pixelSize: Math.round(Style.fontSize * 1.12)
+        }
 
         lineOne: root.dateText
         lineOneColor: Theme.barTextMuted
