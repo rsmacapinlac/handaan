@@ -1,41 +1,9 @@
-// Notifications.
+// Notification bell.
 //
-// Two questions, per docs/quickshell-widgets.md:
-//   1. Is anything waiting for me, and how much does it matter?
-//   2. Am I going to be told when something new arrives?
-//
-// Each question gets one channel of its own, so the two can be read at once
-// without competing:
-//
-//   presence  the bell is on the bar while anything is kept in history
-//   colour    the most urgent thing kept: critical red, normal the accent,
-//             low grey
-//   shape     a slashed bell while do-not-disturb is on
-//
-// Presence is Updates' encoding: a machine with nothing waiting has no
-// notification chrome on it at all. Waiting means kept, not unseen -- opening
-// the history marks everything seen, and a bell that vanished the moment you
-// looked would leave what you have not dealt with behind a door you have to
-// remember exists. Dismiss it or clear the history and the bell goes.
-//
-// Do-not-disturb holds the bell up on its own, grey when nothing is kept. Being
-// quiet is the one state you must not forget you are in, and an empty bar
-// cannot say it. Turn it off with nothing kept and the bell goes too.
-//
-// Colour is the highest urgency kept rather than the newest, so a critical
-// notification is not hidden by a chatty app arriving after it. Peach is left
-// out on purpose: it is Network's and Battery's warning, and a normal
-// notification is not a warning.
-//
-// No count on the glance layer. One notification and six both mean "open the
-// history when you get a moment"; the figures are on hover.
-//
-// Nothing moves. A notification that needed a response now was critical, and
-// critical already stays on screen until dismissed -- a pulse here would be a
-// second holder of the attention channel saying less than the popup does.
-//
-// Click opens the history, which is the obvious action for either question
-// and destroys nothing.
+// The design record is docs/quickshell/widgets/notification-bell.md -- the two
+// questions this answers, the channel each one gets, and why presence rather
+// than a count is the first of them. Only the implementation reasoning is
+// here, and most of it sits at the declarations below.
 
 import QtQuick
 import qs.Commons
@@ -120,7 +88,7 @@ BarWidget {
             anchors.centerIn: parent
             // Nerd Font U+F1F6 bell slash, U+F0F3 bell. Escaped so the glyphs
             // survive edits; see modules/Updates.qml for what losing one cost.
-            text: root.quiet ? "" : ""
+            text: root.quiet ? "\uf1f6" : "\uf0f3"
             color: root.tint
             font.family: Style.fontFamily
             font.pixelSize: Math.round(Style.fontSize * 1.12)
