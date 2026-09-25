@@ -25,6 +25,7 @@
 
 pragma Singleton
 import QtQuick
+import QtQml.Models
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
@@ -32,10 +33,22 @@ import Quickshell.Services.Notifications
 Singleton {
     id: root
 
-    // How long a popup stays when the sender does not say, and how many are on
-    // screen at once. More than a handful stacked down the screen stops being a
-    // notification and becomes a feed; the rest wait in history.
-    readonly property int defaultTimeout: 8000
+    // How long a popup stays, and how many are on screen at once. More than a
+    // handful stacked down the screen stops being a notification and becomes a
+    // feed; the rest wait in history.
+    //
+    // Two seconds for everything, and it is not the sender's to change. The
+    // popup is only the announcement now -- when it goes the notification has
+    // not gone anywhere, it is in the island, still visible in the badge and
+    // still there when you open it. So the popup only has to be long enough to
+    // notice, and every second past that is a second of the screen it is
+    // covering for nothing.
+    //
+    // This is why critical no longer sticks either. It stuck because a popup
+    // leaving used to mean the notification was reachable only through a panel
+    // you had to remember to open. The island is that reachability, on screen,
+    // so the exception it was compensating for is gone.
+    readonly property int popupDuration: 2000
     readonly property int popupLimit: 4
     readonly property int historyLimit: 100
 
@@ -47,7 +60,7 @@ Singleton {
     property var history: []
 
     // On screen as popups, newest first, each with when it goes away.
-    //   { id, deadline, record }   deadline is 0 for one that stays until dismissed
+    //   { id, deadline, record }   each deadline belongs to that arrival
     // The record rides along because a transient notification has none in
     // history to look up.
     property var popups: []
@@ -175,12 +188,14 @@ Singleton {
         return !root.doNotDisturb || r.urgency === "critical";
     }
 
-    // expireTimeout is the protocol's own value, in milliseconds: -1 leaves it
-    // to the server, 0 asks for the notification never to expire.
+    // expireTimeout is the protocol's own value and is deliberately ignored:
+    // the sender no longer decides how long it holds the screen, because the
+    // screen is no longer where the notification lives. A sender asking to
+    // stay forever, or for forty-five seconds, gets the same two as everything
+    // else and then the island. The parameter is kept so the caller still
+    // reads as the protocol does, and so this comment is where someone looks.
     function popUp(r, expireTimeout) {
-        const sticky = r.urgency === "critical" || expireTimeout === 0;
-        const timeout = expireTimeout > 0 ? expireTimeout : root.defaultTimeout;
-        const deadline = sticky ? 0 : Date.now() + timeout;
+        const deadline = Date.now() + root.popupDuration;
 
         var next = [{ id: r.id, deadline: deadline, record: r }];
         for (var i = 0; i < root.popups.length; i++) {
@@ -229,9 +244,12 @@ Singleton {
     function hold(id, holding) {
         if (holding) {
             root.held[id] = true;
+            root.heldChanged();
         } else if (root.held[id]) {
             delete root.held[id];
             root.released[id] = Date.now();
+            root.releasedChanged();
+            root.heldChanged();
         }
     }
 
@@ -320,20 +338,27 @@ Singleton {
         onNotification: n => root.receive(n)
     }
 
-    // Takes popups off the screen as their time runs out. One timer for all of
-    // them, rather than one each, and only while there is something to time.
-    Timer {
-        interval: 250
-        repeat: true
-        running: root.popups.length > 0
+    // One countdown per popup. The absolute deadline survives the array
+    // rebuilding when another notification arrives or leaves, so that cannot
+    // restart the remaining popups' countdowns. Hover holds only its own timer.
+    Instantiator {
+        model: root.popups
 
-        onTriggered: {
-            const now = Date.now();
-            const next = root.popups.filter(p => p.deadline === 0 || p.deadline > now || root.held[p.id]
-                || (root.released[p.id] || 0) + 1500 > now);
-            if (next.length !== root.popups.length) {
-                root.release(root.popups.filter(p => next.indexOf(p) === -1));
-                root.popups = next;
+        delegate: Timer {
+            required property var modelData
+
+            interval: Math.max(1, Math.max(modelData.deadline,
+                (root.released[modelData.id] || 0) + 1500) - Date.now())
+            running: !root.held[modelData.id]
+            repeat: false
+
+            onTriggered: {
+                const id = modelData.id;
+                const leaving = root.popups.filter(p => p.id === id);
+                root.popups = root.popups.filter(p => p.id !== id);
+                root.release(leaving);
+                delete root.held[id];
+                delete root.released[id];
             }
         }
     }

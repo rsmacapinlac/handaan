@@ -8,7 +8,7 @@
 //
 // Two lines is a ceiling, not a quota. A card with nothing worth saying is an
 // icon and an empty text column, and that is the correct shape for it: what
-// belongs on the glance layer is settled by docs/quickshell-widgets.md, and
+// belongs on the glance layer is settled by docs/bar.md, and
 // having somewhere to put a line is not a reason to find one. The ceiling is
 // enforced rather than trusted -- there are two line properties and no third,
 // and each is capped at Style.barCardText and elides -- because the failure

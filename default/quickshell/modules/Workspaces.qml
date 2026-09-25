@@ -1,6 +1,6 @@
 // Workspace indicators.
 //
-// Two questions, per docs/quickshell-widgets.md:
+// Two questions, per docs/bar.md:
 //   1. Which workspace is this screen on?
 //   2. Which workspace wants attention?
 //
@@ -23,7 +23,7 @@
 // the displayed workspace keeps the wide pill on every screen, and only the
 // focused monitor's pill is filled; the other is an outline in the same
 // colour. That is a third state against the two-strong-states rule in
-// docs/quickshell-widgets.md, and it is allowed because it is not a new
+// docs/bar.md, and it is allowed because it is not a new
 // question: it is the same answer, drawn with or without fill. Width still says
 // "this screen is on it", so nothing reflows when focus crosses monitors, and
 // exactly one filled accent pill exists across the whole session.

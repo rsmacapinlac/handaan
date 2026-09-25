@@ -8,6 +8,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs.Commons
 
@@ -58,7 +59,13 @@ Item {
         // unmapping it. Unmapping frees the layer surface and the entire scene
         // graph, so every reveal has to rebuild both; a negative margin leaves
         // everything mapped and costs one property change.
-        exclusionMode: root.hidden ? ExclusionMode.Ignore : ExclusionMode.Auto
+        // The window is not always the bar. When the island expands it grows
+        // downward past the bar's own thickness, so the reserved strip has to
+        // be stated rather than taken from the window's size -- otherwise
+        // every window on the screen would move each time the island opened.
+        // Auto is kept on a side bar, which never grows.
+        exclusionMode: root.hidden ? ExclusionMode.Ignore : (surface.vertical ? ExclusionMode.Auto : ExclusionMode.Normal)
+        exclusiveZone: root.barSize
 
         margins {
             top: root.hidden && root.position === "top" ? -root.barSize : 0
@@ -85,8 +92,56 @@ Item {
         readonly property int contentThickness: Math.max(leftRow.implicitWidth, centerRow.implicitWidth, rightRow.implicitWidth)
 
         implicitWidth: surface.vertical ? Math.max(Style.barSideSize, surface.contentThickness + Style.barSidePadding * 2) : 0
-        implicitHeight: surface.vertical ? 0 : root.barSize
+        implicitHeight: surface.vertical ? 0 : root.barSize + island.overflow
         color: root.background
+        // The centre section. A sibling of the strip rather than a child of
+        // it, because it starts inside the bar and ends below it, and pinned
+        // to the top for the same reason the rows are.
+        Island {
+            id: island
+
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            vertical: surface.vertical
+        }
+
+        // The compositor handles clicks outside this window, including on
+        // another monitor. The bar itself is also in the grab, so observe
+        // its clicks separately without stealing the widgets' actions.
+        HyprlandFocusGrab {
+            windows: [surface]
+            active: island.expanded && !root.hidden && !surface.vertical
+            onCleared: island.expanded = false
+        }
+
+        TapHandler {
+            acceptedButtons: Qt.AllButtons
+            onTapped: {
+                const position = island.hitArea.mapFromItem(parent, point.position);
+                if (!island.hitArea.contains(position))
+                    island.expanded = false;
+            }
+        }
+
+        Connections {
+            target: root
+            function onHiddenChanged() {
+                if (root.hidden)
+                    island.expanded = false;
+            }
+        }
+
+        // Only the bar and the island take the pointer. The rest of the
+        // window is the room the island expands into, and without this it
+        // would swallow every click across the top of the screen.
+        mask: Region {
+            item: barArea
+
+            Region {
+                item: island.hitArea
+            }
+        }
+
         WlrLayershell.namespace: "quickshell-bar"
         WlrLayershell.layer: WlrLayer.Top
 
@@ -98,7 +153,16 @@ Item {
         // On a side bar the same three sections read top, middle and bottom:
         // leftWidgets is the leading edge of the bar whichever way it runs.
         Item {
-            anchors.fill: parent
+            id: barArea
+
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: surface.vertical ? surface.height : root.barSize
+        }
+
+        Item {
+            anchors.fill: barArea
             anchors.leftMargin: surface.vertical ? Style.barSidePadding : Style.barPadding
             anchors.rightMargin: surface.vertical ? Style.barSidePadding : Style.barPadding
             anchors.topMargin: surface.vertical ? Style.barPadding : 0
@@ -115,6 +179,9 @@ Item {
                 anchors.horizontalCenter: surface.vertical ? parent.horizontalCenter : undefined
             }
 
+            // The bar's centre section. Not a WidgetRow: the island is not
+            // built from widgets and does not take a list of them -- see
+            // docs/island/README.md. Centred on both axes, like centerRow below.
             // Centred on both axes either way, so this one needs no case.
             WidgetRow {
                 id: centerRow

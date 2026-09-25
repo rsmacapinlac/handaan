@@ -8,13 +8,13 @@ Notes:
 - There are also different network interfaces.
 - Connected with Internet is Good, Connected (but no Internet) requires troubleshooting, and Not Connected should be displayed but no action required.
 - Connectivity is NetworkManager's answer, on its own endpoint and schedule. This widget starts no probe of its own and changes none of that configuration, so what the globe reports is that check rather than a promise that every site will load.
-- Its place is between Updates and Battery. The right section reads Updates, Network, Battery, Bell, Clock — machine state together, then the Bell beside the Clock, next to the corner where notifications open.
+- Its place is between Updates and Battery. The right section reads Updates, Network, Battery, Clock — machine state together, then the Clock at the end. The Bell used to sit between Battery and Clock; notifications are the island's now.
 - Left-click opens `kitty --title 'Network' -e nmtui`, which is where you go to do something about either answer.
 
 Absence:
 
 - A connected network whose internet status is unverified has no card at all, spacing included. This is absence of the *no answer to give* kind rather than the *nothing to do* kind: the widget is silent about being silent, which is the cost of not showing an untested green.
-- Its disappearance leaves Battery, the Bell and the Clock where they were — the row is anchored to the bar's end, so a widget coming and going shifts only what is on its own side. `nmtui` is still there from a terminal while the card is not.
+- Its disappearance leaves Battery and the Clock where they were — the row is anchored to the bar's end, so a widget coming and going shifts only what is on its own side. `nmtui` is still there from a terminal while the card is not.
 
 Extra Information:
 

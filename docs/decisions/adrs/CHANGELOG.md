@@ -1,5 +1,15 @@
 # ADR Changelog
 
+## 2026-09-25 (notifications move to the island)
+
+- **0008** clarifies independent popup countdowns: each arrival has its own timer and deadline, preserved when other popups arrive or leave. Hover holds only that popup, with a 1.5-second grace period on leaving.
+
+- **0008** edited in place. Clicking the island now expands its own notification and media controls instead of opening the separate history dialog. Hover no longer expands it, and leaving no longer closes it; an outside click collapses it. The empty island opens too, keeping do-not-disturb reachable.
+
+- **0008** edited in place again. A popup now stays two seconds for everything, and `expire_timeout` is ignored rather than honoured; critical no longer stays until dismissed. Both were right while a popup leaving meant the notification was only reachable through a panel you had to remember to open. The island is that reachability now, so the popup is the announcement and nothing more. `Commons/NotificationCenter.qml` carries it as `popupDuration`, replacing `defaultTimeout`.
+- **0008** edited in place, twice over. Popups are top *centre* of the focused monitor, under the island, rather than top right: the island has already said something arrived, and announcing it again on the far side of the screen would be the same notification in two unrelated places. And the bar indicator is no longer a card of its own -- what the bell answered is a badge on `Ui/Island.qml`, kept visible alongside whatever is occupying the island, because a backlog is outstanding rather than happening and must not disappear when media starts playing. Its rules are unchanged: kept rather than unseen, coloured by the most urgent thing kept, slashed under do-not-disturb. Clicking the island's cut-out opens the history, which is what `modules/Bell.qml`'s click did. That file stays in the tree, referenced by nothing, the way waybar stayed installed beside the Quickshell bar until the replacement had earned it.
+- Notifications now also surface in the island itself, reading `NotificationCenter.popups` so the centre keeps deciding what pops, for how long, and what do-not-disturb and the lock screen hold back. They appear in *both* the island and a popup for now, deliberately, so the two can be compared before one is retired -- see [the island](../../island/README.md). The rule that the island is not a second place to say something the bar already says still stands as the end state.
+
 ## 2026-09-15 (tinted bar)
 
 - **0007** edited in place. The bar strip is drawn on a new palette name, `tint` (matugen's `secondary_container`), rather than on `background`, which on a dark scheme is near black whatever the wallpaper. `default/theme/palette.jq`, `default/theme/fallback.json`, `Commons/Colors.qml` and `Theme.barSurface` carry it. No migration: `--restore` re-derives the palette at login, and until then the missing name falls back to Mocha's surface.

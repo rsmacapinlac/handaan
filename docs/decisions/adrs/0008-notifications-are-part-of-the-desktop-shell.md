@@ -16,13 +16,15 @@ Everything else handaan draws already lives in one Quickshell process and follow
 |---|---|
 | `default/quickshell/Commons/NotificationCenter.qml` | Singleton. Owns `org.freedesktop.Notifications` through Quickshell's `NotificationServer`, the history, the popups on screen, do-not-disturb, and the `notificationCenter` IPC target. |
 | `default/quickshell/Ui/NotificationCard.qml` | One notification: app, age, summary, body, action buttons. The same card as a popup and in the history. |
-| `default/quickshell/Ui/NotificationToasts.qml` | Popups, top right of the focused monitor, at most four. |
+| `default/quickshell/Ui/NotificationPopups.qml` | Popups, top centre of the focused monitor, under the island, at most four. Was `NotificationToasts.qml`. |
 | `default/quickshell/Ui/NotificationHistory.qml` | The history panel, with the do-not-disturb switch and Clear all. |
-| `default/quickshell/modules/Bell.qml` | The bar indicator, present while anything is kept or do-not-disturb is on. Coloured by the most urgent notification kept -- critical red, normal the accent, low grey -- and slashed while do-not-disturb is on. |
+| `default/quickshell/Ui/Island.qml` | The bar indicator, as a badge on the island: present while anything is kept or do-not-disturb is on, coloured by the most urgent notification kept -- critical red, normal the accent, low grey -- and slashed while do-not-disturb is on. Clicking the island's cut-out expands the island's own history and controls; clicking outside collapses it. The separate history dialog remains available by keyboard shortcut or command. This was `modules/Bell.qml`, a card in the widgets section, until the island took notifications; that file is still in the tree but nothing references it. |
 | `bin/handaan-notifications` | Toggles the panel; `dnd on\|off\|toggle`, `clear`, `status`. `Super+Shift+N` calls it. |
 | `$HANDAAN_STATE/notifications/do-not-disturb` | Whether do-not-disturb is on. The only notification state written to disk. |
 
-**How long a popup stays is the sender's to say.** The protocol's `expire_timeout` is honoured, in milliseconds; a sender that leaves it to the server gets 8 seconds, and one that asks for 0 stays. Critical stays until dismissed whatever the sender says.
+**A popup stays two seconds, and the sender does not get a say.** The protocol's `expire_timeout` is ignored -- a sender asking for forty-five seconds, or to stay forever, gets the same two as everything else. Critical is not an exception either. This reverses the original decision, which honoured `expire_timeout` and let critical stay until dismissed, and it is the island that makes the reversal safe: a popup leaving used to mean the notification was reachable only through a panel you had to remember to open, and now it is in the island, visible in the badge and there when you open it. The popup only has to be long enough to notice.
+
+Each popup has its own countdown from its arrival. Another popup arriving or closing does not restart it. Hover holds only that popup; leaving gives it at least 1.5 seconds before it disappears. Replacing a notification starts a fresh countdown for that notification alone.
 
 **A timed-out popup leaves the screen, not the history.** The notification stays tracked until you dismiss it there or clear the history, which is what lets its action buttons still work from the panel, and why the server declares persistence. A notification its own app closes -- a message read on another device -- is removed from both. A transient notification is never kept. History is capped at 100, and the oldest past that are expired so their senders are told.
 

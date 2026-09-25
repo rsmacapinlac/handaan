@@ -1,6 +1,6 @@
 // Hover detail for a bar widget.
 //
-// The rule from docs/quickshell-widgets.md: hover may add detail, it may not
+// The rule from docs/bar.md: hover may add detail, it may not
 // carry the answer. Everything shown here has to be redundant -- the thing you
 // occasionally want a precise figure for, never the state the widget exists to
 // communicate. If a widget's meaning depends on its tooltip, the widget is

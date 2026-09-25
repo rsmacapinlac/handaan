@@ -1,5 +1,9 @@
 # Notification bell
 
+**Retired.** The bell is no longer a card in the widgets section. What it answered is a badge on [the island](../../island/README.md), which is where notifications are now; `modules/Bell.qml` is still in the tree but nothing references it.
+
+This record is kept because the reasoning below survived the move intact -- kept rather than unseen, the most urgent thing kept rather than the newest, no count, no motion -- and because a record explaining why is worth more than the widget it was written for. Read it as the argument, not as a description of the bar.
+
 Purpose: Tells the user whether anything is waiting for them and how much it matters, and whether they will be told when something new arrives.
 
 Notes:

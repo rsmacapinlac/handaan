@@ -3,12 +3,13 @@ module qs.Ui
 Bar 1.0 Bar.qml
 BarWidget 1.0 BarWidget.qml
 BarCard 1.0 BarCard.qml
+Island 1.0 Island.qml
 Tooltip 1.0 Tooltip.qml
 Installer 1.0 Installer.qml
 PowerMenu 1.0 PowerMenu.qml
 WallpaperPicker 1.0 WallpaperPicker.qml
 NotificationCard 1.0 NotificationCard.qml
-NotificationToasts 1.0 NotificationToasts.qml
+NotificationPopups 1.0 NotificationPopups.qml
 NotificationHistory 1.0 NotificationHistory.qml
 LockScreen 1.0 LockScreen.qml
 LockContent 1.0 LockContent.qml

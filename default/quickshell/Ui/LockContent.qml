@@ -1,6 +1,6 @@
 // What the lock screen draws on each monitor.
 //
-// Two questions, per docs/quickshell-widgets.md, read as a surface rather than
+// Two questions, per docs/bar.md, read as a surface rather than
 // a bar widget:
 //   1. What does it take to get back in?
 //   2. Is anything going to make my password fail?

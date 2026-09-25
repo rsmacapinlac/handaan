@@ -1,7 +1,15 @@
-// Notification popups: the top-right corner of the monitor you are looking at.
+// Notification popups: the top centre of the monitor you are looking at, under
+// the island that has already said something arrived.
+//
+// `NotificationPopups` rather than `Notifications`, which would shadow
+// Quickshell's own `Quickshell.Services.Notifications` in any file importing
+// both -- the trap AGENTS.md records for `Palette`. It is also the word the
+// rest of this reads in: NotificationCenter keeps `popups`, and the shell
+// pops them up.
 //
 // A view onto qs.Commons.NotificationCenter's popups, which decides what is on
-// screen and for how long. This only draws them.
+// screen and for how long -- an independent two-second countdown per popup.
+// This only draws them.
 //
 // One surface, on the focused monitor, like the shell's dialogs: a notification
 // belongs where you are looking, and with two screens a popup on the other one
@@ -13,8 +21,7 @@
 //
 // A card arriving slides in and one leaving fades: transitions, over before you
 // look, and nothing loops. Motion on the desktop is rationed to "this needs a
-// response" (docs/quickshell-widgets.md), and a notification that did would be
-// critical, which already stays until dismissed.
+// response" (docs/bar.md); kept notifications remain available in the island.
 
 import QtQuick
 import Quickshell
@@ -44,16 +51,19 @@ PanelWindow {
 
     anchors {
         top: true
-        right: true
     }
 
+    // Under the island, in the centre, because that is where the island has
+    // already said something arrived -- a popup on the far side of the screen
+    // would be the same notification announced in two unrelated places.
+    // Anchored top only, so the surface centres itself on the screen.
+    //
     // In line with the windows: below the bar's exclusive zone, reserving none
     // of our own, and inset by Hyprland's outer gap so the cards' edges meet
     // the window borders' edges.
     exclusionMode: ExclusionMode.Normal
     margins {
         top: Style.windowGap
-        right: Style.windowGap
     }
 
     implicitWidth: 380

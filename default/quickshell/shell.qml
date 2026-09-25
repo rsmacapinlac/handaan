@@ -9,7 +9,7 @@
 // rather than bars, up only while summoned. They live here so they inherit
 // Theme -- see Ui/Installer.qml with Commons/AppCatalog.qml, and Ui/PowerMenu.qml
 // with Commons/SessionControl.qml, and Ui/WallpaperPicker.qml with
-// Commons/Wallpapers.qml. Notifications are Ui/NotificationToasts.qml and
+// Commons/Wallpapers.qml. Notifications are Ui/NotificationPopups.qml and
 // Ui/NotificationHistory.qml over Commons/NotificationCenter.qml, which is also
 // the session's notification daemon. The lock screen is the same arrangement:
 // Ui/LockScreen.qml with Commons/SessionLock.qml.
@@ -31,10 +31,14 @@ ShellRoot {
 
         rightWidgets: [
             // Network and Battery sit together as the state of the machine,
-            // then the Bell beside the Clock -- next to the corner where its
-            // popups and history open. Updates and the Bell both come and go;
-            // the row is anchored right, so either arriving shifts what is to
-            // its left and the Clock never moves.
+            // then the Clock at the end. Updates comes and goes; the row is
+            // anchored right, so its arriving shifts what is to its left and
+            // the Clock never moves.
+            //
+            // The Bell used to sit between Battery and Clock. It is the
+            // island's now -- what is waiting is a backlog rather than the
+            // state of this machine, and the island is where notifications
+            // are. See docs/island/README.md.
             Component {
                 Modules.Updates {}
             },
@@ -43,9 +47,6 @@ ShellRoot {
             },
             Component {
                 Modules.Battery {}
-            },
-            Component {
-                Modules.Bell {}
             },
             Component {
                 Modules.Clock {}
@@ -59,7 +60,7 @@ ShellRoot {
 
     WallpaperPicker {}
 
-    NotificationToasts {}
+    NotificationPopups {}
 
     NotificationHistory {}
 

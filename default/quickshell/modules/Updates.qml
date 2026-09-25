@@ -1,6 +1,6 @@
 // Pending updates.
 //
-// One question, per docs/quickshell-widgets.md:
+// One question, per docs/bar.md:
 //   1. Is there anything for me to update?
 //
 // Two sources answer it -- package updates, and a handaan that has moved on or
@@ -58,7 +58,7 @@
 // apart in the tooltip.
 //
 // That top rung is what makes the pulse legitimate here, and it has not always
-// been. docs/quickshell-widgets.md rations motion to one thing on the bar and
+// been. docs/bar.md rations motion to one thing on the bar and
 // requires it to stop when its condition clears; Workspaces spends it on an
 // urgent window and Battery on a flat one, both rare and both self-clearing.
 // The pulse used to ride "packages behind", which is neither: on Arch that is

@@ -82,6 +82,23 @@ QtObject {
     // in the barCardText arithmetic -- widening that one narrows the side
     // bar's text column by the same amount.
     readonly property int barCardRowGap: space(2.5)
+
+    // The island's cut-out. A ceiling on the text rather than a width for the
+    // shape: the shape is as wide as its content, and this stops one long
+    // track title from pushing the bar's centre around as tracks change.
+    readonly property int islandCutoutText: space(40)
+
+    // The island's expanded half, below the cut-out strip. Stated rather than
+    // taken from the content: it is a window, and a window that changed size
+    // with every track would be the shape moving while you were reading it.
+    readonly property int islandWidth: space(96)
+    readonly property int islandHeight: space(34)
+    readonly property int islandArt: space(20)
+
+    // How far down the screen the island may reach when it is holding every
+    // notification. A ceiling rather than a size: it is as tall as it needs to
+    // be until it would be most of the screen, and then it scrolls.
+    readonly property int islandMaxStack: space(140)
     readonly property int barCardWidth: barSideSize - barSidePadding * 2
     // What is left for text: the ceiling every line has to fit, which is what
     // makes "maximum two lines" a rule the card can actually enforce rather
