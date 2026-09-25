@@ -103,15 +103,54 @@ PopupWindow {
 
     // Where the tail meets the body, along the edge it sits on: the widget's
     // centre, held off the rounded corners so the bubble's outline stays whole.
+    //
+    // The widget's centre has to be expressed in the bubble's own coordinates,
+    // and getting there is the awkward part. anchorRect is in the BAR's
+    // coordinates -- itemRect() returns the same thing mapToItem(null) does --
+    // and a PopupWindow exposes no position of its own, so the offset between
+    // the two cannot be read. It is reconstructed instead, by repeating the
+    // placement the compositor performs: centre the bubble on the widget, then
+    // slide it back inside the screen if that would hang it off an edge, which
+    // is what PopupAdjustment.SlideX/SlideY below asks for.
+    //
+    // This is a prediction, which the design document would rather it were
+    // not. It is a prediction because the alternative is not available, and it
+    // is exact for the placement actually requested. What it cannot survive is
+    // the compositor choosing some other placement -- and the failure is
+    // visible rather than silent, because the tail lands under a neighbour.
+    //
+    // Before this, the raw bar coordinate was passed straight in and clamped:
+    // a widget 2128px along a 2560px bar handed a 203px bubble a target of
+    // 2163, which pinned the tail to its far edge every time. On a side bar
+    // that went unnoticed for a while, because widgets sit low there and a
+    // tail pinned to the bubble's bottom looks about right.
     readonly property real tailPos: {
-        var target = root.tailOnTop ? root.anchorRect.x + root.anchorRect.width / 2 : root.anchorRect.y + root.anchorRect.height / 2;
         var length = root.tailOnTop ? body.width : body.height;
         var lo = Style.radius + root.tailSpan / 2;
         var hi = length - Style.radius - root.tailSpan / 2;
         if (hi < lo)
             return length / 2;
-        return Math.max(lo, Math.min(hi, target));
+
+        var centre = root.tailOnTop ? root.anchorRect.x + root.anchorRect.width / 2 : root.anchorRect.y + root.anchorRect.height / 2;
+        var span = root.tailOnTop ? root.screenWidth : root.screenHeight;
+
+        // Where the bubble's leading edge lands: centred on the widget, then
+        // slid back on screen. Without a screen to measure, centring the tail
+        // is the better guess than pinning it to an edge.
+        if (span <= 0)
+            return length / 2;
+        var edge = Math.max(0, Math.min(centre - length / 2, span - length));
+
+        return Math.max(lo, Math.min(hi, centre - edge));
     }
+
+    // The screen the anchored widget is on, which is the space the bubble is
+    // slid within. Read from the widget rather than from this window: a bar is
+    // instantiated once per monitor, so the session-wide answer would be some
+    // other screen's on every monitor but one.
+    readonly property var anchorScreen: root.anchorItem && "screen" in root.anchorItem ? root.anchorItem.screen : null
+    readonly property real screenWidth: root.anchorScreen ? root.anchorScreen.width : 0
+    readonly property real screenHeight: root.anchorScreen ? root.anchorScreen.height : 0
 
     anchor {
         item: root.anchorItem

@@ -5,8 +5,15 @@
 //
 // Two sources answer it -- package updates, and a handaan that has moved on or
 // has migrations to apply -- but they are one question. Both end in the same
-// place: open a terminal and deal with it. Which of the two is precision, and
-// precision is the hover layer's job.
+// place: `handaan update`, which pulls the checkout, upgrades packages and runs
+// migrations in one pass. Which of the two is precision, and precision is the
+// hover layer's job.
+//
+// Security fixes are not a third source. They are a subset of the first: the
+// pending package updates that carry a published fix, counted separately by
+// handaan-pending because nothing local distinguishes them. They do not change
+// what you do -- it is the same command -- they change when you do it, which is
+// why they rank above everything else and take the pulse.
 //
 // Presence is the entire glance encoding. The widget is absent when there is
 // nothing to update and present when there is, which the doc's
@@ -31,28 +38,44 @@
 // question the widget does not claim to answer, and "what could I install" is
 // a different question from "what needs updating".
 //
-// There is no count on the glance layer. A numeral beside the icon would be a
-// second thing to parse that changes nothing: two updates and forty both mean
-// "go and deal with it", and neither the decision nor its urgency differs. The
-// figures live on hover, where the battery widget puts its percentage and for
-// the same reason.
+// The count is on the glance layer, beside the glyph, with the name of the
+// rung driving it underneath. It was not always: the widget shipped as a bare
+// icon on the argument that two updates and forty both mean "go and deal with
+// it", so a numeral was a second thing to parse that changed nothing.
 //
-// Colour carries severity, on a three-level ladder ranked by consequence:
-// packages behind (red) over a handaan not pulled (peach) over migrations not
-// applied (muted). The pulse rides the top of it, which is the battery's
-// discipline -- it pulses at critical, not whenever it is drawn.
+// That argument was sound while every rung meant the same act. It stopped
+// being sound when the security rung arrived, because "71 packages" and "71
+// packages, 1 of them a security fix" are not the same fact and do not prompt
+// the same timing -- and a bare icon can only carry that in colour, which is
+// the one channel already spent on the ladder. The card's text column was
+// reserved and empty; this is what it was reserved for.
 //
-// The reservation stands and is worth keeping in front of whoever reads this
-// next. docs/quickshell-widgets.md rations motion to one thing on the bar and
+// Colour carries one distinction, not a gradient: security fixes waiting
+// (red, pulsing) against anything else waiting (muted). The ladder underneath
+// still ranks four rungs -- security over packages over commits over
+// migrations -- but only the top one is drawn differently, because only it
+// changes what you do. The rest clear with one `handaan update` and are told
+// apart in the tooltip.
+//
+// That top rung is what makes the pulse legitimate here, and it has not always
+// been. docs/quickshell-widgets.md rations motion to one thing on the bar and
 // requires it to stop when its condition clears; Workspaces spends it on an
 // urgent window and Battery on a flat one, both rare and both self-clearing.
-// Package updates are neither. They are available most days and never clear on
-// their own, so the top of this ladder is where the widget spends most of its
-// visible life, and the pulse with it. That is the known cost of ranking by
-// consequence rather than by rarity, and it was chosen deliberately: an
-// unpatched system is the more serious fact, even though the rarer one would
-// make the better signal. If the channel starts reading as noise, this is the
-// pulse to drop first.
+// The pulse used to ride "packages behind", which is neither: on Arch that is
+// true most days and never clears on its own, so the widget spent most of its
+// visible life animating -- the shape the doc calls decoration, and a standing
+// reservation recorded here for as long as it lasted.
+//
+// Binding it to security fixes resolves exactly that. A published fix you have
+// not installed is rare, and it clears when you install it, which is the
+// property the rule asks for and the one the old top rung never had. This is
+// no longer the pulse to drop first if the channel starts reading as noise.
+//
+// It is not free. The rung depends on arch-audit being installed and the Arch
+// Security Team's tracker being reachable, so it is the one rung that can go
+// blind -- and a blind rung reports nothing waiting. See bin/handaan-pending
+// for how the count is derived and the two things it cannot see (the AUR, and
+// versioned package names like electron42 against the tracker's electron).
 //
 // Click re-checks, and that is the only interaction. See the MouseArea below
 // for why it is that rather than a shortcut to a terminal.
@@ -65,7 +88,6 @@
 // doc's rule is to say why a value is missing rather than go quiet about it.
 
 import QtQuick
-import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 
@@ -87,10 +109,9 @@ BarWidget {
     // negative margin on the MouseArea below, because a hit area is not a
     // layout size.
     //
-    // There is no line beside the glyph. The card has room for one and that is
-    // not a reason to write one: the count was left off the glance layer
-    // because two updates and forty prompt the same act, and a rail with space
-    // next to it does not change that. See the header.
+    // Two lines beside the glyph now, so on a side bar this is the full card
+    // width rather than the glyph's own. See the header for why the text
+    // column stopped being empty.
     implicitWidth: card.implicitWidth
 
     // Severity by the kind of thing waiting, not the amount -- the same shape
@@ -102,6 +123,7 @@ BarWidget {
     //   1  migrations   handaan's own repairs, not yet run
     //   2  commits      a newer handaan exists
     //   3  packages     the system itself is behind
+    //   4  security     some of those packages carry a published fix
     //
     // A source whose check could not run reports -1 and so fails every test
     // here, which is the decided behaviour: an unknown counts as nothing
@@ -113,6 +135,8 @@ BarWidget {
     // ranked by the packages, so the rarer problem is reported by the tooltip
     // rather than the colour.
     readonly property int level: {
+        if (Maintenance.archSecurity > 0)
+            return 4;
         if (Maintenance.arch > 0)
             return 3;
         if (Maintenance.handaanCommits > 0)
@@ -122,35 +146,82 @@ BarWidget {
         return 0;
     }
 
-    readonly property color tint: {
-        if (root.level >= 3)
-            return Theme.critical;
-        if (root.level === 2)
-            return Theme.warning;
-        return Theme.barTextMuted;
-    }
+    // Four rungs, two colours. Rungs 1 to 3 render identically and that is the
+    // point rather than an economy: `handaan update` pulls the checkout,
+    // upgrades packages and runs migrations in one pass, so all three clear
+    // with the same command and differ only in what is waiting -- which is the
+    // tooltip's job, not the glyph's. Only the security rung changes what you
+    // do, by changing when you do it, so only it gets a colour of its own.
+    //
+    // That is the doc's "two states may be strong, everything else recedes"
+    // applied honestly. An earlier version spent peach on rung 3, which made
+    // the ladder legible at the cost of ranking three states no one acts on
+    // differently -- and peach is Network's and Battery's warning, where it
+    // means something a user can respond to.
+    //
+    // The rungs stay four even though two would draw the same, because the
+    // ranking is what picks the number on the card and the order in the
+    // tooltip.
+    readonly property color tint: root.level >= 4 ? Theme.critical : Theme.barTextMuted
 
     // The pulse's amplitude, shared with the glyph's resting size below so the
     // two cannot drift apart. Matches the workspace and battery pulses.
     readonly property real pulseScale: 1.12
+
+    // What the card counts changes with the rung, because what it is telling
+    // you changes with it. Below the security rung it is the roll-up --
+    // packages, commits and migrations together -- since those clear with one
+    // command and splitting them here would be three numbers for one act. On
+    // the security rung it is the security count alone: "3" beside a red
+    // pulsing glyph is the figure that decides whether you update now, and the
+    // roll-up is a larger number that would bury it. The tooltip holds both in
+    // every state, which is what makes narrowing the card safe.
+    readonly property string countText: root.level >= 4 ? Maintenance.archSecurity : Maintenance.updates
+
+    // The rung in words, which is not redundant with the glyph's colour: the
+    // doc requires a state to be readable without the channel that escalates
+    // it, so "security" is what says so on a screen the pointer is nowhere
+    // near, or to anyone who does not separate the two tints by eye.
+    //
+    // Abbreviated because the text column is 78px -- "Security updates" does
+    // not fit beside the rail at any size worth reading.
+    readonly property string rungText: root.level >= 4 ? "security" : "updates"
 
     // The parts of the answer, in the order they are worth acting on. Built as
     // a list so the tooltip never prints a source with nothing waiting -- a
     // line reading "0 packages" is noise on a layer that exists to be precise.
     readonly property var parts: {
         var out = [];
+        // Security leads, in the ladder's own order, so the line that changes
+        // what you do is the first one read.
+        //
+        // It is a line of its own rather than a qualifier on the package line
+        // below, which is the record's call. The cost is worth naming because
+        // nothing in the tooltip now pays it off: this count is a SUBSET of
+        // the Arch line under it, so three security fixes among seventy-one
+        // packages list as "3" and "71" with no indication that the 3 are
+        // among the 71. A reader who adds them gets 74, and there is no total
+        // on screen to contradict them -- the summary line that used to sit
+        // above this list was removed as redundant with the card, and the
+        // card shows the security count rather than the roll-up while this
+        // rung is lit.
+        //
+        // Left as it is deliberately. If it reads wrong in practice the fix
+        // is wording rather than structure: "3 of them security" says the
+        // same thing and cannot be added up.
+        if (Maintenance.archSecurity > 0)
+            out.push(Maintenance.archSecurity + (Maintenance.archSecurity === 1 ? " security update" : " security updates"));
+        // "Arch" rather than a bare "package": the line above it counts
+        // packages too, and the two below count handaan's own work, so the
+        // word on its own would not say which of them this is. Covers the AUR
+        // as well as the repos -- both are packages pacman is holding.
         if (Maintenance.arch > 0)
-            out.push(Maintenance.arch + (Maintenance.arch === 1 ? " package update" : " package updates"));
+            out.push(Maintenance.arch + (Maintenance.arch === 1 ? " Arch Package update" : " Arch Package updates"));
         if (Maintenance.handaanCommits > 0)
             out.push(Maintenance.handaanCommits + (Maintenance.handaanCommits === 1 ? " handaan commit" : " handaan commits"));
         if (Maintenance.handaanMigrations > 0)
             out.push(Maintenance.handaanMigrations + (Maintenance.handaanMigrations === 1 ? " migration" : " migrations"));
         return out;
-    }
-
-    readonly property string summary: {
-        const n = Maintenance.updates;
-        return n + (n === 1 ? " update waiting" : " updates waiting");
     }
 
     // Named rather than listed: which check is blind is the useful half, and a
@@ -160,6 +231,13 @@ BarWidget {
         var out = [];
         if (!Maintenance.known(Maintenance.arch))
             out.push("packages");
+        // Named separately from packages because it fails separately: the
+        // package count can be perfectly good while this one is unknown, which
+        // is what a machine without arch-audit looks like. Saying so is the
+        // difference between "no security fixes waiting" and "never checked",
+        // and the card is up for other reasons in exactly that case.
+        if (!Maintenance.known(Maintenance.archSecurity))
+            out.push("security");
         if (!Maintenance.known(Maintenance.handaanCommits))
             out.push("handaan");
         if (out.length === 0)
@@ -168,13 +246,24 @@ BarWidget {
     }
 
     // Detail on request, and only ever the same question at higher
-    // resolution: the glance layer said updates are waiting, this says how
-    // many and of what. Nothing here is required to read the widget.
+    // resolution: the glance layer said how many are waiting, this says of
+    // what. Nothing here is required to read the widget.
+    //
+    // It opens on the breakdown rather than on a total. There used to be a
+    // "71 updates waiting" line above it, written when the card was a bare
+    // glyph and the total existed nowhere else. The card carries that number
+    // now, so the line restated what the pointer was already sitting on --
+    // the same trade the battery makes by leading with its estimate instead
+    // of its percentage.
+    //
+    // The blind notice goes in `detail` rather than being appended to the
+    // list: it is muted and a size down there, which is what it should be
+    // beside counts that were actually measured.
     Tooltip {
         anchorItem: root
         open: hover.containsMouse
-        text: root.summary
-        detail: root.parts.join("\n") + (root.blind !== "" ? "\n" + root.blind : "")
+        text: root.parts.join("\n")
+        detail: root.blind
     }
 
     // Click re-checks. It is the obvious action for this widget's question:
@@ -200,11 +289,19 @@ BarWidget {
         onClicked: Maintenance.refresh()
     }
 
+    // Battery's shape rather than Network's: the value leads at full contrast
+    // and the line under it is the advice, tinted by the same ladder as the
+    // glyph, because this widget ranks by severity the way the battery does
+    // rather than labelling a value the way Network does.
     BarCard {
         id: card
 
         anchors.fill: parent
         vertical: root.vertical
+
+        lineOne: root.countText
+        lineTwo: root.rungText
+        lineTwoColor: root.tint
 
         Text {
             id: icon
@@ -238,7 +335,7 @@ BarWidget {
             // updates are available most days and never clear on their own, so the
             // top level is where this widget spends most of its visible life.
             SequentialAnimation on scale {
-                running: root.level >= 3
+                running: root.level >= 4
                 loops: Animation.Infinite
                 alwaysRunToEnd: true
 

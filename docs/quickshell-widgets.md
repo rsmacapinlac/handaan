@@ -87,6 +87,24 @@ Motion is picked up in peripheral vision.
 - **Motion is never the only encoding.** The same state must also be readable from colour and shape, because the animation may be off-screen, occluded, or simply not noticed. Motion escalates a signal; it does not carry one alone.
 - **Keep it slow and shallow.** A signal that has to survive peripheral vision needs to be smooth, not sharp. Something around a one-second cycle and a gentle amplitude reads as "attend to this when you can" — a fast or large animation reads as an alarm and becomes hostile within a minute, which is worse than not signalling at all.
 
+### There is one pulse, and a widget borrows it
+
+The rules above ration motion to one meaning, so the bar carries one animation to say it with. A widget that has earned the channel takes the pulse as it stands; it does not design its own. Two rhythms on one bar would read as two kinds of urgency, and the previous section has already said there is only one.
+
+| | value | why this number |
+|---|---|---|
+| amplitude | `1.12` | Twelve per cent is enough to catch the eye beside a still column at the size a bar widget actually draws, and little enough that the card does not appear to change size when you look straight at it. |
+| leg | `620ms` | A cycle a shade over a second, which is the "attend to this when you can" tempo above rather than an alarm. |
+| easing | `Easing.InOutSine` | Slowest at both ends, so the motion has no edge to it. Linear reads as mechanical and sharp. |
+| loops | `Animation.Infinite`, `running` bound to the condition | Bound to the condition and not to the widget, so it stops on its own. |
+| stopping | `alwaysRunToEnd: true` | The leg being drawn finishes, so the shape eases back to rest. |
+
+**Stop by finishing the leg, not by snapping back.** Recovery is the moment the widget is most likely to be looked at directly, and cutting the animation mid-scale puts a jump there — the one sharp movement in a signal whose whole argument is that it is smooth. It also costs nothing: the condition has cleared, so the extra half-second is the animation getting out of the way rather than a delay in saying anything.
+
+**One element pulses, not the card.** The battery scales the graphic in the rail while the numeral beside it holds still, so the motion reads as one thing moving rather than the card breathing. A whole card in motion also disturbs the column it sits in, which is the alignment *Every widget is a card* exists to hold.
+
+These numbers are literals in each widget that pulses — `modules/Battery.qml`, `modules/Network.qml`, `modules/Updates.qml` and `modules/Workspaces.qml` — rather than tokens in `Commons/Style.qml`, so nothing but this table keeps them in step. Two of them name the amplitude as a `pulseScale` property because they also size a glyph from it; the other two write it inline.
+
 ## Detail is progressively disclosed
 
 A widget shows one thing at a glance and can be asked for more. That gives it three layers:

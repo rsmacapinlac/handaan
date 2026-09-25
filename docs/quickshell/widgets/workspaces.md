@@ -8,7 +8,7 @@ Workspaces is a grid of pills with no icon and no text, and wrapping it in a rai
 
 ## It holds the motion channel
 
-An urgent workspace pulses on about a 1.2s cycle at 12% scale, and stops the moment it stops being urgent, which is *Motion is reserved for attention* applied as written. The pulse is escalation on top of a signal that is already complete without it — the pill is also red, and also wide and labelled — so the widget stays readable if the motion is never noticed. The battery uses the same cycle and amplitude for critical-and-discharging, so the bar has one vocabulary for urgency rather than several.
+An urgent workspace takes the bar's pulse unmodified — the amplitude, tempo and easing are [the design document's](../../quickshell-widgets.md), not this widget's — and stops the moment it stops being urgent, which is *Motion is reserved for attention* applied as written. The pulse is escalation on top of a signal that is already complete without it — the pill is also red, and also wide and labelled — so the widget stays readable if the motion is never noticed.
 
 It is not the only holder of the channel the rule rations to one: the [update indicator](update-indicator.md) and the [network indicator](network-indicator.md) both pulse too, each recording what it traded for it. This one is the cheapest to justify, because its condition is rare and clears itself.
 

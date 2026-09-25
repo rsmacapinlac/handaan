@@ -38,6 +38,7 @@ Decisions already made and living as prose in `README.md`, `AGENTS.md`, or `docs
 
 **Repository and tooling**
 - Public repo plus private companion; the override mechanism was rebuilt on the copy model after the move off `rcm` (see 0003)
+- `arch-audit` in core, against the letter of [core stays minimal](../standards/core-stays-minimal.md): the bar's security tier means "no known fix waiting", which a machine without the tool cannot say
 - `~/.ssh` deliberately unmanaged; the bootstrap creates no secrets
 - Account-bound services kept out of the bootstrap
 - mise owns portable developer tools; `config/mise/config.toml` stays untracked

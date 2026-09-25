@@ -21,7 +21,7 @@ import "modules" as Modules
 
 ShellRoot {
     Bar {
-        position: "right"
+        position: "top"
 
         leftWidgets: [
             Component {

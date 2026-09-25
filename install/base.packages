@@ -15,6 +15,14 @@ openssh
 # database rather than the real one, where `pacman -Sy` would leave the system
 # half-upgraded. Without it that check reports unknown, not zero.
 pacman-contrib
+# arch-audit, for the same indicator's security tier. Arch ships no security
+# repository, so nothing on the machine separates a security update from any
+# other one -- the answer only exists in the Arch Security Team's tracker, and
+# this is their own tool over it. Not optional despite the desktop running
+# fine without it: the tier's whole meaning is that no card means no known fix
+# waiting, and on a machine without this the check is blind forever while
+# looking exactly like an up-to-date one.
+arch-audit
 mise
 neovim
 python-pynvim

@@ -11,8 +11,15 @@ Singleton {
     property bool enabled: false
     property string mode: "live"
     property string transport: "wifi"
+    // A mock interface name and address, so a preview exercises the tooltip's
+    // address line too. Kept obviously fake -- a preview that showed a
+    // plausible address would be hard to tell from the live one in a
+    // screenshot taken to review it.
+    readonly property string interfaceName: root.transport === "wifi" ? "wlan0" : "eth0"
+    readonly property string address: "203.0.113.10"
+    readonly property var addresses: ({[root.interfaceName]: root.address})
     readonly property var devices: ({values: root.mode === "disconnected" ? [] : [
-        {connected: true, type: root.transport === "wifi" ? DeviceType.Wifi : DeviceType.Wired}
+        {connected: true, name: root.interfaceName, type: root.transport === "wifi" ? DeviceType.Wifi : DeviceType.Wired}
     ]})
     readonly property bool canCheckConnectivity: true
     readonly property bool connectivityCheckEnabled: true

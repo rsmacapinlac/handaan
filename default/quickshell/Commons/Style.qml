@@ -17,7 +17,17 @@ QtObject {
     readonly property int fontSizeSmall: 11
 
     // ----------------------------------------------------------- dimensions
-    readonly property int barSize: 34
+    // A top bar's height. Not the height the content needs -- a card's two
+    // stacked lines measure 27px -- but that plus the air either side of it,
+    // because nothing insets a row on a top bar: WidgetRow takes this height
+    // whole and every widget centres inside it, so the margin above and below
+    // a card IS (barSize - content) / 2. At 44 that is about 8px each way.
+    //
+    // Raising it does not enlarge anything: the workspace pill is a fixed
+    // space(5.5) centred in its slot, and a card's lines are centred too, so
+    // this only ever buys clearance. Lowering it past the content is what
+    // clips, and the first thing to clip is a card's second line.
+    readonly property int barSize: 44
     // A side bar's thickness. Unlike barSize, which is the height a row of
     // widgets needs, this is a budget: the screen width given up to a vertical
     // bar, which the widgets in it divide between them. The workspace grid is
@@ -39,9 +49,13 @@ QtObject {
     // Gap between adjacent widgets in a bar section. Deliberately wide: with no
     // separator chrome in the bar, whitespace is the only thing grouping a
     // widget's own parts against its neighbours. It therefore has to be clearly
-    // larger than any spacing used *inside* a widget -- the clock's date-to-time
-    // gap is space(2) -- or adjacent widgets read as one run of glyphs.
-    readonly property int widgetSpacing: space(5)
+    // larger than any spacing used *inside* a widget -- the widest of those is
+    // barCardRowGap below -- or adjacent widgets read as one run of glyphs.
+    //
+    // It moves with that gap rather than independently: the two are a ratio,
+    // not two numbers. Widening the space between a card's icon and its text
+    // without widening this one closes the difference the rule depends on.
+    readonly property int widgetSpacing: space(6)
     // Inset from the bar's leading and trailing screen edges.
     readonly property int barPadding: space(3)
     // The same inset along a side bar's short axis, where the budget above is
@@ -63,6 +77,11 @@ QtObject {
     // in it.
     readonly property int barCardRail: space(6)
     readonly property int barCardGap: space(1.5)
+    // The same icon-to-text gap on a top bar. A separate number because this
+    // one answers to legibility alone, where barCardGap above is also a term
+    // in the barCardText arithmetic -- widening that one narrows the side
+    // bar's text column by the same amount.
+    readonly property int barCardRowGap: space(2.5)
     readonly property int barCardWidth: barSideSize - barSidePadding * 2
     // What is left for text: the ceiling every line has to fit, which is what
     // makes "maximum two lines" a rule the card can actually enforce rather

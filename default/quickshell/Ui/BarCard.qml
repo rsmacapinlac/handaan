@@ -15,11 +15,17 @@
 // this prevents is a widget that quietly grows a third line and pushes the
 // bar wider for every other card at once.
 //
-// On a top bar the same card lays out as a row: rail, then the lines beside
-// each other. That keeps each widget's content declared once rather than
-// twice, at the cost of one visible change -- the accessory follows the icon
-// there instead of preceding it, so the battery reads body-then-bolt rather
-// than bolt-then-body. The card puts the icon first, always.
+// On a top bar the same card lays out as a row of one card beside the next,
+// but each card keeps its lines stacked: rail, then line one with line two
+// under it. That keeps each widget's content declared once rather than twice,
+// at the cost of one visible change -- the accessory follows the icon there
+// instead of preceding it, so the battery reads body-then-bolt rather than
+// bolt-then-body. The card puts the icon first, always.
+//
+// The two lines stack on a top bar too, which they did not always: they used
+// to sit side by side to stay inside the bar's height. They fit stacked at
+// Style.barSize, but only just -- a top bar reserves no vertical padding, so
+// the pair fills it. Raising either font size needs the bar raised with it.
 
 import QtQuick
 import QtQuick.Layouts
@@ -53,6 +59,14 @@ Item {
     property int lineOneSize: Style.fontSize
     property int lineTwoSize: Style.fontSizeSmall
 
+    // Line two shrinks to fit instead of eliding, down to this floor. Off by
+    // default: eliding is right for prose, where a cut tail still reads as the
+    // same fact shortened. It is wrong for a value that is only itself whole --
+    // an address cut to "192.168.1..." is a different address, not a briefer
+    // one -- and those are the lines this is for.
+    property bool lineTwoFit: false
+    property int lineTwoMinimumSize: 8
+
     // Drawn after line one, for the one thing a string cannot carry: a glyph
     // needing a colour of its own. The battery's bolt is green while it is
     // gaining charge, next to a numeral that is on the severity ladder, and
@@ -77,7 +91,7 @@ Item {
         anchors.left: parent.left
         anchors.right: card.vertical ? parent.right : undefined
         anchors.verticalCenter: parent.verticalCenter
-        spacing: card.vertical ? Style.barCardGap : Style.space(1.5)
+        spacing: card.vertical ? Style.barCardGap : Style.barCardRowGap
 
         Item {
             id: rail
@@ -94,10 +108,17 @@ Item {
         GridLayout {
             id: lines
 
-            // One column stacks the lines, two sets them side by side. A
-            // layout cannot change its base type at runtime; a grid can change
-            // its count, which is the same thing said differently.
-            columns: card.vertical ? 1 : 2
+            // Always one column, so the lines stack whichever edge the bar is
+            // on. A top bar used to set them side by side to stay inside its
+            // height; stacking is what the card is for -- a value with its
+            // label under it reads as one fact, where the same two strings in
+            // a row read as two.
+            //
+            // A grid rather than a column because the count used to change
+            // with the orientation and a layout cannot change its base type at
+            // runtime. Kept as a grid: the cost is nothing and it leaves the
+            // door open.
+            columns: 1
             rowSpacing: 0
             columnSpacing: Style.space(2)
             // Reserved on a side bar whether or not it holds anything, so the
@@ -153,6 +174,8 @@ Item {
                 color: card.lineTwoColor
                 font.family: Style.fontFamily
                 font.pixelSize: card.lineTwoSize
+                fontSizeMode: card.lineTwoFit ? Text.HorizontalFit : Text.FixedSize
+                minimumPixelSize: card.lineTwoMinimumSize
                 elide: Text.ElideRight
                 Layout.maximumWidth: card.vertical ? Style.barCardText : -1
                 Layout.fillWidth: card.vertical
