@@ -103,6 +103,7 @@ Item {
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
             vertical: surface.vertical
+            screen: surface.screen
         }
 
         // The compositor handles clicks outside this window, including on
@@ -179,9 +180,11 @@ Item {
                 anchors.horizontalCenter: surface.vertical ? parent.horizontalCenter : undefined
             }
 
-            // The bar's centre section. Not a WidgetRow: the island is not
-            // built from widgets and does not take a list of them -- see
-            // docs/island/README.md. Centred on both axes, like centerRow below.
+            // The generic centre row, and empty on a top bar: the island is
+            // the centre section there, it is not built from widgets and does
+            // not take a list of them, so nothing is passed to centerWidgets.
+            // See docs/island/README.md. It is also the only centre slot a
+            // side bar has, since the island draws nothing when vertical.
             // Centred on both axes either way, so this one needs no case.
             WidgetRow {
                 id: centerRow

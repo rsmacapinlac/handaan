@@ -52,6 +52,20 @@ Item {
     // Set by the bar. The island is a horizontal-bar thing for now.
     property bool vertical: false
 
+    // The monitor this copy is drawn on, injected by the bar the same way
+    // every widget's is: Variants builds one surface per screen, and the
+    // expanded width is a proportion of the screen it opened on. This is
+    // geometry, not state -- what the island *shows* stays session-wide, per
+    // docs/island/README.md.
+    property var screen: null
+
+    // The expanded shape's width: Style.islandWidthFraction of this screen.
+    // Logical pixels, which is the space every other size here is in -- the
+    // bar's own layer surface measures 1536 on a 1.25-scaled 1920 panel, so
+    // this is a share of what is actually drawn rather than of the panel's
+    // mode.
+    readonly property int expandedWidth: Math.round((root.screen ? root.screen.width : 0) * Style.islandWidthFraction)
+
     // How much taller than the bar the window has to be to hold this. Read by
     // Bar.qml, which grows the window by it while keeping the reserved strip
     // at barSize so no window on the screen moves.
@@ -178,7 +192,12 @@ Item {
     }
 
     implicitWidth: shape.width
-    implicitHeight: shape.height + Style.space(1)
+    // The shape's inset above it, and the same inset below. Both have to be
+    // asked for: shape.y spends the first one, so a single inset here leaves
+    // the island flush with the window's own bottom edge -- 4px of bar above
+    // the expanded island and none under it. Collapsed this still measures
+    // exactly barSize, so overflow stays 0 and the ordinary bar is untouched.
+    implicitHeight: shape.height + Style.space(1) * 2
     visible: !root.vertical
 
     // A labelled control in the expanded half, for the two things that act on
@@ -246,7 +265,10 @@ Item {
 
         // Leaves the bar's own surface visible around it, so the shape reads
         // as cut into the bar rather than laid on top of it.
-        implicitWidth: root.expanded ? Style.islandWidth : cutout.implicitWidth + Style.space(3) * 2
+        // Falls back to the cut-out's own width until the bar has injected a
+        // screen, rather than collapsing to zero on the frames before it
+        // lands. Never seen, since the island starts closed.
+        implicitWidth: root.expanded && root.expandedWidth > 0 ? root.expandedWidth : cutout.implicitWidth + Style.space(3) * 2
         implicitHeight: root.cutoutHeight + (root.expanded ? panel.implicitHeight + Style.space(3) : 0)
         width: implicitWidth
         height: implicitHeight
@@ -278,12 +300,23 @@ Item {
             }
         }
 
-        // The whole collapsed shape is clickable, including its padding.
+        // The cut-out strip is the handle at either size, and it toggles: it
+        // opens the island when closed and closes it again when open.
+        // Collapsed, cutoutHeight *is* the whole shape, so this is still the
+        // capsule and its padding.
+        //
+        // Deliberately not the whole expanded shape. Everything below the strip
+        // is what you opened the island to act on, and a click that dismissed a
+        // notification and collapsed the island in one gesture would take the
+        // surface away mid-task. Bar.qml still collapses on a click anywhere
+        // outside.
         MouseArea {
-            anchors.fill: parent
-            enabled: !root.expanded
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            height: root.cutoutHeight
             cursorShape: Qt.PointingHandCursor
-            onClicked: root.expanded = true
+            onClicked: root.expanded = !root.expanded
         }
 
         // The cut-out's own line, held at the top of the shape so it stays

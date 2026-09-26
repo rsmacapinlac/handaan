@@ -18,7 +18,7 @@ Everything else handaan draws already lives in one Quickshell process and follow
 | `default/quickshell/Ui/NotificationCard.qml` | One notification: app, age, summary, body, action buttons. The same card as a popup and in the history. |
 | `default/quickshell/Ui/NotificationPopups.qml` | Popups, top centre of the focused monitor, under the island, at most four. Was `NotificationToasts.qml`. |
 | `default/quickshell/Ui/NotificationHistory.qml` | The history panel, with the do-not-disturb switch and Clear all. |
-| `default/quickshell/Ui/Island.qml` | The bar indicator, as a badge on the island: present while anything is kept or do-not-disturb is on, coloured by the most urgent notification kept -- critical red, normal the accent, low grey -- and slashed while do-not-disturb is on. Clicking the island's cut-out expands the island's own history and controls; clicking outside collapses it. The separate history dialog remains available by keyboard shortcut or command. This was `modules/Bell.qml`, a card in the widgets section, until the island took notifications; that file is still in the tree but nothing references it. |
+| `default/quickshell/Ui/Island.qml` | The bar indicator, as a badge on the island: present while anything is kept or do-not-disturb is on, coloured by the most urgent notification kept -- critical red, normal the accent, low grey -- and slashed while do-not-disturb is on. Clicking the island's cut-out expands the island's own history and controls; clicking the cut-out again, or anywhere outside, collapses it. The separate history dialog remains available by keyboard shortcut or command. This was `modules/Bell.qml`, a card in the widgets section, until the island took notifications; that file is still in the tree but nothing references it. |
 | `bin/handaan-notifications` | Toggles the panel; `dnd on\|off\|toggle`, `clear`, `status`. `Super+Shift+N` calls it. |
 | `$HANDAAN_STATE/notifications/do-not-disturb` | Whether do-not-disturb is on. The only notification state written to disk. |
 
@@ -38,7 +38,7 @@ Each popup has its own countdown from its arrival. Another popup arriving or clo
 
 **No other notification daemon is installed.** Only one program can own `org.freedesktop.Notifications`, and a daemon's package ships a D-Bus activation file, so the first notification sent before the shell is up would start that daemon, it would take the name, and the shell's server would silently fail to register. Disabling its unit does not stop that. mako was first kept installed with its unit masked, as a fallback while the shell's notifications proved themselves, the way waybar stayed beside the Quickshell bar. It has since been removed, along with its `config/mako` seed.
 
-This replaces mako with nothing new to install -- `Quickshell.Services.Notifications` ships with the `quickshell` package already in core. What it serves better is [configuration is modular](../standards/configuration-is-modular.md) and the palette: notification appearance is QML in `default/`, updated by a `git pull` and coloured by `Theme`, rather than a seeded file that no update reaches.
+This replaces mako with nothing new to install -- `Quickshell.Services.Notifications` ships with the `quickshell` package already in core. What it serves better is [configuration is modular](../../standards/configuration-is-modular.md) and the palette: notification appearance is QML in `default/`, updated by a `git pull` and coloured by `Theme`, rather than a seeded file that no update reaches.
 
 ## Consequences
 

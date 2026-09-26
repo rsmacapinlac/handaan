@@ -1,5 +1,9 @@
 # ADR Changelog
 
+## 2026-09-26 (the cut-out toggles)
+
+- **0008** edited in place. The island's cut-out closes the island as well as opening it, so the handle works both ways rather than leaving an outside click as the only way out. Only the strip toggles -- a click below it lands on the controls you expanded the island to reach, and collapsing the surface in the same gesture that dismissed a notification would take it away mid-task. An outside click still collapses, as before.
+
 ## 2026-09-25 (notifications move to the island)
 
 - **0008** clarifies independent popup countdowns: each arrival has its own timer and deadline, preserved when other popups arrive or leave. Hover holds only that popup, with a 1.5-second grace period on leaving.

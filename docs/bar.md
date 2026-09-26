@@ -5,7 +5,7 @@ The bar is one surface in three sections.
 Each section has its own standard, because a rule that holds for one does not automatically hold for the others:
 
 - **Workspaces** — [record](quickshell/widgets/workspaces.md).
-- **Island** — [The island](island/README.md); nothing is built yet.
+- **Island** — [The island](island/README.md); the cut-out, its expansion, and the backlog badge.
 - **Widgets** — [Widgets](widgets.md), the card and everything that follows from it.
 
 ## The three sections
@@ -62,7 +62,7 @@ The rules above ration motion to one meaning, so the bar carries one animation t
 | leg | `620ms` | A cycle a shade over a second, which is the "attend to this when you can" tempo above rather than an alarm. |
 | easing | `Easing.InOutSine` | Slowest at both ends, so the motion has no edge to it. Linear reads as mechanical and sharp. |
 | loops | `Animation.Infinite`, `running` bound to the condition | Bound to the condition and not to the widget, so it stops on its own. |
-| stopping | `alwaysRunToEnd: true` | The leg being drawn finishes, so the shape eases back to rest. |
+| stopping | `alwaysRunToEnd: true` | The leg being drawn finishes, so the shape eases back to rest. Battery, Updates and Workspaces do this; Network is the one exception, and its [record](quickshell/widgets/network-indicator.md) says so. |
 
 **Stop by finishing the leg, not by snapping back.** Recovery is the moment the widget is most likely to be looked at directly, and cutting the animation mid-scale puts a jump there — the one sharp movement in a signal whose whole argument is that it is smooth. It also costs nothing: the condition has cleared, so the extra half-second is the animation getting out of the way rather than a delay in saying anything.
 
@@ -88,7 +88,7 @@ It holds one end of the motion channel, on an urgent workspace, which is the che
 
 ## The island section
 
-The centre of the bar, and the only section you act in rather than read. Its standard is [The island](island/README.md): what may occupy it, its two states, and the decisions still open. Nothing is built there yet.
+The centre of the bar, and the only section you act in rather than read. Its standard is [The island](island/README.md): what may occupy it, its two states, and the decisions still open. `Ui/Island.qml` draws it — the cut-out with a notification or the current track in it, the backlog badge beside them, and the notification and media controls its expansion holds.
 
 ## The widgets section
 

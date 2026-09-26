@@ -7,7 +7,7 @@
 // broken and the tooltip is hiding it.
 //
 // This is a real window rather than an Item inside the bar because the bar is
-// 34px tall and a tooltip has to escape it. Layer-shell surfaces clip to their
+// 44px tall and a tooltip has to escape it. Layer-shell surfaces clip to their
 // own geometry, so there is no drawing outside the panel.
 //
 // It never takes focus. A tooltip that steals the keyboard from the window
@@ -84,8 +84,8 @@ PopupWindow {
     // How far the tail stands out from the body, and the square that draws it.
     // A square rotated 45 degrees protrudes half its diagonal, so the side is
     // the protrusion times root two and the base it shows is the diagonal.
-    // Sized to read at a glance against a 34px card: a smaller tail was there
-    // first and disappeared into the bubble's own corner radius.
+    // Sized to read at a glance against a card in a 44px bar: a smaller tail
+    // was there first and disappeared into the bubble's own corner radius.
     readonly property int tailSize: Style.space(2)
     readonly property int tailSquare: Math.round(root.tailSize * Math.SQRT2)
     readonly property int tailSpan: Math.round(root.tailSquare * Math.SQRT2)

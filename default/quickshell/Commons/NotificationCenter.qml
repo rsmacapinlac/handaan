@@ -303,8 +303,9 @@ Singleton {
     }
 
     // Opening the history is what reading it means, so everything in it is
-    // seen the moment it is up rather than one card at a time. The bell does
-    // not care: it answers to what is kept, not to what is unseen.
+    // seen the moment it is up rather than one card at a time. The island's
+    // backlog badge does not care: it answers to what is kept, not to what is
+    // unseen.
     onHistoryOpenChanged: {
         if (root.historyOpen)
             root.history = root.history.map(r => r.seen ? r : Object.assign({}, r, { seen: true }));
@@ -371,7 +372,8 @@ Singleton {
     }
 
     // Anything that arrived while locked went straight to history, unseen, and
-    // the bell is up on the way back in. Nothing replays as popups.
+    // the island's backlog badge is up on the way back in. Nothing replays as
+    // popups.
     Connections {
         target: SessionLock
         function onLockedChanged() {

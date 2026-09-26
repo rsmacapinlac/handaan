@@ -91,7 +91,13 @@ QtObject {
     // The island's expanded half, below the cut-out strip. Stated rather than
     // taken from the content: it is a window, and a window that changed size
     // with every track would be the shape moving while you were reading it.
-    readonly property int islandWidth: space(96)
+    //
+    // A fraction of the screen rather than a pixel count. The 384px this
+    // replaced was a quarter of a 1536-wide laptop panel and a seventh of a
+    // 2560-wide external one -- the same island reading as two different
+    // surfaces depending on where it opened. The proportion is what can hold
+    // across monitors; a pixel count cannot.
+    readonly property real islandWidthFraction: 0.4
     readonly property int islandHeight: space(34)
     readonly property int islandArt: space(20)
 

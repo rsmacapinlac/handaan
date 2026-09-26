@@ -19,20 +19,20 @@ It is a badge, not an occupant, and the distinction is the whole of why it works
 
 It keeps the bell's own rules, which were right: waiting means **kept, not unseen**, so reading the history does not clear it and only dismissing or clearing does; the colour comes from the most urgent thing kept rather than the newest, so a chatty app cannot bury a critical one; and peach is not used, because that is Network's and Battery's warning and a notification is not a warning. Do-not-disturb shows as a slashed bell and holds the badge up on its own, since an empty island cannot say you have gone quiet.
 
-**Clicking the cut-out expands the island**, exposing its notification history, media controls and do-not-disturb switch. It also opens when empty. The separate history dialog remains available through `Super+Shift+N` or `handaan notifications`.
+**Clicking the cut-out expands the island**, exposing its notification history, media controls and do-not-disturb switch, and clicking it again collapses it. It also opens when empty. The separate history dialog remains available through `Super+Shift+N` or `handaan notifications`.
 
 ## Two states
 
 The island is either a **cut out** or **expanded**, and expanding is the cut-out growing rather than something new appearing beside it.
 
 - **Cut out** is the small shape: a notch in the bar, carrying what fits at that size.
-- **Expanded** is that same shape grown, with a standard window inside it showing the content in full.
+- **Expanded** is that same shape grown, with a standard window inside it showing the content in full. Its width is a share of the screen it opened on rather than a pixel count -- `Style.islandWidthFraction`, 40% today -- so the island is the same proportion of a 1536-wide laptop panel as of a 2560-wide external one. A fixed number was a quarter of the one and a seventh of the other, which read as two different surfaces.
 
 **Expansion is on click, never on hover or arrival.** Something arriving takes the cut-out; it does not open the island by itself.
 
 That puts a floor under the cut-out. *No interaction is ever required to read* is one of [the bar's](../bar.md) rules, so whatever is in the island has to be answerable at cut-out size -- who is telling you something, that media is playing. Expansion is for the detail and for acting on it, not for finding out there was anything there.
 
-**It stays open until you click outside it.** Moving the pointer away does not collapse it, and clicks on its controls leave it open. Clearing the last notification does not close it either.
+**It stays open until you click outside it, or on the cut-out again.** The cut-out is the handle at either size, so the thing that opened the island is the thing that closes it. Only the strip does: everything below it is what you opened the island to act on, and a click that dismissed a notification and collapsed the island in one gesture would take the surface away mid-task. Moving the pointer away does not collapse it, clicks on its controls leave it open, and clearing the last notification does not close it either.
 
 Outside clicks are handled by `HyprlandFocusGrab` on the bar window, plus a handler for clicks elsewhere inside that same bar. Expansion is local to the monitor you clicked; notification and media state remain shared. Hover does not expand the island or take keyboard focus.
 
@@ -73,4 +73,4 @@ Three remain:
 2. **Whether anything ever forces expansion.** Nothing does today, including critical notifications. Expansion requires a click.
 3. **What the island does on a vertical bar.** Nothing above answers it, and the always-top escape is closed. Either it transposes and the cut-out becomes close to icon-only, or the island is a thing horizontal bars have and side bars do not.
 
-Separately, *it is not a second place to say something the bar already says* commits to something worth naming: if a notification surfaces here it must not also pop up at the top right, which reverses part of [0008](../decisions/adrs/0008-notifications-are-part-of-the-desktop-shell.md). That ADR needs editing, and the edit needs a [CHANGELOG](../decisions/adrs/CHANGELOG.md) entry, before this is built.
+Separately, *it is not a second place to say something the bar already says* is not satisfied yet. [0008](../decisions/adrs/0008-notifications-are-part-of-the-desktop-shell.md) has been edited for the island and the edit is in the [CHANGELOG](../decisions/adrs/CHANGELOG.md) — the popups moved to the centre under the island rather than staying at the top right — but both surfaces still run, which is the comparison the first rule above describes. Retiring one of them is what closes this.

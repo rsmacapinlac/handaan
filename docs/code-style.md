@@ -74,7 +74,7 @@ Neovim's own Lua config no longer lives in this repository — it moved to the p
 
 ## QML
 
-Four-space indent, unanimous across all sixteen files, no tabs. `id: root` is the first line inside a root element, followed by property declarations, then children.
+Four-space indent, unanimous across all thirty files, no tabs. `id: root` is the first line inside a root element, followed by property declarations, then children.
 
 Imports go `QtQuick` first, then the repository's own modules:
 
