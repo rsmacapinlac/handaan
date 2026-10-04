@@ -27,9 +27,15 @@ set -euo pipefail
 APP_NAME="Todoist"
 APP_URL="https://app.todoist.com/app/"
 MANIFEST_URL="https://app.todoist.com/manifest.json"
-# Chromium derives a WM_CLASS from the URL otherwise, which is both unstable and
-# unusable in a Hyprland windowrule. Pin it so rules and StartupWMClass match.
+# Names the launcher and icon files. It is not the window's identity: Chromium
+# ignores --class when it runs natively on Wayland, so it can't be pinned.
 APP_CLASS="todoist"
+# What the window actually reports, which Chromium builds from the URL: host
+# and path joined by _, every / in the path made _, then the profile. So it changes if
+# APP_URL does, or if Chromium is ever pointed at a profile other than Default.
+# StartupWMClass has to name this for launchers -- and the island's app name --
+# to tie the window back to this entry.
+APP_ID="chrome-$(sed -E 's#^https?://##; s#/#__#; s#/#_#g' <<<"$APP_URL")-Default"
 
 APPS_DIR="$HOME/.local/share/applications"
 ICON_ROOT="$HOME/.local/share/icons/hicolor"
@@ -91,9 +97,9 @@ Type=Application
 Version=1.0
 Name=$APP_NAME
 Comment=$APP_NAME web app
-Exec=chromium --app=$APP_URL --class=$APP_CLASS
+Exec=chromium --app=$APP_URL
 Icon=$APP_CLASS
-StartupWMClass=$APP_CLASS
+StartupWMClass=$APP_ID
 StartupNotify=true
 Terminal=false
 Categories=Office;ProjectManagement;
@@ -110,7 +116,7 @@ $APP_NAME installed as a Chromium web app.
   launcher  $DESKTOP_FILE
   icon      $icon_dir/$APP_CLASS.png (${icon_size}px)
 
-Find it in rofi; it opens in its own window with app_id "$APP_CLASS", so you can
+Find it in rofi; it opens in its own window with app_id "$APP_ID", so you can
 target it from config/hypr/conf/rules.lua. Log in on first launch -- the session
 persists through the gnome-libsecret store Chromium is pinned to.
 
