@@ -17,7 +17,17 @@ QtObject {
     readonly property int fontSizeSmall: 11
 
     // ----------------------------------------------------------- dimensions
-    readonly property int barSize: 34
+    // A top bar's height. Not the height the content needs -- a card's two
+    // stacked lines measure 27px -- but that plus the air either side of it,
+    // because nothing insets a row on a top bar: WidgetRow takes this height
+    // whole and every widget centres inside it, so the margin above and below
+    // a card IS (barSize - content) / 2. At 44 that is about 8px each way.
+    //
+    // Raising it does not enlarge anything: the workspace pill is a fixed
+    // space(5.5) centred in its slot, and a card's lines are centred too, so
+    // this only ever buys clearance. Lowering it past the content is what
+    // clips, and the first thing to clip is a card's second line.
+    readonly property int barSize: 44
     // A side bar's thickness. Unlike barSize, which is the height a row of
     // widgets needs, this is a budget: the screen width given up to a vertical
     // bar, which the widgets in it divide between them. The workspace grid is
@@ -39,9 +49,13 @@ QtObject {
     // Gap between adjacent widgets in a bar section. Deliberately wide: with no
     // separator chrome in the bar, whitespace is the only thing grouping a
     // widget's own parts against its neighbours. It therefore has to be clearly
-    // larger than any spacing used *inside* a widget -- the clock's date-to-time
-    // gap is space(2) -- or adjacent widgets read as one run of glyphs.
-    readonly property int widgetSpacing: space(5)
+    // larger than any spacing used *inside* a widget -- the widest of those is
+    // barCardRowGap below -- or adjacent widgets read as one run of glyphs.
+    //
+    // It moves with that gap rather than independently: the two are a ratio,
+    // not two numbers. Widening the space between a card's icon and its text
+    // without widening this one closes the difference the rule depends on.
+    readonly property int widgetSpacing: space(6)
     // Inset from the bar's leading and trailing screen edges.
     readonly property int barPadding: space(3)
     // The same inset along a side bar's short axis, where the budget above is
@@ -63,6 +77,60 @@ QtObject {
     // in it.
     readonly property int barCardRail: space(6)
     readonly property int barCardGap: space(1.5)
+    // The same icon-to-text gap on a top bar. A separate number because this
+    // one answers to legibility alone, where barCardGap above is also a term
+    // in the barCardText arithmetic -- widening that one narrows the side
+    // bar's text column by the same amount.
+    readonly property int barCardRowGap: space(2.5)
+
+    // The island's cut-out. A ceiling on the text rather than a width for the
+    // shape: the shape is as wide as its content, and this stops one long
+    // window title from pushing the bar's centre around as focus moves.
+    readonly property int islandCutoutText: space(40)
+
+    // The empty cut-out's width. With nothing in either section the shape is
+    // still the handle, and a handle has to be big enough to hit.
+    readonly property int islandCutoutMinWidth: space(18)
+
+    // A notification card's width wherever it is read. The popup surface is
+    // this wide and its cards fill it, and the island's notification column is
+    // sized from it rather than carrying a second copy of the number: one
+    // notification should not be a different width for being read in a
+    // different place. See Ui/NotificationPopups.qml.
+    readonly property int notificationWidth: 380
+
+    // The island's expanded half, below the cut-out strip. Its width is the two
+    // columns it has to hold plus the margins around them -- the player on the
+    // left, a notification card on the right -- so what goes in it decides how
+    // wide it is, rather than a share of the screen or a number that looked
+    // right on the monitor it was chosen on.
+    //
+    // Fixed, and that is the point. The share of the screen this replaced made
+    // the island 614px on the laptop panel and 1024px on the external, so one
+    // surface was two sizes depending on where it opened. A fixed width is
+    // learned once.
+    //
+    // Declared left to right, as the columns are drawn.
+    //
+    // Squarer than it was. The column's height is set by its content and does
+    // not move with its width -- the art is islandArt, and the three text lines
+    // elide rather than wrap -- so it measures about 105 whatever this says,
+    // and 280 drew a strip nearly three times as wide as it was tall. At 200
+    // the art keeps 80, its gap 10, and the artist and album line has 110 left,
+    // which is about eleven monospace characters before eliding. Below roughly
+    // 180 that line stops saying anything and the art has to stack above the
+    // text instead of sitting beside it.
+    readonly property int islandPlayerColumn: 200
+    readonly property int islandColumnGap: space(3)
+    readonly property int islandNotificationColumn: notificationWidth + space(3)
+    readonly property int islandWidth: islandPlayerColumn + islandColumnGap + islandNotificationColumn + space(3) * 2
+    readonly property int islandHeight: space(34)
+    readonly property int islandArt: space(20)
+
+    // How far down the screen the island may reach when it is holding every
+    // notification. A ceiling rather than a size: it is as tall as it needs to
+    // be until it would be most of the screen, and then it scrolls.
+    readonly property int islandMaxStack: space(140)
     readonly property int barCardWidth: barSideSize - barSidePadding * 2
     // What is left for text: the ceiling every line has to fit, which is what
     // makes "maximum two lines" a rule the card can actually enforce rather

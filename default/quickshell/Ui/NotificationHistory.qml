@@ -1,12 +1,15 @@
 // The notification history, and the do-not-disturb switch.
 //
-// A view onto qs.Commons.NotificationCenter. Summoned by Super+Shift+N, the
-// bar's bell, or `handaan notifications`, and dismissed like the shell's other
-// dialogs: Escape, or a click anywhere off the panel.
+// A view onto qs.Commons.NotificationCenter. Summoned by Super+Shift+N or
+// `handaan notifications`, and dismissed like the shell's other dialogs:
+// Escape, or a click anywhere off the panel. Clicking the island expands its
+// own copy of the same list; this panel is the keyboard way in.
 //
-// A panel at the top right, under where the popups appear, so opening it reads
-// as the popups staying put and the ones already gone coming back. On the
-// focused monitor, for the reason the popups are.
+// A panel at the top right, under the bar, on the focused monitor. It used to
+// sit under the popups, so opening it read as the popups staying put and the
+// ones already gone coming back; the popups moved to the centre when the
+// island took notifications, so that reading belongs to the island's expansion
+// now and this is a panel of its own.
 //
 // Every card here is the popup it once was, with its actions still live while
 // the notification is kept. Closing a card here dismisses it for good, which is
@@ -15,7 +18,8 @@
 //
 // Opening it is reading it -- NotificationCenter marks everything seen -- so
 // there is no per-card "mark read" to manage. Reading is not dealing with,
-// though: the bell stays until a card is closed here or the history cleared.
+// though: the island's backlog badge stays until a card is closed here or the
+// history cleared.
 
 import QtQuick
 import QtQuick.Layouts

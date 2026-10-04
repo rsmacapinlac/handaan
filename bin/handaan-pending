@@ -6,6 +6,7 @@
 #
 #   apps                 apps under ~/.config/handaan/apps not installed yet
 #   arch                 package updates, repo (checkupdates) and AUR (yay -Qua)
+#   arch-security        of those, the ones carrying a published security fix
 #   handaan-commits      commits on origin/main this checkout does not have
 #   handaan-migrations   migrations this machine has not applied
 #
@@ -28,7 +29,7 @@ fetch=0
 case "${1:-}" in
     --fetch) fetch=1 ;;
     -h|--help)
-        sed -n '3,22p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '3,23p' "$0" | sed 's/^# \{0,1\}//'
         exit 0
         ;;
     "") ;;
@@ -70,12 +71,58 @@ fi
 # root and cannot leave the real one half-synced the way `pacman -Sy` does. It
 # exits 2 with no output when there is nothing to upgrade, which is why the
 # exit status is ignored and the lines are counted instead.
+repo_pending=""
 if command -v checkupdates >/dev/null 2>&1; then
-    repo=$(checkupdates 2>/dev/null | count_lines)
+    # The names as well as the count: the security block below has to know
+    # which of these updates a mirror is actually offering. Sorted under the C
+    # locale because `comm` there compares byte by byte and disagrees with a
+    # UTF-8 `sort` otherwise -- silently, by reporting nothing in common.
+    repo_pending=$(checkupdates 2>/dev/null | awk '{print $1}' | LC_ALL=C sort -u)
+    repo=$(count_lines <<<"$repo_pending")
     aur=$(yay -Qua 2>/dev/null | count_lines)
     emit arch "$(( repo + aur ))"
 else
     emit arch '?'
+fi
+
+# ---------------------------------------------------------- arch-security
+# Which of the updates above carry a published security fix. Arch ships no
+# security repository, so nothing local tells them apart; arch-audit is the
+# Arch Security Team's own tool over security.archlinux.org.
+#
+# `-u` is what makes this a count of updates rather than of vulnerabilities:
+# it keeps only AVGs whose status is Fixed. Without it the tool also reports
+# vulnerabilities with no fix published, which cannot be acted on and would
+# never clear.
+#
+# Gated on checkupdates as well, which arch-audit deliberately does not do --
+# it reports a fix the tracker has published whether or not a mirror carries
+# it yet. A security update that cannot be installed is one this count must
+# not claim, because acting on it would not clear it.
+#
+# Two things this cannot see, both worth knowing before trusting a zero: the
+# AUR is outside the tracker, and a versioned package name (electron42) never
+# matches the tracker's unversioned one (electron).
+#
+# Network, so it sits behind --fetch with the git fetch above. A bare run
+# reports unknown rather than zero, which is the same contract as the rest of
+# this script.
+if (( fetch )) && command -v arch-audit >/dev/null 2>&1 && [[ -n $repo_pending ]]; then
+    if audit=$(arch-audit -u --json 2>/dev/null); then
+        emit arch-security "$(
+            jq -r '.[].packages[]?' <<<"$audit" | LC_ALL=C sort -u |
+                LC_ALL=C comm -12 - <(printf '%s\n' "$repo_pending") | count_lines
+        )"
+    else
+        emit arch-security '?'
+    fi
+elif (( fetch )) && command -v arch-audit >/dev/null 2>&1; then
+    # No repo updates pending, so none of them can be a security update. That
+    # is a real zero rather than an unchecked one, and saying so keeps a fully
+    # up-to-date machine from reporting a blind check.
+    emit arch-security 0
+else
+    emit arch-security '?'
 fi
 
 # ---------------------------------------------------------------- handaan

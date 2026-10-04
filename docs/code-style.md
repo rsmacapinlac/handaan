@@ -1,6 +1,6 @@
 # Code style
 
-What code in this repository should look like. Only shape: architecture and traps live elsewhere — decisions in [`decisions/adrs/`](decisions/adrs), widget design in [Quickshell widget design](quickshell-widgets.md), and the rules behind all of it in [Standards](standards/README.md). A rule earns a place here by describing what the code already does, so most of this was measured rather than chosen.
+What code in this repository should look like. Only shape: architecture and traps live elsewhere — decisions in [`decisions/adrs/`](decisions/adrs), widget design in [Widgets](widgets.md), and the rules behind all of it in [Standards](standards/README.md). A rule earns a place here by describing what the code already does, so most of this was measured rather than chosen.
 
 ## Match the file you are in
 
@@ -74,7 +74,7 @@ Neovim's own Lua config no longer lives in this repository — it moved to the p
 
 ## QML
 
-Four-space indent, unanimous across all sixteen files, no tabs. `id: root` is the first line inside a root element, followed by property declarations, then children.
+Four-space indent, unanimous across all thirty files, no tabs. `id: root` is the first line inside a root element, followed by property declarations, then children.
 
 Imports go `QtQuick` first, then the repository's own modules:
 
@@ -83,7 +83,7 @@ import QtQuick
 import qs.Commons
 ```
 
-Widgets carry a file-header comment stating the question the widget answers before any code — see the top of `modules/Battery.qml`, which names its two questions and explains what was deliberately left out. That header is the widget's design record, and [Quickshell widget design](quickshell-widgets.md) governs what belongs in it.
+Widgets carry a file-header comment stating the question the widget answers before any code — see the top of `modules/Battery.qml`, which names its two questions and explains what was deliberately left out. That header is the widget's design record, and [Widgets](widgets.md) governs what belongs in it.
 
 ## hyprlang
 

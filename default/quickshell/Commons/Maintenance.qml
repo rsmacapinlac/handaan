@@ -38,6 +38,22 @@ Singleton {
     property int handaanCommits: -1
     property int handaanMigrations: -1
 
+    // A subset of `arch`, not another source: the count of pending package
+    // updates that carry a published security fix. handaan-pending derives it
+    // with arch-audit, because Arch ships no security repository and nothing
+    // on the machine separates a security update from any other one.
+    //
+    // Subset is the whole reason this is not summed into `updates` below.
+    // Adding it would count the same package twice and inflate every number
+    // the bar shows -- three security updates among sixty-seven would report
+    // seventy waiting.
+    //
+    // It is -1 far more often than the other sources, and legitimately so:
+    // handaan-pending reports it unknown unless --fetch was passed AND
+    // arch-audit is installed. The background poller always fetches, so in the
+    // bar an unknown here means the package is missing.
+    property int archSecurity: -1
+
     // True once a poll has completed, so the widget can tell "nothing waiting"
     // from "nothing measured yet" during the seconds after login.
     property bool polled: false
@@ -123,6 +139,7 @@ Singleton {
                 return "not polled yet";
             return "apps=" + root.apps
                 + " arch=" + root.arch
+                + " arch-security=" + root.archSecurity
                 + " handaan-commits=" + root.handaanCommits
                 + " handaan-migrations=" + root.handaanMigrations
                 + " updates=" + root.updates
@@ -144,6 +161,7 @@ Singleton {
                 var next = {
                     "apps": -1,
                     "arch": -1,
+                    "arch-security": -1,
                     "handaan-commits": -1,
                     "handaan-migrations": -1
                 };
@@ -165,6 +183,7 @@ Singleton {
 
                 root.apps = next["apps"];
                 root.arch = next["arch"];
+                root.archSecurity = next["arch-security"];
                 root.handaanCommits = next["handaan-commits"];
                 root.handaanMigrations = next["handaan-migrations"];
                 root.polled = true;

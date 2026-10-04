@@ -1,49 +1,9 @@
 // Battery.
 //
-// Two questions, per docs/quickshell-widgets.md:
-//   1. Do I need to plug in?
-//   2. Am I gaining charge, holding, or running down?
-//
-// One channel per question, so neither answer has to be read out of the
-// other. Fill length and colour answer the first; the glyph answers the
-// second, and sits outside the battery body so it never competes with the
-// colour that carries severity.
-//
-// The second question used to be "am I on mains", answered by the presence of
-// a bolt. That conflated two situations worth telling apart: a charger that
-// is filling the battery, and one that is connected but delivering nothing.
-// The second is common -- an underpowered supply, a cable that negotiated a
-// low USB-C contract, a threshold, a firmware inhibit -- and it looks exactly
-// like charging if the only signal is "something is plugged in", while the
-// battery quietly drains. So the glyph now distinguishes them: a green bolt
-// means gaining, a muted plug means connected but static. The widget does not
-// try to say *which* cause; from here they are indistinguishable, and the
-// glyph reports what is observable.
-//
-// Whether there is a numeral depends on which bar this is, and it is the one
-// thing here decided by room rather than by the question.
-//
-// On a top bar there is none. Fill length and the colour ladder already answer
-// "do I need to plug in", a digit beside them is a fourth thing to parse that
-// changes no decision the shape did not already prompt, and dropping it is
-// what bought the width the body spends on fill range -- which is what makes
-// the shape answer legible at all.
-//
-// A side bar has no such trade to make. The body is 30px in a bar over three
-// times that wide, so the numeral costs width nothing else was going to use.
-// And 40% and 25% are both peach while only one of them sends you looking for
-// a cable: that precision sits on hover elsewhere because hover is usually the
-// only place there is for it, not because it belongs behind the pointer.
-//
-// So the boundary between the two layers moves and the rule does not. Where
-// the numeral is on the bar, the tooltip stops restating it and leads with the
-// estimate instead; hover still only ever sharpens what the shape already
-// said, and nothing below the pointer is required to read the widget either
-// way. See docs/quickshell-widgets.md, which records the same split.
-//
-// Nothing is clickable. There is no obvious action for "the battery is at
-// 40%", and the doc's rule is that a widget without one does not need a click
-// handler. Power actions live behind the keyboard, not in the bar.
+// The design record is docs/quickshell/widgets/battery.md -- the two questions
+// this answers, the channel each one gets, why the glyph distinguishes gaining
+// from merely connected, and why the numeral comes and goes with the bar's
+// edge. Only the implementation reasoning is here.
 //
 // The service connects lazily: UPower's fields read empty until a QML binding
 // reads them, because the read is what opens the D-Bus connection. Everything
@@ -62,39 +22,39 @@ BarWidget {
     readonly property var device: UPower.displayDevice
 
     // A desktop and an LXC container both have a displayDevice; neither has a
-    // battery behind it. Drawing an empty husk there would answer no question,
-    // so the widget leaves the row entirely.
+    // battery behind it.
     readonly property bool present: device !== null && device.ready && device.isLaptopBattery && device.isPresent
 
     // percentage is a 0..1 fraction, not 0..100.
     readonly property real charge: device !== null ? Math.max(0, Math.min(1, device.percentage)) : 0
 
-    // The system-wide flag, rather than the device's charge state. Q2 asks
-    // whether mains is attached, and onBattery answers exactly that -- where
-    // the device state splits the same fact across Charging, FullyCharged and
-    // PendingCharge, three values to distinguish for one binary answer.
     // Not named `state`: Item already has one, and it is a string.
     readonly property int chargeState: device !== null ? device.state : UPowerDeviceState.Unknown
 
+    // The system-wide flag rather than the device's charge state, which splits
+    // the same fact across Charging, FullyCharged and PendingCharge.
     readonly property bool onMains: device !== null && !UPower.onBattery
 
-    // Actually taking charge, as opposed to merely connected. FullyCharged and
-    // PendingCharge are both "connected, gaining nothing" and read as the plug.
+    // The four states. Charging is actually gaining; fullyCharged is done;
+    // pluggedIdle is connected and gaining nothing; discharging is !onMains.
     readonly property bool charging: root.chargeState === UPowerDeviceState.Charging
+    readonly property bool fullyCharged: root.chargeState === UPowerDeviceState.FullyCharged || (root.onMains && root.charge >= 0.995)
+    readonly property bool pluggedIdle: root.onMains && !root.charging && !root.fullyCharged
 
     // Carried over from the waybar config this replaces, so the levels that
     // used to mean something still do.
     readonly property real warnLevel: setting("warnLevel", 0.30)
     readonly property real criticalLevel: setting("criticalLevel", 0.15)
 
-    // Severity only applies on battery. Plugged in at 10% is recovering, not
-    // failing, and colouring it red would train the red to be ignored.
+    // Severity only applies on battery, which is what keeps it from ever
+    // colliding with the two green states below: on mains there is nothing to
+    // act on, so the colour is free to answer the other question.
     readonly property bool low: !onMains && charge <= warnLevel
     readonly property bool critical: !onMains && charge <= criticalLevel
 
-    // Seconds until the battery is flat, or until it is full on mains. UPower
-    // reports 0 when it has no estimate yet -- just after a plug event, or
-    // while the draw rate is still settling after a load change.
+    // Seconds until flat, or until full on mains. UPower reports 0 when it has
+    // no estimate yet -- just after a plug event, or while the draw rate is
+    // still settling after a load change.
     readonly property real secondsLeft: {
         if (device === null)
             return 0;
@@ -104,21 +64,12 @@ BarWidget {
     readonly property string estimate: {
         if (device === null)
             return "";
-        if (root.chargeState === UPowerDeviceState.FullyCharged || (root.onMains && root.charge >= 0.995))
+        if (root.fullyCharged)
             return "Fully charged";
-        // Connected but gaining nothing: rate and both time estimates sit at
-        // 0 and stay there. Falling through to "Estimating" would promise a
+        // Connected but gaining nothing: rate and both time estimates sit at 0
+        // and stay there. Falling through to "Estimating" would promise a
         // figure that is never coming, which reads as working and is a lie.
-        //
-        // No attempt is made to say why. A charge threshold, a firmware
-        // inhibit and a supply too weak to charge are indistinguishable from
-        // here -- all three are pending-charge at a zero rate -- so the line
-        // states the observable fact and leaves the diagnosis to the person.
-        //
-        // The wording is about charging rather than about mains, because the
-        // glyph has already said something is plugged in; restating it would
-        // spend a line on what the glance layer answered.
-        if (root.chargeState === UPowerDeviceState.PendingCharge)
+        if (root.pluggedIdle && root.secondsLeft <= 0)
             return "Not charging";
         if (root.secondsLeft <= 0)
             return "Estimating\u2026";
@@ -136,30 +87,45 @@ BarWidget {
         return rest + "m";
     }
 
-    // Rounded to the whole point. 68.4% and 68% prompt the same decision, and
-    // a decimal here would be the false precision formatDuration already
-    // refuses on the figure beside it.
+    // Rounded to the whole point: 68.4% and 68% prompt the same decision.
     readonly property string percentText: Math.round(root.charge * 100) + "%"
 
+    // Severity first, state second. The record has the ordering: colour says
+    // what the battery is doing until there is something to do about it, and
+    // then it says that instead.
     readonly property color tint: {
         if (root.critical)
             return Theme.critical;
         if (root.low)
             return Theme.warning;
+        if (root.charging || root.fullyCharged)
+            return Theme.good;
         return Theme.barTextMuted;
     }
 
+    // Nerd Font U+F0E7 bolt, U+F1E6 plug. Escaped rather than written
+    // literally -- see modules/Updates.qml for what losing a private-use
+    // codepoint to a rewrite cost once already. Discharging has no glyph:
+    // nothing is attached, and an icon for "no supply" would be one.
+    readonly property string stateGlyph: {
+        if (root.charging)
+            return "\uf0e7";
+        if (root.onMains)
+            return "\uf1e6";
+        return "";
+    }
+
+    // What to do about it, or nothing. The card drops an empty line entirely,
+    // so a battery with no action on it is a single-line card.
+    readonly property string advice: {
+        if (root.critical)
+            return "Plug in now";
+        if (root.low)
+            return "Plug in";
+        return "";
+    }
+
     // ------------------------------------------------------------- geometry
-    // On a top bar, wider than a battery glyph would be, because fill length
-    // is the only thing encoding how much is left: every pixel of body is
-    // resolution on the widget's primary question.
-    //
-    // On a side bar it is the card's icon rail instead, which is narrower --
-    // and that is the same argument rather than an exception to it. Fill
-    // length is no longer the only encoding there: the numeral is beside it,
-    // so the pixels the body gives up are pixels whose resolution is now
-    // carried in a form that does not need them. The rail is sized from this
-    // body in the first place, so the two cannot drift apart.
     readonly property int bodyWidth: root.vertical ? Style.barCardRail - root.capWidth : Style.space(7)
     readonly property int bodyHeight: Style.space(3.5)
     readonly property int capWidth: Style.space(0.5)
@@ -169,35 +135,13 @@ BarWidget {
     active: present
     implicitWidth: card.implicitWidth
 
-    // Measured rather than assumed: the two glyphs are not the same advance
-    // width in this font (9px against 8px), so the slot takes the larger.
-    TextMetrics {
-        id: boltMetrics
-        font.family: Style.fontFamily
-        font.pixelSize: Style.fontSizeSmall
-        text: ""
-    }
-
-    TextMetrics {
-        id: plugMetrics
-        font.family: Style.fontFamily
-        font.pixelSize: Style.fontSizeSmall
-        text: ""
-    }
-
-    // Detail on demand: the exact charge, and how long it buys you. Both are
-    // redundant -- the fill length and the bolt already answered the widget's
-    // two questions -- which is the only reason they are allowed here.
-    //
-    // On a side bar the charge is on the bar, so a tooltip opening with it
-    // would restate what the pointer is sitting next to. The estimate takes
-    // the top line there instead: the same question still, still sharper than
-    // the shape, and the only half of the pair the glance layer cannot give.
+    // The percentage is on the bar in every state now, so the tooltip leads
+    // with the estimate: restating what the pointer is sitting next to would
+    // spend the hover layer on nothing.
     Tooltip {
         anchorItem: root
         open: hover.containsMouse
-        text: root.vertical ? root.estimate : root.percentText
-        detail: root.vertical ? "" : root.estimate
+        text: root.estimate
     }
 
     // Hover only. There is no click action, and swallowing button presses over
@@ -209,71 +153,24 @@ BarWidget {
         acceptedButtons: Qt.NoButton
     }
 
-    // Bolt or plug, as the card's accessory rather than as a column of the
-    // row. Null when there is no supply attached, which is what collapses the
-    // slot: a Loader with no component takes no width.
-    //
-    // That collapse is the same trade the row made before the card, and it
-    // still costs the same thing -- the glyph appearing on a dock shifts what
-    // is beside it -- judged against a permanently reserved slot leaving a
-    // hole in the card in every state but one. What it did lose is the fade:
-    // the glyph used to cross-fade in and now it is created and destroyed
-    // with the supply. Worth restoring if the appearance ever reads as a jump
-    // rather than as a plug going in.
-    Component {
-        id: chargeGlyph
-
-        Item {
-            implicitWidth: Math.max(boltMetrics.width, plugMetrics.width)
-            implicitHeight: indicator.implicitHeight
-
-            Text {
-                id: indicator
-
-                anchors.centerIn: parent
-                // Nerd Font U+F0E7 bolt when gaining charge, U+F1E6 plug when
-                // merely connected. Escaped rather than written literally --
-                // see modules/Updates.qml for what losing a private-use
-                // codepoint to a rewrite cost once already.
-                text: root.charging ? "\uf0e7" : "\uf1e6"
-                // Green is reserved for the good case, so a plug cannot be
-                // mistaken for one at a glance; connected-but-static is a
-                // neutral fact, not a reassurance. This is why the glyph is an
-                // accessory item rather than part of the line's string: one
-                // Text cannot be green while the numeral beside it is on the
-                // severity ladder.
-                color: root.charging ? Theme.good : Theme.barTextMuted
-                font.family: Style.fontFamily
-                font.pixelSize: Style.fontSizeSmall
-
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Style.animationFast
-                    }
-                }
-            }
-        }
-    }
-
     BarCard {
         id: card
 
         anchors.fill: parent
         vertical: root.vertical
-        // The numeral only exists on a side bar. See the header for why the
-        // top bar keeps the shape alone.
-        lineOne: root.vertical ? root.percentText : ""
-        // Tinted with the body rather than given a colour of its own, so it
-        // joins the existing ladder instead of opening a fourth channel: the
-        // numeral is the same answer at higher resolution and should look
-        // like it.
-        lineOneColor: root.tint
-        accessory: root.present && root.onMains ? chargeGlyph : null
 
-        // The icon. Centred in the card's rail, which is sized from it, and
-        // deliberately outside the line beside it: the shape pulses and the
-        // figure holds still, so the motion reads as one thing moving rather
-        // than the whole card breathing.
+        lineOne: root.percentText
+        // Plain. The icon owns colour now, and a numeral repeating it would be
+        // the same channel twice rather than a second reading.
+        lineOneColor: root.foreground
+        lineTwo: root.advice
+        // Only ever set while low or critical, so this is always the severity
+        // colour and never the state one.
+        lineTwoColor: root.tint
+
+        // The icon, centred in the card's rail, which is sized from it. The
+        // shape pulses and the numeral holds still, so the motion reads as one
+        // thing moving rather than the whole card breathing.
         Item {
             id: graphic
 
@@ -281,17 +178,9 @@ BarWidget {
             width: root.bodyWidth + root.capWidth
             height: root.bodyHeight
 
-            // Motion means "this needs a response", and it stops when the
-            // condition clears. Critical *and* discharging is the only state
-            // here that qualifies: on mains at 10% the battery is recovering
-            // and needs nothing from you, so it stays still. The same cycle
-            // and amplitude as the workspace pulse, so the bar has one
-            // vocabulary for urgency rather than two.
-            //
-            // An urgent workspace could in principle pulse at the same moment.
-            // Both are genuinely "needs a response" and neither is worth
-            // demoting to avoid a collision that requires a window shouting
-            // while the battery is nearly flat.
+            // Critical and discharging only, on the bar's one 620ms cycle for
+            // urgency. The record has why that is the single state here that
+            // earns the motion channel, and what it accepts by sharing it.
             SequentialAnimation on scale {
                 running: root.critical
                 loops: Animation.Infinite
@@ -334,12 +223,18 @@ BarWidget {
                     anchors.leftMargin: root.fillInset
                     anchors.verticalCenter: parent.verticalCenter
                     height: parent.height - root.fillInset * 2
-                    // Floored so a nearly-dead battery still draws a sliver:
-                    // an empty outline reads as "no data", which is a
-                    // different and much less alarming thing than "no charge".
+                    // Floored so a nearly-flat battery still draws a sliver: an
+                    // empty outline reads as "no data", which is a different and
+                    // much less alarming thing than "no charge".
                     width: Math.max(Style.space(0.5), (parent.width - root.fillInset * 2) * root.charge)
                     radius: Style.space(0.5)
                     color: root.tint
+                    // Drops back to a band whenever a glyph is sitting on it,
+                    // which is exactly when the glyph is the answer and the
+                    // level is context: on mains the numeral has the figure.
+                    // Discharging carries no glyph and keeps the solid fill,
+                    // which is when the level is what you are reading.
+                    opacity: root.stateGlyph !== "" ? 0.4 : 1.0
 
                     Behavior on width {
                         NumberAnimation {
@@ -347,6 +242,31 @@ BarWidget {
                             easing.type: Easing.OutCubic
                         }
                     }
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Style.animationFast
+                        }
+                    }
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Style.animationFast
+                        }
+                    }
+                }
+
+                // Inside the body rather than beside it, so the icon carries
+                // the state instead of introducing it. Drawn at full tint over
+                // the dimmed fill, which is what keeps it legible whether the
+                // battery is nearly empty or nearly full.
+                Text {
+                    id: stateIcon
+
+                    anchors.centerIn: parent
+                    text: root.stateGlyph
+                    color: root.tint
+                    font.family: Style.fontFamily
+                    font.pixelSize: Math.round(root.bodyHeight * 0.72)
+
                     Behavior on color {
                         ColorAnimation {
                             duration: Style.animationFast
