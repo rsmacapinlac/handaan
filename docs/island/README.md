@@ -26,7 +26,7 @@ It keeps the bell's own rules, which were right: waiting means **kept, not unsee
 The island is either a **cut out** or **expanded**, and expanding is the cut-out growing rather than something new appearing beside it.
 
 - **Cut out** is the small shape: a notch in the bar, carrying what fits at that size.
-- **Expanded** is that same shape grown, with a standard window inside it showing the content in full. Its width is a share of the screen it opened on rather than a pixel count -- `Style.islandWidthFraction`, 40% today -- so the island is the same proportion of a 1536-wide laptop panel as of a 2560-wide external one. A fixed number was a quarter of the one and a seventh of the other, which read as two different surfaces.
+- **Expanded** is that same shape grown, with a standard window inside it showing the content in full. It holds two columns -- the player on the left, what is waiting on the right -- and its width is those two plus the margins around them, `Style.islandWidth`. The width is fixed, so the island is one size on every monitor and is learned once; a share of the screen was tried first and made it 614px on a 1536-wide laptop panel against 1024px on a 2560-wide external, which is one surface at two sizes. The notification column is sized from a notification card's own width, so a card is not a different width for being read here.
 
 **Expansion is on click, never on hover or arrival.** Something arriving takes the cut-out; it does not open the island by itself.
 

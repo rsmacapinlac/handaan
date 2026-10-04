@@ -59,12 +59,13 @@ Item {
     // docs/island/README.md.
     property var screen: null
 
-    // The expanded shape's width: Style.islandWidthFraction of this screen.
-    // Logical pixels, which is the space every other size here is in -- the
-    // bar's own layer surface measures 1536 on a 1.25-scaled 1920 panel, so
-    // this is a share of what is actually drawn rather than of the panel's
-    // mode.
-    readonly property int expandedWidth: Math.round((root.screen ? root.screen.width : 0) * Style.islandWidthFraction)
+    // The expanded shape's width: Style.islandWidth, which its two columns
+    // add up to. The screen is a ceiling rather than the source -- the width is
+    // the same on every monitor, and this only stops an island being wider
+    // than a display narrower than any here. Logical pixels, the space every
+    // other size is in: the bar's own layer surface measures 1536 on a
+    // 1.25-scaled 1920 panel.
+    readonly property int expandedWidth: root.screen ? Math.min(Style.islandWidth, root.screen.width - Style.space(3) * 2) : Style.islandWidth
 
     // How much taller than the bar the window has to be to hold this. Read by
     // Bar.qml, which grows the window by it while keeping the reserved strip
@@ -265,10 +266,7 @@ Item {
 
         // Leaves the bar's own surface visible around it, so the shape reads
         // as cut into the bar rather than laid on top of it.
-        // Falls back to the cut-out's own width until the bar has injected a
-        // screen, rather than collapsing to zero on the frames before it
-        // lands. Never seen, since the island starts closed.
-        implicitWidth: root.expanded && root.expandedWidth > 0 ? root.expandedWidth : cutout.implicitWidth + Style.space(3) * 2
+        implicitWidth: root.expanded ? root.expandedWidth : cutout.implicitWidth + Style.space(3) * 2
         implicitHeight: root.cutoutHeight + (root.expanded ? panel.implicitHeight + Style.space(3) : 0)
         width: implicitWidth
         height: implicitHeight
@@ -389,128 +387,165 @@ Item {
                 }
             }
 
-            // One panel holding everything the island has, rather than a
-            // choice between occupants. A backlog must not hide the media
-            // controls: the cut-out shows one thing at a time because it has
-            // room for one thing, but expanding is where you came to find
-            // what else there was.
-            ColumnLayout {
+            // Two columns: the player on the left, what is waiting on the
+            // right. One panel holding everything the island has rather than a
+            // choice between occupants -- a backlog must not hide the media
+            // controls, because the cut-out shows one thing at a time only for
+            // want of room, and expanding is where you came to find what else
+            // there was.
+            //
+            // Side by side rather than stacked, which is also where the shape's
+            // width comes from: see Style.islandWidth. The notification column
+            // scrolls, and a player underneath a scrolling list is a set of
+            // controls that moves whenever the list above it changes height. It
+            // is also the column that takes any slack, so the player keeps its
+            // size and the cards narrow instead.
+            RowLayout {
                 id: panel
 
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: parent.top
-                spacing: Style.space(2)
+                spacing: Style.islandColumnGap
 
-                Loader {
-                    active: root.hasMedia
-                    visible: active
-                    sourceComponent: mediaPanel
-                    Layout.fillWidth: true
-                }
-
-                // The stack. Newest first, the same card the popup was --
-                // "the same card as a popup and in the history" is the
-                // notification's own rule, and this is a third place it is
-                // read rather than a third way of drawing it.
-                ListView {
-                    id: list
-
-                    model: root.stacked
+                // What is playing. Keeps its width whether or not anything is,
+                // so the island does not change shape when a track starts.
+                ColumnLayout {
                     spacing: Style.space(2)
-                    clip: true
-                    boundsBehavior: Flickable.StopAtBounds
-                    visible: root.stacked.length > 0
+                    Layout.preferredWidth: Style.islandPlayerColumn
+                    Layout.alignment: Qt.AlignTop
 
-                    // Measure only the first four cards independently of the
-                    // virtualized delegates, so scrolling cannot resize the panel.
-                    implicitHeight: Math.min(preview.implicitHeight, Style.islandMaxStack)
-
-                    Column {
-                        id: preview
-
-                        visible: false
-                        width: list.width - Style.space(3)
-                        spacing: list.spacing
-
-                        Repeater {
-                            model: root.stacked.slice(0, 4)
-
-                            delegate: NotificationCard {
-                                required property var modelData
-
-                                width: preview.width
-                                record: modelData
-                                bodyLines: 4
-                            }
-                        }
-                    }
-
-                    Controls.ScrollBar.vertical: Controls.ScrollBar {
-                        id: scrollBar
-
-                        policy: Controls.ScrollBar.AsNeeded
-                        visible: list.contentHeight > list.height
-                        contentItem: Rectangle {
-                            implicitWidth: Style.space(1)
-                            radius: width / 2
-                            color: scrollBar.pressed ? Theme.active : Theme.barTextMuted
-                        }
-                        background: Item {}
-                    }
-
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: implicitHeight
-
-                    delegate: NotificationCard {
-                        id: card
-
-                        required property var modelData
-
-                        width: list.width - Style.space(3)
-                        record: card.modelData
-                        bodyLines: 4
-
-                        onCloseClicked: NotificationCenter.dismiss(card.modelData.id)
-                        onActionClicked: identifier => NotificationCenter.activate(card.modelData.id, identifier)
-                        onActivated: NotificationCenter.activate(card.modelData.id, "")
-                    }
-                }
-
-                // What the history panel carried, because the island is that
-                // panel now: the switch for whether you will be told, and the
-                // way to be done with all of it at once.
-                RowLayout {
-                    spacing: Style.space(2)
-                    Layout.fillWidth: true
-
-                    IslandChip {
-                        label: (root.quiet ? "\uf1f6" : "\uf0f3") + "  Do not disturb"
-                        on: root.quiet
-                        onActivated: NotificationCenter.setDoNotDisturb(!root.quiet)
-                    }
-
-                    Item {
+                    Loader {
+                        active: root.hasMedia
+                        visible: active
+                        sourceComponent: mediaPanel
                         Layout.fillWidth: true
                     }
 
-                    IslandChip {
-                        visible: NotificationCenter.history.length > 0
-                        label: "Clear all"
-                        onActivated: NotificationCenter.clearAll()
+                    // Said rather than left blank, for the reason the line
+                    // opposite is: the column holds its width either way, so the
+                    // space is there whatever happens and naming it beats a void.
+                    Text {
+                        visible: !root.hasMedia
+                        text: "Nothing playing."
+                        color: Theme.barTextMuted
+                        font.family: Style.fontFamily
+                        font.pixelSize: Style.fontSizeSmall
+                        Layout.alignment: Qt.AlignHCenter
                     }
                 }
+                // What is waiting, and the two controls that act on all of it.
+                // This column takes the slack, so a display too narrow for the
+                // stated width narrows the cards rather than the player.
+                ColumnLayout {
+                    spacing: Style.space(2)
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: Style.islandNotificationColumn
+                    Layout.alignment: Qt.AlignTop
 
-                // Said rather than left as an empty panel: do-not-disturb can
-                // hold the island open with nothing in it, and that is the one
-                // state you must not forget you are in.
-                Text {
-                    visible: NotificationCenter.history.length === 0
-                    text: root.quiet ? "Nothing waiting. Do not disturb is on." : "Nothing waiting."
-                    color: Theme.barTextMuted
-                    font.family: Style.fontFamily
-                    font.pixelSize: Style.fontSizeSmall
-                    Layout.alignment: Qt.AlignHCenter
+                    // The stack. Newest first, the same card the popup was --
+                    // "the same card as a popup and in the history" is the
+                    // notification's own rule, and this is a third place it is
+                    // read rather than a third way of drawing it.
+                    ListView {
+                        id: list
+
+                        model: root.stacked
+                        spacing: Style.space(2)
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
+                        visible: root.stacked.length > 0
+
+                        // Measure only the first four cards independently of the
+                        // virtualized delegates, so scrolling cannot resize the panel.
+                        implicitHeight: Math.min(preview.implicitHeight, Style.islandMaxStack)
+
+                        Column {
+                            id: preview
+
+                            visible: false
+                            width: list.width - Style.space(3)
+                            spacing: list.spacing
+
+                            Repeater {
+                                model: root.stacked.slice(0, 4)
+
+                                delegate: NotificationCard {
+                                    required property var modelData
+
+                                    width: preview.width
+                                    record: modelData
+                                    bodyLines: 4
+                                }
+                            }
+                        }
+
+                        Controls.ScrollBar.vertical: Controls.ScrollBar {
+                            id: scrollBar
+
+                            policy: Controls.ScrollBar.AsNeeded
+                            visible: list.contentHeight > list.height
+                            contentItem: Rectangle {
+                                implicitWidth: Style.space(1)
+                                radius: width / 2
+                                color: scrollBar.pressed ? Theme.active : Theme.barTextMuted
+                            }
+                            background: Item {}
+                        }
+
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: implicitHeight
+
+                        delegate: NotificationCard {
+                            id: card
+
+                            required property var modelData
+
+                            width: list.width - Style.space(3)
+                            record: card.modelData
+                            bodyLines: 4
+
+                            onCloseClicked: NotificationCenter.dismiss(card.modelData.id)
+                            onActionClicked: identifier => NotificationCenter.activate(card.modelData.id, identifier)
+                            onActivated: NotificationCenter.activate(card.modelData.id, "")
+                        }
+                    }
+
+                    // What the history panel carried, because the island is that
+                    // panel now: the switch for whether you will be told, and the
+                    // way to be done with all of it at once.
+                    RowLayout {
+                        spacing: Style.space(2)
+                        Layout.fillWidth: true
+
+                        IslandChip {
+                            label: (root.quiet ? "\uf1f6" : "\uf0f3") + "  Do not disturb"
+                            on: root.quiet
+                            onActivated: NotificationCenter.setDoNotDisturb(!root.quiet)
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        IslandChip {
+                            visible: NotificationCenter.history.length > 0
+                            label: "Clear all"
+                            onActivated: NotificationCenter.clearAll()
+                        }
+                    }
+
+                    // Said rather than left as an empty panel: do-not-disturb can
+                    // hold the island open with nothing in it, and that is the one
+                    // state you must not forget you are in.
+                    Text {
+                        visible: NotificationCenter.history.length === 0
+                        text: root.quiet ? "Nothing waiting. Do not disturb is on." : "Nothing waiting."
+                        color: Theme.barTextMuted
+                        font.family: Style.fontFamily
+                        font.pixelSize: Style.fontSizeSmall
+                        Layout.alignment: Qt.AlignHCenter
+                    }
                 }
             }
         }

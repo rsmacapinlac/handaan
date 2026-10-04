@@ -88,16 +88,38 @@ QtObject {
     // track title from pushing the bar's centre around as tracks change.
     readonly property int islandCutoutText: space(40)
 
-    // The island's expanded half, below the cut-out strip. Stated rather than
-    // taken from the content: it is a window, and a window that changed size
-    // with every track would be the shape moving while you were reading it.
+    // A notification card's width wherever it is read. The popup surface is
+    // this wide and its cards fill it, and the island's notification column is
+    // sized from it rather than carrying a second copy of the number: one
+    // notification should not be a different width for being read in a
+    // different place. See Ui/NotificationPopups.qml.
+    readonly property int notificationWidth: 380
+
+    // The island's expanded half, below the cut-out strip. Its width is the two
+    // columns it has to hold plus the margins around them -- the player on the
+    // left, a notification card on the right -- so what goes in it decides how
+    // wide it is, rather than a share of the screen or a number that looked
+    // right on the monitor it was chosen on.
     //
-    // A fraction of the screen rather than a pixel count. The 384px this
-    // replaced was a quarter of a 1536-wide laptop panel and a seventh of a
-    // 2560-wide external one -- the same island reading as two different
-    // surfaces depending on where it opened. The proportion is what can hold
-    // across monitors; a pixel count cannot.
-    readonly property real islandWidthFraction: 0.4
+    // Fixed, and that is the point. The share of the screen this replaced made
+    // the island 614px on the laptop panel and 1024px on the external, so one
+    // surface was two sizes depending on where it opened. A fixed width is
+    // learned once.
+    //
+    // Declared left to right, as the columns are drawn.
+    //
+    // Squarer than it was. The column's height is set by its content and does
+    // not move with its width -- the art is islandArt, and the three text lines
+    // elide rather than wrap -- so it measures about 105 whatever this says,
+    // and 280 drew a strip nearly three times as wide as it was tall. At 200
+    // the art keeps 80, its gap 10, and the artist and album line has 110 left,
+    // which is about eleven monospace characters before eliding. Below roughly
+    // 180 that line stops saying anything and the art has to stack above the
+    // text instead of sitting beside it.
+    readonly property int islandPlayerColumn: 200
+    readonly property int islandColumnGap: space(3)
+    readonly property int islandNotificationColumn: notificationWidth + space(3)
+    readonly property int islandWidth: islandPlayerColumn + islandColumnGap + islandNotificationColumn + space(3) * 2
     readonly property int islandHeight: space(34)
     readonly property int islandArt: space(20)
 

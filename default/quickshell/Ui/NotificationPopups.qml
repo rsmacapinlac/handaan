@@ -66,7 +66,7 @@ PanelWindow {
         top: Style.windowGap
     }
 
-    implicitWidth: 380
+    implicitWidth: Style.notificationWidth
     implicitHeight: Math.max(1, stack.implicitHeight)
     color: "transparent"
 
