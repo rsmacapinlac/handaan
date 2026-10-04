@@ -1,9 +1,10 @@
 // The notification history, and the do-not-disturb switch.
 //
-// A view onto qs.Commons.NotificationCenter. Summoned by Super+Shift+N or
+// A view onto qs.Commons.NotificationCenter. Summoned by
 // `handaan notifications`, and dismissed like the shell's other dialogs:
-// Escape, or a click anywhere off the panel. Clicking the island expands its
-// own copy of the same list; this panel is the keyboard way in.
+// Escape, or a click anywhere off the panel. The island expands its own copy
+// of the same list, by click or Super+Shift+N; this panel has no key of its
+// own any more.
 //
 // A panel at the top right, under the bar, on the focused monitor. It used to
 // sit under the popups, so opening it read as the popups staying put and the

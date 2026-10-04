@@ -1,5 +1,11 @@
 # ADR Changelog
 
+## 2026-10-04 (one family of shortcuts)
+
+- **0010** written. handaan's surfaces are reached with `Super+Shift+<letter>`, each running a `bin/handaan-*` command that toggles the surface, with `Ctrl+Alt+Delete` for the session menu as the one exception. The pattern already held for the installer and the wallpaper picker; nothing had written it down, and the island's first shortcut, `Super+N`, fell outside it.
+- **0008** edited in place. `Super+Shift+N` expands and collapses the island on the focused monitor, through `bin/handaan-island`, rather than opening the separate history panel; `Escape` collapses it too. The island holds the same list, so the key goes where it is read, and the panel keeps `handaan notifications`.
+- **0006** and **0007** link their keys to 0010. No decision in either changes.
+
 ## 2026-09-26 (the cut-out toggles)
 
 - **0008** edited in place. The island's cut-out closes the island as well as opening it, so the handle works both ways rather than leaving an outside click as the only way out. Only the strip toggles -- a click below it lands on the controls you expanded the island to reach, and collapsing the surface in the same gesture that dismissed a notification would take it away mid-task. An outside click still collapses, as before.

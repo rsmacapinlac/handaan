@@ -32,7 +32,7 @@ The power menu is the second dialog built this way, and replaced a rofi script t
 |---|---|
 | `default/quickshell/Commons/SessionControl.qml` | Singleton. Holds whether the menu is up, lists the five actions and their commands, runs one. Carries the `sessionControl` IPC target. |
 | `default/quickshell/Ui/PowerMenu.qml` | The dialog. Same surface, placement and dismissal as the installer: a compact card with a filter field, the actions in a single row, and a status line. |
-| `bin/handaan-session` | Toggles the menu. Nothing else. `Ctrl+Alt+Delete` calls it. |
+| `bin/handaan-session` | Toggles the menu. Nothing else. `Ctrl+Alt+Delete` calls it -- the one exception in [0010](0010-reach-handaan-surfaces-with-one-family-of-shortcuts.md). |
 
 Typing filters the row, matching each action's label and a few synonyms (`reboot`, `sleep`, `shutdown`), and the arrows move through it. Lock and suspend act on the first `Enter`; log out, restart and shut down arm on the first and act on the second, because each ends every open window. The text field, the cursor highlight and the armed colour are the installer's own. The armed item turns warning and the status line carries the prompt, since an action's cell is too narrow to. Everything else about the card stays quiet so that the confirmation is the one loud thing on it. Lock asks the shell's own lock screen, `Commons/SessionLock.qml`, for a lock in-process rather than running a command. Because `Ctrl+Alt+Delete` is pressed when something is already wrong, `handaan-session` sends its failure as a desktop notification when there is no terminal to print to.
 
@@ -42,7 +42,7 @@ The wallpaper picker is the third, and replaced a key that set a random wallpape
 |---|---|
 | `default/quickshell/Commons/Wallpapers.qml` | Singleton. Reads the list from `handaan-wallpaper-manifest`, holds whether the picker is up and which wallpaper is current, and hands a choice to `handaan-wallpaper-set`. Carries the `wallpapers` IPC target. |
 | `default/quickshell/Ui/WallpaperPicker.qml` | The dialog. Same surface and dismissal as the other two: a filter field, a grid of thumbnails with Random first, and a status line naming the one under the cursor. |
-| `bin/handaan-wallpaper` | Toggles the picker. Nothing else. `Super+Shift+W` calls it. |
+| `bin/handaan-wallpaper` | Toggles the picker. Nothing else. `Super+Shift+W` calls it; see [0010](0010-reach-handaan-surfaces-with-one-family-of-shortcuts.md). |
 
 It opens on the wallpaper you have, arrows move in two dimensions, and `Enter` sets. Nothing confirms, because a wallpaper you did not want is one more choice away. It has no scrim, since the wallpaper behind the card is what the thumbnails are being compared against. Choosing a wallpaper is also how the desktop's colours change; see [0007](0007-take-the-desktop-colours-from-the-wallpaper.md).
 

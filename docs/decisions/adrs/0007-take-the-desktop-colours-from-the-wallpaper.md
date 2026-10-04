@@ -21,7 +21,7 @@ The desktop's colours were Catppuccin Mocha, copied by hand or by a generator in
 | `default/wallpapers/README.md` | The credit format, and which licences an image handaan ships may carry. |
 | `test/wallpaper-credits.sh` | Fails on an image in `default/wallpapers` without a credit under one of those licences. |
 | `bin/handaan-wallpaper-set` | Sets an image (or `--random`, or `--restore` at login) on every monitor, records it in `~/.wallpaper`, derives the palette, and tells Hyprland. |
-| `bin/handaan-wallpaper` | Toggles the picker. `Super+Shift+W` calls it. |
+| `bin/handaan-wallpaper` | Toggles the picker. `Super+Shift+W` calls it; see [0010](0010-reach-handaan-surfaces-with-one-family-of-shortcuts.md). |
 | `default/quickshell/Commons/Wallpapers.qml` | Singleton: the list, the current wallpaper, the open state, the `wallpapers` IPC target. |
 | `default/quickshell/Ui/WallpaperPicker.qml` | The picker: a grid of thumbnails with Random first. See [0006](0006-present-handaan-dialogs-as-part-of-the-desktop.md). |
 | `$HANDAAN_STATE/theme/colors.json` | The derived palette. Per-machine state, in neither tree. |

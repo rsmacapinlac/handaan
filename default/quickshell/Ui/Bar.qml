@@ -106,12 +106,38 @@ Item {
             screen: surface.screen
         }
 
+        // The grab starts a beat after the island opens, not with it. Started
+        // in the same instant -- or on the next turn of the event loop -- the
+        // compositor cleared it at once when the island was opened from the
+        // keyboard, and onCleared collapsed the island before it was drawn.
+        // Why is not known. 100ms held over repeated runs; nothing finer was
+        // measured.
+        property bool grabArmed: false
+
+        Timer {
+            id: armGrab
+
+            interval: 100
+            onTriggered: surface.grabArmed = island.expanded
+        }
+
+        Connections {
+            target: island
+
+            function onExpandedChanged() {
+                if (island.expanded)
+                    armGrab.restart();
+                else
+                    surface.grabArmed = false;
+            }
+        }
+
         // The compositor handles clicks outside this window, including on
         // another monitor. The bar itself is also in the grab, so observe
         // its clicks separately without stealing the widgets' actions.
         HyprlandFocusGrab {
             windows: [surface]
-            active: island.expanded && !root.hidden && !surface.vertical
+            active: surface.grabArmed && island.expanded && !root.hidden && !surface.vertical
             onCleared: island.expanded = false
         }
 
@@ -145,6 +171,11 @@ Item {
 
         WlrLayershell.namespace: "quickshell-bar"
         WlrLayershell.layer: WlrLayer.Top
+        // Keys only while this monitor's island is open, so Escape can close
+        // it; the rest of the time the bar must never take typing away from a
+        // window. Exclusive, as the shell's dialogs are -- an open island is a
+        // surface you summoned, and an outside click already collapses it.
+        WlrLayershell.keyboardFocus: island.expanded ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
         // Sections are siblings in a single row. Center is anchored to the
         // surface rather than placed between the other two, so whatever sits
