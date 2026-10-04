@@ -4,7 +4,7 @@
 #
 # Notifications are the shell's -- Commons/NotificationCenter.qml is the
 # session's notification daemon, and Ui/NotificationHistory.qml the panel. This
-# is the door to them that Super+Shift+N calls, and it does nothing else.
+# is the door to them from a terminal, and it does nothing else.
 #
 #   (no argument)          open the history, or close it if it is up
 #   dnd on|off|toggle      do-not-disturb: only critical notifications pop up

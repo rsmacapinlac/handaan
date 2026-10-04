@@ -19,7 +19,7 @@ It is a badge, not an occupant, and the distinction is the whole of why it works
 
 It keeps the bell's own rules, which were right: waiting means **kept, not unseen**, so reading the history does not clear it and only dismissing or clearing does; the colour comes from the most urgent thing kept rather than the newest, so a chatty app cannot bury a critical one; and peach is not used, because that is Network's and Battery's warning and a notification is not a warning. Do-not-disturb shows as a slashed bell and holds the badge up on its own, since an empty island cannot say you have gone quiet.
 
-**Clicking the cut-out expands the island**, exposing its notification history, media controls and do-not-disturb switch, and clicking it again collapses it. It also opens when empty. The separate history dialog remains available through `Super+Shift+N` or `handaan notifications`.
+**Clicking the cut-out expands the island**, exposing its notification history, media controls and do-not-disturb switch, and clicking it again collapses it. It also opens when empty. `Super+Shift+N` (or `handaan island`) does the same from the keyboard, on the focused monitor's island. The separate history dialog remains available through `handaan notifications`.
 
 ## Two sections
 
@@ -48,9 +48,9 @@ The island is either a **cut out** or **expanded**, and expanding is the cut-out
 
 That puts a floor under the cut-out. *No interaction is ever required to read* is one of [the bar's](../bar.md) rules, so whatever is in the island has to be answerable at cut-out size -- who is telling you something, what you are in, that media is playing, that you are being recorded. Expansion is for the detail and for acting on it, not for finding out there was anything there.
 
-**It stays open until you click outside it, or on the cut-out again.** The cut-out is the handle at either size, so the thing that opened the island is the thing that closes it. Only the strip does: everything below it is what you opened the island to act on, and a click that dismissed a notification and collapsed the island in one gesture would take the surface away mid-task. Moving the pointer away does not collapse it, clicks on its controls leave it open, and clearing the last notification does not close it either.
+**It stays open until you click outside it, click the cut-out again, or press `Escape` or `Super+Shift+N`.** The cut-out is the handle at either size, so the thing that opened the island is the thing that closes it. Only the strip does: everything below it is what you opened the island to act on, and a click that dismissed a notification and collapsed the island in one gesture would take the surface away mid-task. Moving the pointer away does not collapse it, clicks on its controls leave it open, and clearing the last notification does not close it either.
 
-Outside clicks are handled by `HyprlandFocusGrab` on the bar window, plus a handler for clicks elsewhere inside that same bar. Expansion is local to the monitor you clicked; notification and media state remain shared. Hover does not expand the island or take keyboard focus.
+Outside clicks are handled by `HyprlandFocusGrab` on the bar window, plus a handler for clicks elsewhere inside that same bar. Expansion is local to the monitor you clicked; notification and media state remain shared. Hover does not expand the island or take keyboard focus. The bar takes the keyboard only while its island is open -- exclusively, as the shell's dialogs do -- so `Escape` can close it; closed, it never takes typing away from a window.
 
 It is drawable as described. `PanelWindow` takes an `exclusiveZone` independently of its size, so the bar's window can grow downward past its 44px while still reserving only 44px -- windows below stay where they are. The overflow is transparent and would otherwise swallow every click across the top of the screen, so the window's `mask` has to be the bar's rectangle plus the island's current shape, and has to follow it as it grows.
 

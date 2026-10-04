@@ -268,6 +268,27 @@ Item {
             root.expanded = false;
     }
 
+    // Escape closes it, as it does the shell's dialogs. Bar.qml hands this
+    // surface the keyboard while the island is open; this takes it.
+    onExpandedChanged: {
+        if (root.expanded)
+            root.forceActiveFocus();
+    }
+
+    Keys.onEscapePressed: root.expanded = false
+
+    // The keyboard's way in. Every copy hears it; only the focused monitor's
+    // acts, so Super+Shift+N opens the island where you are working.
+    Connections {
+        target: IslandControl
+
+        function onRequested(action) {
+            if (!root.focusedHere || root.vertical)
+                return;
+            root.expanded = action === "toggle" ? !root.expanded : action === "open";
+        }
+    }
+
     // What context says: who is telling you something, else what you are in.
     // Detail is the expanded state's job.
     readonly property string contextText: {

@@ -399,7 +399,7 @@ Singleton {
     IpcHandler {
         target: "notificationCenter"
 
-        // What Super+Shift+N calls.
+        // What `handaan notifications` calls.
         function toggle(): string {
             root.toggleHistory();
             return root.historyOpen ? "opened" : "closed";

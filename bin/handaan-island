@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# handaan:summary=Expand or collapse the bar's island.
+# handaan:args=[open | close]
+#
+# The island is the bar's centre section -- Ui/Island.qml -- and this is the
+# door to it that Super+Shift+N calls. It acts on the island of the focused
+# monitor.
+#
+#   (no argument)   expand the island, or collapse it if it is open
+#   open            expand it
+#   close           collapse it
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    sed -n '5,11p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+fi
+
+case ${1:-} in
+    "")    call=toggle ;;
+    open)  call=open ;;
+    close) call=close ;;
+    *)
+        log_error "Usage: handaan-island [open | close]"
+        exit 2
+        ;;
+esac
+
+# Run from a keybind there is no terminal to print to; this is for a run from
+# one.
+fail() {
+    log_error "$1"
+    log_error "    $2"
+    exit 1
+}
+
+# qs reports a connection failure with a nonzero exit, but an IPC-level failure
+# on stdout with exit 0; see handaan-apps.
+if ! output=$(qs -p "$HANDAAN_PATH/default/quickshell" ipc call island "$call" 2>/dev/null); then
+    fail "The Quickshell shell is not running, so there is no island to open." \
+        "systemctl --user start quickshell.service"
+fi
+
+case $output in
+    "Target not found."* | "Function not found."*)
+        fail "This Quickshell session started before the island took a shortcut." \
+            "systemctl --user restart quickshell.service"
+        ;;
+esac

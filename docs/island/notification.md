@@ -36,7 +36,7 @@ Purpose: Tells the user what has arrived that they have not dealt with, and lets
 
 Notes:
 
-- Summoned: `Super+Shift+N` or `handaan notifications`. Dismissed like the shell's other dialogs -- Escape, or a click off the panel. Clicking the island expands its own copy of the same list, which is the ordinary way in; this panel is the keyboard one.
+- Summoned: `handaan notifications`. Dismissed like the shell's other dialogs -- Escape, or a click off the panel. The island expands its own copy of the same list, by a click or `Super+Shift+N`, which is the ordinary way in; the key used to open this panel, and moved to the island once the island held the same list.
 - Top right, under the bar. It no longer sits where the popups do -- they moved to the centre with the island -- so the reading it used to get, of the ones already gone coming back, belongs to the island's expansion now.
 - Every card is the popup it was, with its actions still live while the notification is kept.
 - Closing a card here dismisses it for good. That is the difference from a popup's close.
