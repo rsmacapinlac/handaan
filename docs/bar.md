@@ -88,7 +88,7 @@ It holds one end of the motion channel, on an urgent workspace, which is the che
 
 ## The island section
 
-The centre of the bar, and the only section you act in rather than read. Its standard is [The island](island/README.md): what may occupy it, its two states, and the decisions still open. `Ui/Island.qml` draws it — the cut-out with a notification or the current track in it, the backlog badge beside them, and the notification and media controls its expansion holds.
+The centre of the bar, and the only section you act in rather than read. Its standard is [The island](island/README.md): what may occupy it, its two states, and the decisions still open. `Ui/Island.qml` draws it — the cut-out's context section with the focused app or a notification in it, its status section of capture, media and backlog badges, and the notification and media controls its expansion holds.
 
 ## The widgets section
 

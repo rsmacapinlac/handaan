@@ -85,8 +85,12 @@ QtObject {
 
     // The island's cut-out. A ceiling on the text rather than a width for the
     // shape: the shape is as wide as its content, and this stops one long
-    // track title from pushing the bar's centre around as tracks change.
+    // window title from pushing the bar's centre around as focus moves.
     readonly property int islandCutoutText: space(40)
+
+    // The empty cut-out's width. With nothing in either section the shape is
+    // still the handle, and a handle has to be big enough to hit.
+    readonly property int islandCutoutMinWidth: space(18)
 
     // A notification card's width wherever it is read. The popup surface is
     // this wide and its cards fill it, and the island's notification column is

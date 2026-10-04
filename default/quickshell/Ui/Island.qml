@@ -13,11 +13,13 @@
 // it earns it by not being information: it is the handle, and settings are
 // always reachable through it.
 //
-// Two occupants so far, and they behave differently in time. Media is the
-// resting state: it is there for hours and it is still there afterwards. A
-// notification is an event -- it takes the island, and when it is done the
-// island goes back to whatever it was showing. So notifications win while they
-// last, which is the whole of the precedence rule for now.
+// The cut-out is two sections. Context, on the left, says what you are in: the
+// focused window's app on this monitor, with its title too on the monitor that
+// has focus, so the title is also how you tell which screen keys go to. A
+// notification is an event and takes context while it lasts, then hands it
+// back. Status, on the right, holds badges -- capture, media, backlog -- which
+// never take turns, because each is something you must not lose sight of while
+// something else is in context.
 //
 // Its notifications are the same set NotificationCenter puts on screen, read
 // straight off `popups`. That is deliberate: the centre already decides what
@@ -42,7 +44,10 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls as Controls
+import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Services.Mpris
+import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
 
@@ -97,9 +102,113 @@ Item {
 
     readonly property bool hasNotification: root.notification !== null
 
-    // An event outranks a state. When the notification goes, media is still
-    // underneath it.
-    readonly property string occupant: root.hasNotification ? "notification" : (root.hasMedia ? "media" : "none")
+    // This copy's monitor. Focus is per screen even though the island's other
+    // state is not: every copy reading Hyprland.activeToplevel alone would put
+    // the same window on every monitor.
+    readonly property var monitor: root.screen ? Hyprland.monitorFor(root.screen) : null
+
+    // focusedMonitor is only learned from an event, so until focus first moves
+    // after a restart this falls back to what the startup query said.
+    readonly property bool focusedHere: {
+        if (!root.monitor)
+            return false;
+        if (Hyprland.focusedMonitor)
+            return Hyprland.focusedMonitor === root.monitor;
+        return root.monitor.lastIpcObject.focused === true;
+    }
+
+    // The window this monitor last had focused, kept so a monitor that loses
+    // focus still names what is on it. Typed, so it reads null once the
+    // window closes rather than holding a dead object.
+    property HyprlandToplevel recent: null
+
+    Connections {
+        target: Hyprland
+
+        function onActiveToplevelChanged() {
+            const t = Hyprland.activeToplevel;
+            if (t && root.monitor && t.monitor === root.monitor)
+                root.recent = t;
+        }
+    }
+
+    // What is in front on this monitor: the focused window if it is here,
+    // else the one this monitor last had, else Hyprland's own record of the
+    // workspace's last window -- the only answer before anything has moved.
+    //
+    // Reads the workspace list for its side effect: Hyprland fetches it on
+    // first read, and until it has, a monitor's activeWorkspace is a guess --
+    // it named 3 while the screen showed 1. Workspaces.qml happens to read it
+    // too, which is not something this should rely on.
+    readonly property var window: {
+        const ws = root.monitor ? root.monitor.activeWorkspace : null;
+        if (!ws || Hyprland.workspaces.values.length === 0)
+            return null;
+        const active = Hyprland.activeToplevel;
+        if (active && active.workspace === ws)
+            return active;
+        if (root.recent && root.recent.workspace === ws)
+            return root.recent;
+        const wins = ws.toplevels.values;
+        const last = String(ws.lastIpcObject.lastwindow || "").replace(/^0x/, "");
+        for (var i = 0; i < wins.length; i++) {
+            if (wins[i].address === last)
+                return wins[i];
+        }
+        return wins.length > 0 ? wins[0] : null;
+    }
+
+    // The app's own name from its desktop entry, else the tail of its app id.
+    // Reading the entry count makes this re-run once entries finish loading,
+    // which heuristicLookup alone would not.
+    readonly property string appName: {
+        if (!root.window || DesktopEntries.applications.values.length < 0)
+            return "";
+        const id = root.window.wayland ? root.window.wayland.appId : (root.window.lastIpcObject.class || "");
+        if (id === "")
+            return "";
+        const entry = DesktopEntries.heuristicLookup(id);
+        if (entry && entry.name !== "")
+            return entry.name;
+        const tail = id.split(".").pop();
+        return tail.charAt(0).toUpperCase() + tail.slice(1);
+    }
+
+    // Only where focus is. Most titles end by naming their app, which context
+    // already says, so that tail is cut.
+    readonly property string windowTitle: {
+        if (!root.focusedHere || !root.window)
+            return "";
+        var t = root.window.title;
+        const name = root.appName.toLowerCase();
+        if (name !== "" && t.toLowerCase().endsWith(name)) {
+            const cut = Math.max(t.lastIndexOf(" — "), t.lastIndexOf(" – "), t.lastIndexOf(" - "));
+            if (cut > 0)
+                t = t.slice(0, cut);
+        }
+        return t === root.appName ? "" : t;
+    }
+
+    // An event outranks a state. When the notification goes, the window is
+    // still underneath it.
+    readonly property string context: root.hasNotification ? "notification" : (root.appName !== "" ? "window" : "none")
+
+    // Whether anything is reading the camera, the microphone or the screen.
+    // An app capturing shows up in PipeWire as an input stream; a screen share
+    // through the portal as xdg-desktop-portal-hyprland's own node, whether or
+    // not anything has started reading it yet. Recorders that use
+    // wlr-screencopy directly never touch PipeWire and are not seen.
+    readonly property bool capturing: {
+        const nodes = Pipewire.nodes.values;
+        for (var i = 0; i < nodes.length; i++) {
+            const n = nodes[i];
+            if (n.name.startsWith("xdph-streaming-"))
+                return true;
+            if (n.isStream && (n.type & PwNodeType.Source))
+                return true;
+        }
+        return false;
+    }
 
     // What the bell used to answer, folded in here: what is waiting that you
     // have not dealt with, and whether you will be told about the next thing.
@@ -108,7 +217,7 @@ Item {
     // of why. The occupants are things happening now and they take turns; a
     // backlog is not happening, it is outstanding, and it has to still be
     // there while something else is in the island. An occupant would vanish
-    // the moment media started playing.
+    // the moment a notification arrived.
     //
     // Waiting means kept, not unseen: reading the history does not clear this,
     // only dismissing or clearing does. A badge that went away when you looked
@@ -159,38 +268,23 @@ Item {
             root.expanded = false;
     }
 
-    // What the cut-out answers on its own: who is telling you something, or
-    // what is playing. Detail is the expanded state's job.
-    readonly property string cutoutText: {
-        if (root.occupant === "notification")
+    // What context says: who is telling you something, else what you are in.
+    // Detail is the expanded state's job.
+    readonly property string contextText: {
+        if (root.context === "notification")
             return root.notification.summary !== "" ? root.notification.summary : root.notification.appName;
-        if (root.occupant === "media") {
-            const t = root.player.trackTitle;
-            return t && t !== "" ? t : root.player.identity;
-        }
-        return "";
-    }
-
-    // Nerd Font: U+F0F3 bell, U+F04B play, U+F04C pause, U+F141 ellipsis.
-    // Escapes rather than the glyphs themselves -- a private-use codepoint is
-    // invisible in a diff and has been lost twice in this tree already.
-    readonly property string cutoutGlyph: {
-        if (root.occupant === "notification")
-            return "\uf0f3";
-        if (root.occupant === "media")
-            return root.player.isPlaying ? "\uf04b" : "\uf04c";
-        return "\uf141";
+        return root.appName;
     }
 
     // Critical is the one notification state drawn loudly, the same way the
     // card draws it.
-    readonly property color cutoutTint: {
-        if (root.occupant === "notification")
-            return root.notification.urgency === "critical" ? Theme.critical : Theme.barText;
-        if (root.occupant === "media")
-            return Theme.barText;
-        return Theme.barTextMuted;
+    readonly property color contextTint: {
+        if (root.context === "notification" && root.notification.urgency === "critical")
+            return Theme.critical;
+        return Theme.barText;
     }
+
+    readonly property bool hasStatus: root.capturing || root.hasMedia || root.hasBacklog
 
     implicitWidth: shape.width
     // The shape's inset above it, and the same inset below. Both have to be
@@ -266,7 +360,7 @@ Item {
 
         // Leaves the bar's own surface visible around it, so the shape reads
         // as cut into the bar rather than laid on top of it.
-        implicitWidth: root.expanded ? root.expandedWidth : cutout.implicitWidth + Style.space(3) * 2
+        implicitWidth: root.expanded ? root.expandedWidth : Math.max(cutout.implicitWidth + Style.space(3) * 2, Style.islandCutoutMinWidth)
         implicitHeight: root.cutoutHeight + (root.expanded ? panel.implicitHeight + Style.space(3) : 0)
         width: implicitWidth
         height: implicitHeight
@@ -327,41 +421,107 @@ Item {
             height: root.cutoutHeight
             spacing: Style.space(1.5)
 
-            Text {
-                text: root.cutoutGlyph
-                color: root.cutoutTint
-                font.family: Style.fontFamily
-                font.pixelSize: Style.fontSizeSmall
+            // Context: the incoming notification, else this monitor's app and,
+            // where focus is, its window title.
+            RowLayout {
+                visible: root.context !== "none"
+                spacing: Style.space(1.5)
+                Layout.alignment: Qt.AlignVCenter
+
+                // Nerd Font U+F0F3 bell. Escapes rather than the glyphs
+                // themselves -- a private-use codepoint is invisible in a diff
+                // and has been lost twice in this tree already. It marks what
+                // follows as a notification rather than an app name.
+                Text {
+                    visible: root.context === "notification"
+                    text: "\uf0f3"
+                    color: root.contextTint
+                    font.family: Style.fontFamily
+                    font.pixelSize: Style.fontSizeSmall
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                Text {
+                    id: contextLabel
+
+                    text: root.contextText
+                    color: root.contextTint
+                    font.family: Style.fontFamily
+                    font.pixelSize: Style.fontSizeSmall
+                    elide: Text.ElideRight
+                    // A title is not a fact that has to survive whole the way
+                    // an address is, so it elides rather than shrinking. The
+                    // ceiling stops one long title pushing the bar's centre
+                    // around.
+                    Layout.maximumWidth: Style.islandCutoutText
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                // Muted, so the app reads first. Shares the one ceiling with
+                // the name rather than having its own, and gives way first.
+                Text {
+                    visible: root.context === "window" && root.windowTitle !== ""
+                    text: root.windowTitle
+                    color: Theme.barTextMuted
+                    font.family: Style.fontFamily
+                    font.pixelSize: Style.fontSizeSmall
+                    elide: Text.ElideRight
+                    Layout.maximumWidth: Math.max(0, Style.islandCutoutText - contextLabel.implicitWidth - Style.space(1.5))
+                    Layout.alignment: Qt.AlignVCenter
+                }
+            }
+
+            Rectangle {
+                visible: root.context !== "none" && root.hasStatus
+                implicitWidth: Style.borderWidth
+                implicitHeight: Math.round(root.cutoutHeight * 0.45)
+                color: Theme.border
+                Layout.leftMargin: Style.space(1)
+                Layout.rightMargin: Style.space(1)
                 Layout.alignment: Qt.AlignVCenter
             }
 
-            Text {
-                visible: root.cutoutText !== ""
-                text: root.cutoutText
-                color: root.cutoutTint
-                font.family: Style.fontFamily
-                font.pixelSize: Style.fontSizeSmall
-                elide: Text.ElideRight
-                // A title is not a fact that has to survive whole the way an
-                // address is, so it elides rather than shrinking. The ceiling
-                // stops one long title pushing the bar's centre around.
-                Layout.maximumWidth: Style.islandCutoutText
+            // Status: badges, which never take turns.
+            RowLayout {
+                visible: root.hasStatus
+                spacing: Style.space(2)
                 Layout.alignment: Qt.AlignVCenter
+
+                // Something is reading the camera, microphone or screen. Red
+                // because being recorded without knowing is the one thing here
+                // worth the loud colour; still, because it is a state rather
+                // than something asking for a response.
+                Rectangle {
+                    visible: root.capturing
+                    implicitWidth: Style.space(2)
+                    implicitHeight: Style.space(2)
+                    radius: width / 2
+                    color: Theme.critical
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                // Media. The track itself is the expanded island's; here it is
+                // only whether something is playing. U+F04B play, U+F04C pause.
+                Text {
+                    visible: root.hasMedia
+                    text: root.hasMedia && root.player.isPlaying ? "\uf04b" : "\uf04c"
+                    color: root.hasMedia && root.player.isPlaying ? Theme.barText : Theme.barTextMuted
+                    font.family: Style.fontFamily
+                    font.pixelSize: Style.fontSizeSmall
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                // The backlog badge. Nerd Font U+F0F3 bell, U+F1F6 bell slash --
+                // shape answers the second question, the way the widget did.
+                Text {
+                    visible: root.hasBacklog
+                    text: root.quiet ? "\uf1f6" : "\uf0f3"
+                    color: root.backlogTint
+                    font.family: Style.fontFamily
+                    font.pixelSize: Style.fontSizeSmall
+                    Layout.alignment: Qt.AlignVCenter
+                }
             }
-
-            // The backlog badge. Nerd Font U+F0F3 bell, U+F1F6 bell slash --
-            // shape answers the second question, the way the widget did.
-            Text {
-                visible: root.hasBacklog
-                text: root.quiet ? "\uf1f6" : "\uf0f3"
-                color: root.backlogTint
-                font.family: Style.fontFamily
-                font.pixelSize: Style.fontSizeSmall
-                Layout.alignment: Qt.AlignVCenter
-                Layout.leftMargin: root.cutoutText !== "" ? Style.space(1) : 0
-            }
-
-
         }
 
         // The expanded half: what the cut-out could not say, and the controls.

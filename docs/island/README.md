@@ -15,11 +15,27 @@ The expansion is one surface with the cut-out rather than a separate panel under
 
 What the bell used to answer is the island's: *what is waiting that I have not dealt with*, and *will I be told about the next one*. The bar widget is retired.
 
-It is a badge, not an occupant, and the distinction is the whole of why it works. Occupants are things happening now and they take turns; a backlog is not happening, it is outstanding, and it has to stay visible while something else is in the island. As an occupant it would disappear the moment media started playing, which is the one thing the bell was for.
+It is a badge, not an occupant, and the distinction is the whole of why it works. Occupants are things happening now and they take turns; a backlog is not happening, it is outstanding, and it has to stay visible while something else is in the island. As an occupant it would disappear the moment a notification took context, which is the one thing the bell was for.
 
 It keeps the bell's own rules, which were right: waiting means **kept, not unseen**, so reading the history does not clear it and only dismissing or clearing does; the colour comes from the most urgent thing kept rather than the newest, so a chatty app cannot bury a critical one; and peach is not used, because that is Network's and Battery's warning and a notification is not a warning. Do-not-disturb shows as a slashed bell and holds the badge up on its own, since an empty island cannot say you have gone quiet.
 
 **Clicking the cut-out expands the island**, exposing its notification history, media controls and do-not-disturb switch, and clicking it again collapses it. It also opens when empty. The separate history dialog remains available through `Super+Shift+N` or `handaan notifications`.
+
+## Two sections
+
+The cut-out is divided in two: **context** on the left, **status** on the right, with a thin rule between them when both have something to say.
+
+**Context says what you are in.** It names the app of the window in front on that monitor, and on the monitor that has focus it adds the window's title, muted, after the name. The title is therefore also how you tell which screen your keys go to. Most titles end by naming their app -- "— Mozilla Firefox" -- and that tail is cut, since the name is already there. The name comes from the app's desktop entry, else the tail of its app id. Name and title share one width ceiling, `Style.islandCutoutText`, and the title gives way first.
+
+A notification is an event and takes context while it lasts, marked with a bell so it does not read as an app name, then hands context back to the window. An event outranks a state.
+
+**Status holds badges, which never take turns**, because each is something you must not lose sight of while something else is in context:
+
+- **Capture** -- a red dot while anything reads the camera, the microphone or the screen. It is the one loud colour in the cut-out because being recorded without knowing is the case worth it, and it is still, because it is a state rather than a request for a response. It reads PipeWire: an app capturing is an input stream, and a portal screen share is `xdg-desktop-portal-hyprland`'s own `xdph-streaming-*` node. A recorder that uses `wlr-screencopy` directly never touches PipeWire and is not seen, and a volume meter such as pavucontrol's opens an input stream and is.
+- **Media** -- play or pause. Only whether something is playing; the track is the expanded island's.
+- **Backlog** -- the bell, below.
+
+With nothing in either section the cut-out is a bare pill, `Style.islandCutoutMinWidth` wide, so the handle is still big enough to hit. It used to carry an ellipsis there, which read as text cut off rather than as nothing going on.
 
 ## Two states
 
@@ -30,7 +46,7 @@ The island is either a **cut out** or **expanded**, and expanding is the cut-out
 
 **Expansion is on click, never on hover or arrival.** Something arriving takes the cut-out; it does not open the island by itself.
 
-That puts a floor under the cut-out. *No interaction is ever required to read* is one of [the bar's](../bar.md) rules, so whatever is in the island has to be answerable at cut-out size -- who is telling you something, that media is playing. Expansion is for the detail and for acting on it, not for finding out there was anything there.
+That puts a floor under the cut-out. *No interaction is ever required to read* is one of [the bar's](../bar.md) rules, so whatever is in the island has to be answerable at cut-out size -- who is telling you something, what you are in, that media is playing, that you are being recorded. Expansion is for the detail and for acting on it, not for finding out there was anything there.
 
 **It stays open until you click outside it, or on the cut-out again.** The cut-out is the handle at either size, so the thing that opened the island is the thing that closes it. Only the strip does: everything below it is what you opened the island to act on, and a click that dismissed a notification and collapsed the island in one gesture would take the surface away mid-task. Moving the pointer away does not collapse it, clicks on its controls leave it open, and clearing the last notification does not close it either.
 
@@ -55,7 +71,7 @@ The island is on every monitor, the way the rest of the bar is. It is not gated 
 Two things follow, and they are requirements rather than consequences to discover later:
 
 - **The islands are views onto one state, not several.** A notification dismissed on one screen is gone from all of them, and media paused on one is paused everywhere, because there is one notification centre and one player. This is the ordinary singleton arrangement -- `Commons/` owns the state, the surfaces draw it.
-- **The island reads session-wide state, deliberately.** The bar's standing rule is that a widget answering anything about "this screen" must use its injected screen and never a global. The island is the exception and has to be: it answers nothing about the screen it is on, so a per-screen answer would be the bug rather than the fix.
+- **The island reads session-wide state, except for context.** The bar's standing rule is that a widget answering anything about "this screen" must use its injected screen and never a global. Notifications, media, capture and the backlog answer nothing about the screen they are on, so a per-screen answer there would be the bug rather than the fix. Context is the one per-screen answer: it reads `Hyprland.monitorFor(screen)` and its active workspace, and remembers the window that monitor last had focused, so a monitor that loses focus still names what is on it.
 
 ## It lives in the bar
 
@@ -69,7 +85,7 @@ Everything above is written for a horizontal bar. What a vertical one does is op
 
 Three remain:
 
-1. **Precedence, beyond the first rule.** An event outranks a state, so a notification takes the island while it lasts and media is still underneath when it goes. That settles the pair that exists. It does not settle what happens when settings arrive -- they are neither an event nor something the island can be *showing* in the same sense -- nor what two notifications at once should do, where the island currently shows the newest and says nothing about the rest.
+1. **Precedence, beyond the first rule.** Badges never compete, and in context an event outranks a state, so a notification takes context while it lasts and the window is still underneath when it goes. That settles what exists. It does not settle what happens when settings arrive -- they are neither an event nor something the island can be *showing* in the same sense -- nor what two notifications at once should do, where the island currently shows the newest and says nothing about the rest.
 2. **Whether anything ever forces expansion.** Nothing does today, including critical notifications. Expansion requires a click.
 3. **What the island does on a vertical bar.** Nothing above answers it, and the always-top escape is closed. Either it transposes and the cut-out becomes close to icon-only, or the island is a thing horizontal bars have and side bars do not.
 
