@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# handaan:summary=Print the optional-app catalogue as JSON: name, summary, installed.
+# handaan:summary=Print the optional-app catalogue as JSON: name, summary, installed, and what each declares.
 # handaan:hidden=machine-readable catalogue behind the installer; run `handaan apps` instead
 #
 # The only place that answers "which apps exist, and which are installed". The
@@ -10,7 +10,12 @@
 #
 # Output is a JSON array, one object per app directory:
 #
-#   [{"name":"tmux","summary":"Terminal multiplexer.","installed":true}]
+#   [{"name":"tmux","summary":"Terminal multiplexer.","installed":true,
+#     "packages":["tmux"],"hooks":["install","uninstall"],
+#     "config":[".config/tmux/tmux.conf"]}]
+#
+# packages, hooks and config are what the app directory declares, so the
+# installer can show what an install or an uninstall would touch.
 #
 # Nothing here needs sudo, a Wayland session or the network, so it answers the
 # same from a TTY, a script and the bar. What an app is: docs/extending-with-apps.md.
@@ -23,7 +28,7 @@ APPS_ROOT="$HOME/.config/handaan/apps"
 APPS_STATE="$HANDAAN_STATE/apps"
 
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-    sed -n '3,17p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,23p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
 fi
 
@@ -109,10 +114,27 @@ app_installed() {
     return 0
 }
 
+app_hooks() {
+    local hook
+    for hook in install update uninstall; do
+        [[ -f "$APPS_ROOT/$1/$hook.sh" ]] && echo "$hook"
+    done
+    return 0
+}
+
+# Files and links, as cp -Rn copies them. -H follows a config/ that is itself a
+# link into a dotfile repository.
+app_config() {
+    local config="$APPS_ROOT/$1/config"
+    [[ -d $config ]] || return 0
+    find -H "$config" -mindepth 1 \( -type f -o -type l \) -printf '%P\n' | LC_ALL=C sort
+}
+
 # Fields reach jq as argv rather than interpolated into a filter, so a summary
 # is free text that cannot terminate a string, inject a key or swallow the
 # field after it -- the failure the old tab-separated handoff could only ask
-# callers not to trigger.
+# callers not to trigger. The three lists travel as one newline-joined field
+# each; a name or path holding a newline is not one handaan can install anyway.
 fields=()
 for app in "${apps[@]}"; do
     fields+=("$app")
@@ -122,11 +144,18 @@ for app in "${apps[@]}"; do
     else
         fields+=(false)
     fi
+    fields+=("$(declared_packages "$app")")
+    fields+=("$(app_hooks "$app")")
+    fields+=("$(app_config "$app")")
 done
 
 jq -n --args '
-  [ range(0; ($ARGS.positional | length); 3) as $i
+  def lines: split("\n") | map(select(length > 0));
+  [ range(0; ($ARGS.positional | length); 6) as $i
     | { name:      $ARGS.positional[$i],
         summary:   $ARGS.positional[$i + 1],
-        installed: ($ARGS.positional[$i + 2] == "true") } ]
+        installed: ($ARGS.positional[$i + 2] == "true"),
+        packages:  ($ARGS.positional[$i + 3] | lines),
+        hooks:     ($ARGS.positional[$i + 4] | lines),
+        config:    ($ARGS.positional[$i + 5] | lines) } ]
 ' "${fields[@]}"

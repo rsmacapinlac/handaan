@@ -163,30 +163,21 @@ PanelWindow {
         onClicked: Wallpapers.close()
     }
 
-    Rectangle {
+    // The installer's card; see DialogCard.
+    DialogCard {
         id: card
 
         anchors.centerIn: parent
-        width: Math.min(root.cellWidth * root.columns + Style.space(6), parent.width - Style.space(8))
-        height: Math.min(layout.implicitHeight + Style.space(6), parent.height - Style.space(8))
+        width: Math.min(root.cellWidth * root.columns + Style.space(8), parent.width - Style.space(8))
+        height: Math.min(layout.implicitHeight + Style.space(8), parent.height - Style.space(8))
 
-        color: Theme.dialogSurface
-        radius: Style.radius
-        border.width: Style.borderWidth
-        border.color: Theme.border
-
-        // Swallows clicks so the dismiss handler behind the card does not fire.
-        MouseArea {
-            anchors.fill: parent
-            hoverEnabled: true
-            onPositionChanged: root.pointerArmed = true
-        }
+        onPointerMoved: root.pointerArmed = true
 
         ColumnLayout {
             id: layout
 
             anchors.fill: parent
-            anchors.margins: Style.space(3)
+            anchors.margins: Style.space(4)
             spacing: Style.space(2)
 
             // ------------------------------------------------------- filter

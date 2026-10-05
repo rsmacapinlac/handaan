@@ -380,6 +380,15 @@ handaan apps-install all
 handaan apps-install all
 ```
 
+Then take one app back out, twice, and put it back. The second uninstall must be a no-op, and `apps-manifest` must report the app `installed: false` in between:
+
+```bash
+handaan apps-uninstall syncthing
+handaan apps-uninstall syncthing
+handaan apps-manifest | jq '.[] | select(.name == "syncthing")'
+handaan apps-install syncthing
+```
+
 Each invocation must perform one full system upgrade. The second run should
 skip current packages, complete without errors, clean temporary build
 dependencies, and remove the temporary passwordless sudo rule.

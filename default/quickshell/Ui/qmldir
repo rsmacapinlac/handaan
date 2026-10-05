@@ -5,6 +5,7 @@ BarWidget 1.0 BarWidget.qml
 BarCard 1.0 BarCard.qml
 Island 1.0 Island.qml
 Tooltip 1.0 Tooltip.qml
+DialogCard 1.0 DialogCard.qml
 Installer 1.0 Installer.qml
 PowerMenu 1.0 PowerMenu.qml
 WallpaperPicker 1.0 WallpaperPicker.qml

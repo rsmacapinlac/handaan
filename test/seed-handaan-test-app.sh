@@ -5,7 +5,7 @@
 # Every real app normally comes from a user's own dotfile repository (see
 # docs/decisions/adrs/0005-accept-user-owned-optional-applications.md), which
 # a fresh VM has no access to -- without this, there is nothing to discover
-# and no way to rehearse packages/install.sh/update.sh/config/ at all.
+# and no way to rehearse packages/install.sh/update.sh/uninstall.sh/config/ at all.
 #
 # This is meant for a disposable VM: it writes into the real apps root, on
 # the assumption that the whole machine gets thrown away afterward. Don't run
@@ -51,6 +51,11 @@ date >"$HOME/.local/state/handaan-test/update-ran"
 log_info "handaan-test update.sh ran"
 EOF
 
+cat >"$APP_DIR/uninstall.sh" <<'EOF'
+rm -f "$HOME/.local/state/handaan-test/install-ran"
+log_info "handaan-test uninstall.sh ran"
+EOF
+
 cat >"$APP_DIR/config/.local/share/handaan-test/from-config" <<'EOF'
 Seeded by config/ -- proves the no-clobber copy into $HOME ran.
 EOF
@@ -66,6 +71,11 @@ Verify with:
 
   handaan-update                     # exercises update.sh on its own
   cat ~/.local/state/handaan-test/update-ran
+
+  handaan apps-uninstall handaan-test  # uninstall.sh, config/ out, cowsay released
+  test ! -e ~/.local/state/handaan-test/install-ran
+  test ! -e ~/.local/share/handaan-test/from-config
+  handaan apps-manifest | jq '.[] | select(.name == "handaan-test")'  # installed: false
 
 Tear down with: test/seed-handaan-test-app.sh --remove
 EOF

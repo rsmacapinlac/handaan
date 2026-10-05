@@ -51,14 +51,15 @@ The second run clones this repository to `~/.local/share/handaan` and installs f
 ## Everyday commands
 
 ```bash
-handaan                      # list every command
-handaan update               # packages, migrations, tools -- snapshot first
-handaan migrate              # apply pending migrations only
-handaan diff-config          # what in ~/.config has drifted from the defaults
-handaan refresh-config <p>   # take a newer default (backs up yours first)
-handaan promote-config <p>   # send a local edit back into the tree
-handaan apps                 # pick your own optional applications
-handaan apps-install <name>  # ...or install one without the dialog
+handaan                       # list every command
+handaan update                # packages, migrations, tools -- snapshot first
+handaan migrate               # apply pending migrations only
+handaan diff-config           # what in ~/.config has drifted from the defaults
+handaan refresh-config <p>    # take a newer default (backs up yours first)
+handaan promote-config <p>    # send a local edit back into the tree
+handaan apps                  # pick your own optional applications
+handaan apps-install <name>   # ...or install one without the dialog
+handaan apps-uninstall <name> # take one back out
 ```
 
 ## Development setup

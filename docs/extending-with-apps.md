@@ -33,10 +33,11 @@ There is no registry to add yourself to. The directory existing is the registrat
 | `packages` | optional | Package list installed with `yay`. |
 | `install.sh` | optional | Sourced once, each time the app is selected. One-time setup. |
 | `update.sh` | optional | Sourced on every `handaan update`. Ongoing maintenance. |
-| `config/` | optional | Mirrors `$HOME`. Copied in without clobbering, when the app is selected. |
+| `uninstall.sh` | optional | Sourced when the app is uninstalled. Undoes what `install.sh` did. |
+| `config/` | optional | Mirrors `$HOME`. Copied in without clobbering when the app is selected, and removed again when it is uninstalled. |
 | `theme/` | optional | Colour templates, written from the desktop's palette on every wallpaper change. See [Colours from the wallpaper](#colours-from-the-wallpaper). |
 
-Only `meta` is required. The other five are independent of each other — an app can be a package list and nothing else, or a `config/` tree and nothing else. Anything else you keep in the directory (a `README.md`, a helper script, a wallpaper) is ignored by handaan and available to your own scripts.
+Only `meta` is required. The other six are independent of each other — an app can be a package list and nothing else, or a `config/` tree and nothing else. Anything else you keep in the directory (a `README.md`, a helper script, a wallpaper) is ignored by handaan and available to your own scripts.
 
 When an app is installed, the three steps run in this order: **packages, then `install.sh`, then `config/`.** So `install.sh` cannot assume its own `config/` files have landed yet.
 
@@ -108,6 +109,21 @@ Strict mode applies here too: a failure aborts the update before it reaches mise
 
 The distinction against a migration is scope. A migration repairs one thing once, on machines that predate a fix. An `update.sh` is ongoing work that runs forever.
 
+### `uninstall.sh`
+
+The counterpart of `install.sh`, for the part of an install that removing packages and files does not undo: a systemd unit you enabled, a group you joined, a plugin manager you cloned, a state directory you created.
+
+```bash
+systemctl --user disable --now syncthing.service || true
+rm -rf "$HOME/.tmux/plugins"
+```
+
+It has the same environment as `install.sh`: sourced in a subshell, strict mode, the log helpers, and `sudo` without a prompt. It runs **before** the app's `config/` files and packages are removed, so the binaries it needs to stop or disable things are still there.
+
+Without one, an uninstall still removes the app's files and packages, and anything `install.sh` did stays. That includes packages `install.sh` installed itself, rather than through `packages`: handaan never saw those, so `uninstall.sh` is the only thing that can remove them.
+
+Write it to be safe to run twice, and safe on a machine where `install.sh` never ran. Uninstalling an app that was only marked with `handaan apps-mark` is a real case. Guard each step and append `|| true` where "already gone" is a non-zero exit.
+
 ### `config/`
 
 A tree that mirrors `$HOME`, copied in wholesale when the app is selected:
@@ -122,6 +138,8 @@ lands as `~/.config/tmux/tmux.conf` and `~/.local/share/applications/tmux.deskto
 The copy is **no-clobber**. A file that already exists in `$HOME` is left exactly as it is — the same rule handaan applies to its own `config/` seed, for the same reason: your live configuration is yours, and nothing here is allowed to overwrite it.
 
 The consequence catches everyone once. **Editing a file in your app's `config/` does not change a machine where the app is already installed.** The copy in `$HOME` already exists and wins. To take the new version, delete or move your local copy and re-run `handaan apps-install <name>`, or just apply the edit to `$HOME` yourself.
+
+Uninstalling takes the tree back out, judged file by file against what `config/` holds now. See [Uninstalling](#uninstalling).
 
 Note also that `.desktop` overrides for your applications belong here, not in handaan — handaan seeds only overrides for packages it installs itself.
 
@@ -184,6 +202,11 @@ log_info "Updating tmux plugins..."
 "$HOME/.tmux/plugins/tpm/bin/update_plugins" all || log_warning "tmux plugin update failed"
 EOF
 
+cat > ~/.config/handaan/apps/tmux/uninstall.sh <<'EOF'
+# The plugins install.sh cloned; nothing else knows they are there.
+rm -rf "$HOME/.tmux/plugins"
+EOF
+
 cp ~/my-dotfiles/tmux.conf ~/.config/handaan/apps/tmux/config/.config/tmux/tmux.conf
 ```
 
@@ -202,21 +225,26 @@ handaan apps-install all            # install everything found
 handaan apps-manifest               # the catalogue, as JSON
 handaan apps-mark tmux              # record as installed without installing
 handaan apps-mark --undo tmux       # the reverse
+handaan apps-uninstall tmux         # take it back out; see Uninstalling
 ```
 
 The installer is part of the shell rather than a window of its own, so it needs `quickshell.service` running; `handaan apps` says so plainly if it is not. Everything else works from a TTY with no session at all.
 
 The installer is a launcher, not a form. Type to narrow the list, `↑`/`↓` to move, `Enter` to install the app under the cursor, `Esc` to close. The search matches the app's name *and* its `meta` summary. There is no multi-select: one row, one app.
 
-`Install all pending` sits at the top of the list whenever something is not installed, and is the only thing here that asks twice — the first `Enter` arms it, the second runs it. It installs what is missing, not everything, so it is a no-op on a machine that is already complete.
+Beside the list, a pane shows the app under the cursor: its summary, whether it is installed (●), removed (○) or neither, and what its directory declares — packages, hooks, and the files `config/` ships. That is the same answer `handaan apps-manifest` gives, so the pane is a quick way to check an app reads the way you meant it to.
 
-Already-installed apps stay in the list and stay choosable; the row says `reinstall` rather than `install`. That is deliberate — re-running an app is how you re-apply a `config/` file you have since deleted. There is no uninstall path, by design: removing an app is `yay -Rns` and deleting the files, deliberately, by you.
+Above the list, a header shows what is waiting and two buttons, reached with `Tab` or the mouse. **Install all** installs whatever is pending. When nothing is pending it becomes **Reinstall all**, which re-applies every installed app — the quickest way to restore `config/` files you have deleted. **Update** runs `handaan update`. Both ask twice: the first press arms, the second runs.
+
+Already-installed apps stay in the list and stay choosable; the button says `Reinstall` rather than `Install`. That is deliberate — re-running an app is how you re-apply a `config/` file you have since deleted.
+
+`Ctrl+Delete` on an installed app uninstalls it, and asks twice: the first press arms it and the pane lists what will go, the second runs it. `Enter` never uninstalls anything. See [Uninstalling](#uninstalling).
 
 Before it installs anything, an install run performs a full system upgrade and makes sure `yay` is present, then cleans up orphaned build dependencies afterwards. Budget for that: an install on a machine that has not been updated in a while is not a quick command.
 
-An install started from the dialog opens a terminal of its own and logs the session to `/tmp/handaan-apps.log`; when it fails the window stays open and names that file. Started from a terminal, it just runs there and logs nothing.
+An install or uninstall started from the dialog opens a terminal of its own and logs the session to `/tmp/handaan-apps.log`; when it fails the window stays open and names that file. Either way, it ends with a desktop notification saying what happened — for an uninstall, with the app directory to remove next — so the result is still in the island's history after the window closes. Started from a terminal, it just runs there, logs nothing and sends no notification.
 
-The catalogue needs no session, no sudo and no network, which is why it is also what the bar's maintenance indicator counts, via `handaan pending`:
+The catalogue needs no session, no sudo and no network, which is why `handaan pending` can count from it in a terminal or a script. The bar's Updates indicator does not count apps: the catalogue offers everything you might want on any machine, so the count rarely reaches zero, and a signal that never clears says nothing (see `modules/Updates.qml`).
 
 ```bash
 handaan apps-manifest | jq -r '.[] | select(.installed | not) | .name'
@@ -243,6 +271,45 @@ handaan apps-mark --undo <name>...   # the reverse
 ```
 
 Marking matters most for the `install.sh` case, where the alternative is a reinstall whose only real effect is the marker. For an app that builds from the AUR, that is a full rebuild to learn nothing.
+
+An app you uninstalled is simply not installed. Its directory is still there, so it counts as pending, and Install all would bring it back, until you delete the directory. See [Uninstalling](#uninstalling).
+
+## Uninstalling
+
+```bash
+handaan apps-uninstall tmux           # one app
+handaan apps-uninstall tmux neovim    # several; every name is checked first
+```
+
+Or select the app in the installer and press `Ctrl+Delete` twice. There is no uninstall-all either way: removal is something you name.
+
+An uninstall reverses the install, in the opposite order:
+
+1. **The installed marker is removed.** It goes first, so a run that fails part-way leaves the app pending rather than half removed but still listed as installed. Run the uninstall again to finish it, or the install to put the app back.
+2. **`uninstall.sh` is sourced**, while the packages are still installed.
+3. **`config/` is taken back out.** Each file your app ships is compared with the same path in `$HOME`:
+   - If it is identical, it is deleted.
+   - If it differs, because you edited it, it is moved to `~/.local/state/handaan/retired-config/apps/<name>/` rather than lost.
+   - If it is a symlink, or sits under a directory that is one, it is left alone. Another tree deployed it, and deleting through the link would delete from that repository.
+   - If it is absent, there is nothing to do.
+
+   Directories this leaves empty are removed, deepest first.
+4. **Packages are released, not force-removed.** From the names in your `packages`, handaan drops:
+   - any name another installed app also declares,
+   - any name handaan's core installs (`$HANDAAN_PATH/install/*.packages`),
+   - any name no installed package carries, such as a virtual name like `sh`.
+
+   It marks the rest as dependencies (`pacman -D --asdeps`), then sweeps orphans. A package nothing else needs goes, and so do its own now-unneeded dependencies. A package something still depends on stays until that dependent goes too.
+5. **handaan's pending check is refreshed**, and the run ends by naming the app's directory, and what it links to, so you can remove it.
+
+An uninstall does not upgrade the system first the way an install does, since nothing is being installed. It does take `sudo` without a prompt for the length of the run, the same as an install.
+
+What it leaves behind:
+
+- **The app directory.** Your dotfiles repository owns it, so handaan leaves it alone, and the app stays in the catalogue as not installed. That means it counts as pending in the installer's header and in `handaan pending`, and Install all would bring it back. The bar's Updates indicator never counts apps, so it is not affected. If the app is gone for good, delete its directory (or the link to it in `~/.config/handaan/apps/`). If you might want it again, leave it, and accept the pending count.
+- **Whatever `install.sh` did**, unless your `uninstall.sh` undoes it.
+- **Files the app writes at runtime**: caches, history, `~/.local/share/<app>`. Only files `config/` ships are removed. Anything else is `uninstall.sh`'s to remove, if you want it removed.
+- **Rendered `theme/` files.** Those are rendered for every app directory present, installed or not.
 
 ## Keeping apps in your own repository
 
@@ -308,14 +375,18 @@ Drop any Catppuccin (or other) theme those configs load, or it will paint over t
 - **`install.sh` runs before `config/` is copied.** Do not read your own config files from it.
 - **Adding an app to handaan's own tree does not work.** It is not a place apps go, and `git pull` replaces it. Apps live in your dotfiles repository, deployed to `~/.config/handaan/apps/`.
 - **An app is only "installed" once handaan has installed it.** Writing the app directory is not enough, and neither is having its packages already. Until it goes through `handaan apps-install`, its `config/` has not been copied — the usual symptom is a `.desktop` file that never appears in your launcher.
-- **Nothing uninstalls.** Deleting the app directory removes it from the installer, and leaves its packages and files exactly where they are.
+- **Deleting the app directory is not an uninstall.** It removes the app from the installer, and leaves its packages and files exactly where they are. Run `handaan apps-uninstall <name>` first, then delete it.
+- **Uninstall judges `config/` by what the app directory holds now.** If you edited a file in your app's `config/` after installing, the copy in `$HOME` no longer matches it. It is treated as edited and retired rather than deleted. Nothing is lost, but it does not simply disappear.
+- **A package you installed by hand before an app declared it looks like the app's.** Uninstalling the app releases it, and the orphan sweep removes it if nothing depends on it. `yay -S` brings it back. Install it explicitly again if you want to keep it.
+- **Uninstall cannot see packages `install.sh` installed.** Only the names in `packages` are released. Remove the rest in `uninstall.sh`.
+- **A path your private repository also seeds is at risk.** If its seed and an app's `config/` both deploy the same file as a plain copy (not a symlink), an uninstall of the app deletes it when the two are identical. Keep the two trees disjoint.
 
 ## Testing an app before you trust it
 
 Check the syntax of the hooks the way the rest of the tree is checked:
 
 ```bash
-bash -n ~/.config/handaan/apps/<name>/install.sh ~/.config/handaan/apps/<name>/update.sh
+bash -n ~/.config/handaan/apps/<name>/{install,update,uninstall}.sh
 ```
 
 Then exercise the real thing:
@@ -325,6 +396,10 @@ handaan apps-install <name>   # packages, install.sh, config/
 handaan apps-manifest | jq '.[] | select(.name == "<name>")'   # installed: true
 handaan update                # update.sh, on its own
 handaan apps-install <name>   # again: proves it is safe to re-run
+handaan apps-uninstall <name> # uninstall.sh, config/ out, packages released
+handaan apps-manifest | jq '.[] | select(.name == "<name>")'   # installed: false
+handaan apps-uninstall <name> # again: proves it is safe to re-run
+handaan apps-install <name>   # and back, from a clean slate
 ```
 
-A disposable VM is the honest place for a first run of an app that touches system state; handaan's rehearsal procedure is in `$HANDAAN_PATH/docs/testing-build-scripts.md`. `$HANDAAN_PATH/test/seed-handaan-test-app.sh` writes a complete throwaway app exercising all five files, and is the shortest working reference to read.
+A disposable VM is the honest place for a first run of an app that touches system state; handaan's rehearsal procedure is in `$HANDAAN_PATH/docs/testing-build-scripts.md`. `$HANDAAN_PATH/test/seed-handaan-test-app.sh` writes a complete throwaway app exercising all six files, and is the shortest working reference to read.

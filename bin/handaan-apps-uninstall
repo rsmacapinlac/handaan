@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+# handaan:summary=Uninstall optional apps by name: uninstall.sh, then config/, then packages.
+# handaan:args=<app>...
+# handaan:hidden=installs apps, not handaan itself; see docs/standards/core-stays-minimal.md
+#
+# The reverse of handaan-apps-install, read from the app directory as it stands
+# rather than from a record of what the install did -- the install never kept
+# one, and the directory already says what the app is. So every app ever
+# installed can be removed, with no migration to backfill anything.
+#
+# Like handaan-apps-install it does the work and nothing else; the terminal
+# window and the session log belong to handaan-apps-terminal --uninstall, which
+# is what the Quickshell installer spawns. What an uninstall takes back, and
+# what it leaves: docs/extending-with-apps.md#uninstalling and adrs/0005.
+
+set -euo pipefail
+
+HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
+# shellcheck source=install/lib/handaan-common.sh
+source "$HANDAAN_PATH/install/lib/handaan-common.sh"
+
+readonly APPS_ROOT="$HOME/.config/handaan/apps"
+readonly APPS_STATE="$HANDAAN_STATE/apps"
+readonly RETIRED="$HANDAAN_STATE/retired-config/apps"
+
+usage() {
+    cat <<EOF
+Usage: handaan-apps-uninstall <app>...
+
+Uninstalls each named app: its uninstall.sh, then the files its config/ put in
+\$HOME, then the packages it declares that nothing else installed still needs.
+Edited config files are moved to $RETIRED/<app>/
+rather than deleted. There is no "all": removal is something you name.
+EOF
+}
+
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    usage
+    exit 0
+fi
+
+if (( $# == 0 )); then
+    log_error "No applications named."
+    usage
+    exit 1
+fi
+
+# Every name is checked before anything is removed, so a typo in the third name
+# does not leave the first two half taken apart.
+selected=()
+declare -A seen=()
+for name in "$@"; do
+    if [[ $name == all ]]; then
+        log_error "Uninstall has no 'all'. Name the apps to remove."
+        exit 1
+    fi
+    if [[ ! -d "$APPS_ROOT/$name" ]]; then
+        log_error "No app found at $APPS_ROOT/$name"
+        exit 1
+    fi
+    if [[ -z ${seen[$name]:-} ]]; then
+        selected+=("$name")
+        seen[$name]=1
+    fi
+done
+
+# The same strip handaan-apps-manifest uses, so a package list reads the same
+# to the catalogue, the install and the uninstall.
+package_list() {
+    [[ -f $1 ]] || return 0
+    sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e '/^[[:space:]]*$/d' "$1"
+}
+
+# True when a directory above $HOME/<rel> is a symlink. Such a path was
+# deployed by another tree, and removing through the link would remove from
+# that repository rather than from this machine. The path itself is judged by
+# the caller, since an app may ship a link of its own.
+under_symlink() {
+    local rel=$1 path=$HOME part
+    local -a parts
+    IFS=/ read -ra parts <<< "$(dirname "$rel")"
+    for part in "${parts[@]}"; do
+        [[ $part == . ]] && continue
+        path="$path/$part"
+        [[ -L $path ]] && return 0
+    done
+    return 1
+}
+
+retire() {
+    local name=$1 rel=$2 kept
+    kept="$RETIRED/$name/$rel.$(date +%s)"
+    mkdir -p "$(dirname "$kept")"
+    mv "$HOME/$rel" "$kept"
+    log_warning "  $rel had edits; kept at $kept"
+}
+
+# Each file the app ships is judged against the same path under $HOME: gone if
+# identical, retired if edited, left alone if another tree owns it. A file
+# already absent is nothing to do, which is what makes a second run free.
+remove_config() {
+    local name=$1 config="$APPS_ROOT/$1/config" rel src target removed=0
+    [[ -d $config ]] || return 0
+
+    while IFS= read -r -d '' rel; do
+        src="$config/$rel"
+        target="$HOME/$rel"
+        [[ -e $target || -L $target ]] || continue
+
+        if under_symlink "$rel"; then
+            log_info "  $rel is under a link into another tree; left in place"
+            continue
+        fi
+
+        if [[ -L $src ]]; then
+            if [[ -L $target && $(readlink "$target") == "$(readlink "$src")" ]]; then
+                rm "$target"
+                removed=$(( removed + 1 ))
+            else
+                retire "$name" "$rel"
+            fi
+        elif [[ -L $target ]]; then
+            log_info "  $rel is a link into another tree; left in place"
+        elif [[ -d $target ]]; then
+            log_warning "  $rel is a directory here, not the file the app ships; left in place"
+        elif cmp -s "$src" "$target"; then
+            rm "$target"
+            removed=$(( removed + 1 ))
+        else
+            retire "$name" "$rel"
+        fi
+    done < <(find -H "$config" -mindepth 1 \( -type f -o -type l \) -printf '%P\0')
+
+    # Deepest first, so a parent is tried only after its children are gone.
+    # rmdir refuses anything still holding a file, which is the whole test.
+    while IFS= read -r -d '' rel; do
+        under_symlink "$rel" && continue
+        rmdir "$HOME/$rel" 2>/dev/null || true
+    done < <(find -H "$config" -mindepth 1 -depth -type d -printf '%P\0')
+
+    log_info "  removed $removed config file(s)"
+}
+
+# Released, not removed: what is left after the filters is marked as a
+# dependency, and the orphan sweep after the last app takes whatever nothing
+# requires. `pacman -Rns` would refuse a package something depends on, or with
+# -c take the dependent too; a demoted package just waits for its last
+# dependent to go.
+release_packages() {
+    local name=$1 pkg list other
+    local -A keep=()
+    local -a release=()
+
+    # Core's lists, and every other app still carrying a marker. The marker
+    # rather than the manifest's `installed`: an app missing one package by hand
+    # is still an app you have, and its other packages are still in use.
+    for list in "$HANDAAN_PATH"/install/*.packages; do
+        while read -r pkg; do keep[$pkg]=core; done < <(package_list "$list")
+    done
+    for other in "$APPS_STATE"/*; do
+        [[ -f $other ]] || continue
+        other=$(basename "$other")
+        [[ $other == "$name" ]] && continue
+        while read -r pkg; do keep[$pkg]=$other; done < <(package_list "$APPS_ROOT/$other/packages")
+    done
+
+    while read -r pkg; do
+        if [[ -n ${keep[$pkg]:-} ]]; then
+            log_info "  kept $pkg: ${keep[$pkg]} declares it too"
+        elif [[ $(pacman -Qq "$pkg" 2>/dev/null) != "$pkg" ]]; then
+            # Not installed, or a virtual name like `sh` with no package of its
+            # own to release. -Q answers a provided name with the provider --
+            # bash, for sh -- so the name it answers with has to be this one.
+            continue
+        else
+            release+=("$pkg")
+        fi
+    done < <(package_list "$APPS_ROOT/$name/packages")
+
+    (( ${#release[@]} > 0 )) || return 0
+    sudo pacman -D --asdeps "${release[@]}" >/dev/null
+    log_info "  released ${release[*]}"
+}
+
+# Marker first -- the mirror of the install, which writes its marker last. A
+# run that dies part-way leaves the app pending rather than claiming an install
+# it has half taken apart.
+uninstall_app() {
+    local name=$1 dir="$APPS_ROOT/$1"
+
+    log_info "Uninstalling $name..."
+    rm -f "$APPS_STATE/$name"
+
+    if [[ -f "$dir/uninstall.sh" ]]; then
+        ( source "$dir/uninstall.sh" )
+    fi
+
+    remove_config "$name"
+    release_packages "$name"
+}
+
+# The app directory stays: it belongs to the dotfile repository that put it
+# there, and handaan never writes to it. While it does, the app reads as not
+# installed -- pending in the installer's header and in `handaan pending`, and
+# in Install all. Say so, with the path,
+# rather than leave it to be noticed.
+point_at_directory() {
+    local name=$1 dir="$APPS_ROOT/$1"
+    if [[ -L $dir ]]; then
+        log_info "  $dir links to $(readlink -f "$dir")"
+    fi
+    log_info "  To drop $name from the catalogue, remove $dir"
+    log_info "  (or its source in your dotfiles). Until then it counts as pending."
+}
+
+begin_handaan_install
+
+for app in "${selected[@]}"; do
+    uninstall_app "$app"
+done
+
+remove_build_dependencies
+
+for app in "${selected[@]}"; do
+    point_at_directory "$app"
+done
+
+# Best-effort, as in handaan-apps-install: this has to work from a TTY with no
+# shell running, and a missing bar is not an uninstall failure.
+qs -p "$HANDAAN_PATH/default/quickshell" ipc call maintenance refresh >/dev/null 2>&1 || true
+
+log_success "Uninstalled: ${selected[*]}"

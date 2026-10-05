@@ -16,7 +16,7 @@
 // records for `Palette`, and the same reason Maintenance is not called Updates.
 //
 // "Apps" here means handaan's own sense of the word -- a directory under
-// ~/.config/handaan/apps/ holding meta, packages, install.sh and config/ --
+// ~/.config/handaan/apps/ holding meta, packages, its hooks and config/ --
 // not desktop entries. Quickshell's launcher-side types are DesktopEntries and
 // DesktopEntry, which is what a launcher would read instead.
 //
@@ -32,7 +32,8 @@ import Quickshell.Io
 Singleton {
     id: root
 
-    // One entry per app directory: { name, summary, installed }. Empty until
+    // One entry per app directory: { name, summary, installed, packages,
+    // hooks, config }, as handaan-apps-manifest prints it. Empty until
     // the first poll returns, which `loaded` is what distinguishes -- an empty
     // catalogue and an unread one look identical otherwise, and only one of
     // them should say "no apps found".
@@ -47,16 +48,32 @@ Singleton {
 
     // Whether the installer surface is up. Held here rather than in the
     // surface because the surface is loaded on demand, and a thing that is not
-    // loaded cannot receive the IPC call asking it to appear.
-    property bool installerOpen: false
+    // loaded cannot receive the IPC call asking it to appear. Derived from the
+    // slot it shares with the wallpaper picker, so opening either closes the
+    // other; see Summoned.
+    readonly property bool installerOpen: Summoned.current === "installer"
 
-    readonly property int pendingCount: {
-        var pending = 0;
+    // Not installed -- the same test handaan-pending applies, so the bar's
+    // count and the installer's Install all agree.
+    readonly property var pendingNames: {
+        var pending = [];
         for (var i = 0; i < root.entries.length; i++) {
             if (!root.entries[i].installed)
-                pending += 1;
+                pending.push(root.entries[i].name);
         }
         return pending;
+    }
+    readonly property int pendingCount: root.pendingNames.length
+
+    // What "Reinstall all" runs over when nothing is pending -- which, with
+    // nothing pending, is every app there is.
+    readonly property var installedNames: {
+        var installed = [];
+        for (var i = 0; i < root.entries.length; i++) {
+            if (root.entries[i].installed)
+                installed.push(root.entries[i].name);
+        }
+        return installed;
     }
 
     // Resolved rather than looked up on PATH, and run as argv rather than
@@ -70,11 +87,11 @@ Singleton {
 
     function open() {
         root.refresh();
-        root.installerOpen = true;
+        Summoned.claim("installer");
     }
 
     function close() {
-        root.installerOpen = false;
+        Summoned.release("installer");
     }
 
     // Hand the names to a terminal and forget about them. The install is long,
@@ -89,6 +106,20 @@ Singleton {
         if (!names || names.length === 0)
             return;
         Quickshell.execDetached([root.handaanPath + "/bin/handaan-apps-terminal"].concat(names));
+    }
+
+    // The same hand-off, to handaan-apps-uninstall. The installer arms it
+    // before calling; nothing here asks again.
+    function uninstall(names) {
+        if (!names || names.length === 0)
+            return;
+        Quickshell.execDetached([root.handaanPath + "/bin/handaan-apps-terminal", "--uninstall"].concat(names));
+    }
+
+    // `handaan update -y`, in the same kind of window. It lives here because the
+    // installer is where it is offered; what is waiting is Maintenance's answer.
+    function update() {
+        Quickshell.execDetached([root.handaanPath + "/bin/handaan-apps-terminal", "--update"]);
     }
 
     IpcHandler {
