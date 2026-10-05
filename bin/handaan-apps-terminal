@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
-# handaan:summary=Run an app install in its own terminal window, logged and held open on failure.
-# handaan:args=<app>... | all
+# handaan:summary=Run an app install, an uninstall or handaan update in its own terminal window, logged and held open on failure.
+# handaan:args=<app>... | all | --uninstall <app>... | --update
 # handaan:hidden=spawned by the Quickshell installer; call handaan-apps-install directly instead
 #
 # The visible half of an install. handaan-apps-install does the work and knows
 # nothing about windows; this opens a terminal for it, keeps a session log, and
-# holds the window open when the run fails.
+# holds the window open when the run fails. --uninstall does the same for
+# handaan-apps-uninstall, and --update for `handaan update -y` -- the installer
+# has already asked twice, so the update's own prompt would be a third time.
+#
+# When the run ends it says so as a desktop notification, because on success
+# the window closes with everything it printed -- including, for an uninstall,
+# the app directory still to remove. The notification lands in the island's
+# history, where it can be read after the window has gone. A failure notifies
+# too, critically, beside the window it holds open.
 #
 # It exists as its own command because the installer is a Quickshell surface:
 # the shell should spawn one thing and forget about it, rather than carry a
@@ -17,20 +25,83 @@ HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
 # shellcheck source=install/lib/handaan-common.sh
 source "$HANDAAN_PATH/install/lib/handaan-common.sh"
 
-readonly APPS_LOG=/tmp/handaan-apps.log
+usage() {
+    echo "Usage: handaan-apps-terminal <app>... | all | --uninstall <app>... | --update"
+}
 
-if (( $# == 0 )) || [[ ${1:-} == -h || ${1:-} == --help ]]; then
-    echo "Usage: handaan-apps-terminal <app>... | all"
-    (( $# == 0 )) && exit 1
+if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+    usage
     exit 0
 fi
+
+log=/tmp/handaan-apps.log
+worker=handaan-apps-install
+title="Installing applications"
+verb=apps-install
+case ${1:-} in
+    --uninstall)
+        worker=handaan-apps-uninstall
+        title="Uninstalling applications"
+        verb=apps-uninstall
+        shift
+        ;;
+    --update)
+        (( $# == 1 )) || { usage; exit 1; }
+        worker=handaan-update
+        title="Updating handaan"
+        verb=update
+        # handaan-update logs itself through script(1) unless told it already
+        # is. It is, here, so the session lands once, in its usual file.
+        log=/tmp/handaan-update.log
+        export HANDAAN_UPDATE_LOGGED=1
+        set -- -y
+        ;;
+esac
+
+if (( $# == 0 )); then
+    usage
+    exit 1
+fi
+
+# What the notification says, worked out here where the names are known. The
+# uninstall hint is rebuilt rather than read back from the run's output: the
+# run prints it for a terminal, and this is the same advice for the desktop.
+names=$(printf '%s, ' "$@")
+names=${names%, }
+case $verb in
+    apps-install)
+        if [[ $* == all ]]; then
+            ok_title="Installed every app"
+        else
+            ok_title="Installed $names"
+        fi
+        ok_body=""
+        fail_title="Install failed"
+        ;;
+    apps-uninstall)
+        ok_title="Uninstalled $names"
+        dirs=$(printf '~/.config/handaan/apps/%s, ' "$@")
+        dirs=${dirs%, }
+        if (( $# == 1 )); then
+            ok_body="Remove $dirs to drop it from the catalogue; until then it counts as pending."
+        else
+            ok_body="Remove $dirs to drop them from the catalogue; until then they count as pending."
+        fi
+        fail_title="Uninstall failed"
+        ;;
+    update)
+        ok_title="handaan updated"
+        ok_body="Session log: $log"
+        fail_title="Update failed"
+        ;;
+esac
 
 # An `exec` that cannot find its target exits 127 with nothing on screen, which
 # from the installer looks identical to a terminal that opened and vanished.
 # Say which it was.
 if ! command -v kitty &>/dev/null; then
-    log_error "kitty is not installed, so the install cannot open a terminal of its own."
-    log_error "Run it directly instead:  handaan apps-install $*"
+    log_error "kitty is not installed, so the run cannot open a terminal of its own."
+    log_error "Run it directly instead:  handaan $verb $*"
     exit 1
 fi
 
@@ -39,15 +110,25 @@ fi
 # flushes so a crash leaves a complete file, and -e propagates the exit status.
 # Its -c takes one command string, so the argv is quoted into one with %q
 # rather than interpolated.
-exec kitty --title "Installing applications" -e bash -c '
-    log=$1; shift
+exec kitty --title "$title" -e bash -c '
+    log=$1; worker=$2; ok_title=$3; ok_body=$4; fail_title=$5; shift 5
     printf -v command "%q " "$@"
     script -qefc "${command% }" "$log"
     status=$?
-    [ "$status" -eq 0 ] && exit 0
-    printf "\n\033[0;31m[FAILED]\033[0m handaan-apps-install exited %d.\n" "$status"
+    # Best-effort: a missing notify-send or notification daemon must not turn
+    # a finished run into a failed one.
+    notify() {
+        command -v notify-send >/dev/null 2>&1 && notify-send -a handaan "$@" 2>/dev/null
+        return 0
+    }
+    if [ "$status" -eq 0 ]; then
+        notify "$ok_title" "$ok_body"
+        exit 0
+    fi
+    notify -u critical "$fail_title" "Full log: $log"
+    printf "\n\033[0;31m[FAILED]\033[0m %s exited %d.\n" "$worker" "$status"
     printf "Full log: %s\n" "$log"
     printf "\nPress Enter to close this window. "
     read -r _ < /dev/tty
     exit "$status"
-' _ "$APPS_LOG" "$HANDAAN_PATH/bin/handaan-apps-install" "$@"
+' _ "$log" "$worker" "$ok_title" "$ok_body" "$fail_title" "$HANDAAN_PATH/bin/$worker" "$@"

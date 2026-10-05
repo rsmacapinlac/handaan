@@ -15,16 +15,35 @@ Concretely, for the application installer:
 | piece | what it is |
 |---|---|
 | `default/quickshell/Commons/AppCatalog.qml` | Singleton. Reads the catalogue, holds whether the installer is up, spawns an install. Carries the `appCatalog` IPC target. |
-| `default/quickshell/Ui/Installer.qml` | The dialog. A layer-shell surface on the focused monitor, bound to `Theme` and `Style` like every widget. |
+| `default/quickshell/Ui/Installer.qml` | The dialog. A layer-shell surface on the focused monitor, bound to `Theme` and `Style` like every widget: a header with what is waiting and the Update and Install all actions, then the list on the left and the app under the cursor on the right. |
+| `default/quickshell/Ui/DialogCard.qml` | The card the installer and the wallpaper picker are drawn on. |
 | `bin/handaan-apps-manifest` | Discovery and installed-state, as JSON. The only place that answers "which apps exist, and which are installed". |
 | `bin/handaan-apps-install` | Installs named apps. No terminal, no picker, no log. |
-| `bin/handaan-apps-terminal` | Opens a terminal for the above, keeps the session log, holds the window open on failure. |
+| `bin/handaan-apps-terminal` | Opens a terminal for the above, keeps the session log, holds the window open on failure, and sends a desktop notification when the run ends. `--uninstall` does the same for an uninstall, and `--update` for `handaan update -y`. |
 | `bin/handaan-apps-mark` | Records an install without performing one. |
+| `bin/handaan-apps-uninstall` | Uninstalls named apps. No terminal, no picker, no log. |
 | `bin/handaan-apps` | Summons the dialog. Nothing else. |
 
 The flow runs one way. `handaan apps` — or `SUPER+SHIFT+A` — calls `appCatalog open`; the shell runs `handaan-apps-manifest` and renders the result; choosing a row hands that app's name to `handaan-apps-terminal` through `execDetached` and closes. Nothing waits for anything: the install pokes `maintenance refresh` when it finishes, and the dialog re-reads the catalogue every time it opens.
 
-The dialog is a launcher rather than a form — type to narrow, arrows to move, `Enter` to install the row under the cursor. Multi-select was dropped because installing one app is the overwhelmingly common case and a checkbox list made it the slowest one, and because a tick that started checked on an already-installed app, and did nothing when cleared, was state with no meaning. `Install all pending` is a row in the same list and the only action that confirms, since it is the one whose cost — a full system upgrade plus every missing app — is not visible from the row.
+**The run reports its end as a notification.** On success the terminal closes, and everything it printed goes with it — for an uninstall, that includes the app directory still to remove. So `handaan-apps-terminal` sends a notification when the run ends: `Installed tmux`, `handaan updated`, or `Uninstalled beets` with the directory to remove as its body. A failure sends a critical one naming the log, beside the window it holds open. The notification lands in the island's history, where it can be read after the window has gone. A run typed into a terminal sends none, since its output is already in front of you.
+
+The dialog is a launcher rather than a form — type to narrow, arrows to move, `Enter` to install the row under the cursor. Multi-select was dropped because installing one app is the overwhelmingly common case and a checkbox list made it the slowest one, and because a tick that started checked on an already-installed app, and did nothing when cleared, was state with no meaning.
+
+**Above the list, a header says what the machine is waiting on and carries the two actions that act on everything.** On the left is a status line: updates as the bar's Updates indicator counts them, security ones called out, and how many apps are pending. On the right are two buttons:
+
+- **Update** runs `handaan update -y` in a terminal through `handaan-apps-terminal --update`. `-y` is passed because the dialog has already asked twice.
+- **Install all** installs the pending apps when there are any. When nothing is pending it becomes **Reinstall all**, over every installed app.
+
+Each asks twice: the first press fills the button, and the status line turns into what the second press will do. Update lives here rather than on the bar's indicator because a click on the bar must be harmless if it was a mistake (see `modules/Updates.qml`). Here, a confirmation is already the convention. The header is reached with `Tab`; `←`/`→` move between its buttons, and `Enter` arms, then runs. The search field keeps the keyboard throughout, so typing anything returns to the list without losing the keystroke.
+
+Beside the list is a pane showing the app under the cursor: its summary, whether it is installed, removed or neither, and what it declares — packages, hooks, the files its `config/` ships — with its actions as buttons. The pane is there because uninstall is in the dialog, and an action that takes things away should show what it takes before it runs. A click on a row selects it rather than acting, and hover does not select at all, because the pointer crosses the list on its way to the pane's buttons and must not change what they act on.
+
+**`Enter` installs and only ever installs. Uninstall is `Ctrl+Delete`, and it asks twice.** The first press arms the row and the pane spells out what will go — whether `uninstall.sh` runs, how many config files, which packages are released. The second press runs it in a terminal through `handaan-apps-terminal --uninstall`. `Enter`, `Esc` or moving the cursor disarms it. A key of its own, rather than a choice offered on `Enter`, is what keeps a stray `Enter` cheap: one too many costs an idempotent reinstall, never the app. Uninstall is offered only for an installed app, and there is no uninstall-all.
+
+An app removed with `handaan apps-uninstall` stays in the list as not installed, and counts as pending, until its directory is deleted from the dotfile repository.
+
+**The installer and the wallpaper picker share one card, `Ui/DialogCard.qml`:** a 4px accent border and 12px corners, the frame of the rofi launcher, so every list you summon reads as one family. It is a component rather than values each dialog copies, because copying is how the two drifted apart. A dialog sets only its size and contents. The power menu and the notification history are not summoned lists, and keep their quieter 1px frame.
 
 The power menu is the second dialog built this way, and replaced a rofi script that wrote a theme file into `~/.config/rofi` on every run and carried its own copy of Mocha:
 
@@ -43,6 +62,8 @@ The wallpaper picker is the third, and replaced a key that set a random wallpape
 | `default/quickshell/Commons/Wallpapers.qml` | Singleton. Reads the list from `handaan-wallpaper-manifest`, holds whether the picker is up and which wallpaper is current, and hands a choice to `handaan-wallpaper-set`. Carries the `wallpapers` IPC target. |
 | `default/quickshell/Ui/WallpaperPicker.qml` | The dialog. Same surface and dismissal as the other two: a filter field, a grid of thumbnails with Random first, and a status line naming the one under the cursor. |
 | `bin/handaan-wallpaper` | Toggles the picker. Nothing else. `Super+Shift+W` calls it; see [0010](0010-reach-handaan-surfaces-with-one-family-of-shortcuts.md). |
+
+**The installer and the wallpaper picker are one at a time.** Both are lists you summon to choose from, so opening either closes the other, rather than stacking a second exclusive-keyboard surface over the first. They share one slot, `default/quickshell/Commons/Summoned.qml`: a singleton holding the name of the surface that is up. `AppCatalog.open` claims it for `"installer"`, `Wallpapers.open` for `"wallpapers"`, and each surface's open flag is derived from it (`installerOpen: Summoned.current === "installer"`). Claiming the slot is what closes whichever surface held it, so no surface names another, and a new one joins by claiming a name of its own. Only the holder can release the slot, so a close that arrives late cannot put away a surface that has since taken it. Joining is opt-in. The power menu stays outside: it is reached when something is wrong, and must come up over whatever is already open.
 
 It opens on the wallpaper you have, arrows move in two dimensions, and `Enter` sets. Nothing confirms, because a wallpaper you did not want is one more choice away. It has no scrim, since the wallpaper behind the card is what the thumbnails are being compared against. Choosing a wallpaper is also how the desktop's colours change; see [0007](0007-take-the-desktop-colours-from-the-wallpaper.md).
 

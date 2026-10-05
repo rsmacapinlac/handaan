@@ -134,6 +134,7 @@ handaan apps                       # open the installer, then cancel with Esc
 handaan apps-install media mail
 handaan apps-install all           # complete boundary rehearsal
 handaan apps-install all           # idempotency rehearsal
+handaan apps-uninstall not-an-app  # must fail before sudo
 ```
 
 After installing selected groups, verify only their packages and services. For

@@ -10,6 +10,7 @@
 #   handaan-apps-install    install named apps, here in this terminal
 #   handaan-apps-terminal   the same, in a window of its own, logged
 #   handaan-apps-mark       record an install without performing one
+#   handaan-apps-uninstall  uninstall named apps, here in this terminal
 
 set -euo pipefail
 
@@ -18,7 +19,7 @@ HANDAAN_PATH="${HANDAAN_PATH:-$HOME/.local/share/handaan}"
 source "$HANDAAN_PATH/install/lib/handaan-common.sh"
 
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-    sed -n '3,13p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,14p' "$0" | sed 's/^# \{0,1\}//'
     exit 0
 fi
 

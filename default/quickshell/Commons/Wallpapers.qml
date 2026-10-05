@@ -30,7 +30,8 @@ Singleton {
     property bool loaded: false
     property string error: ""
 
-    property bool pickerOpen: false
+    // Derived from the slot the picker shares with the installer; see Summoned.
+    readonly property bool pickerOpen: Summoned.current === "wallpapers"
 
     // What is on screen, as handaan-wallpaper-set records it. Watched, so the
     // picker marks the right one even when the change came from somewhere else.
@@ -43,11 +44,11 @@ Singleton {
     function open() {
         if (!manifest.running)
             manifest.running = true;
-        root.pickerOpen = true;
+        Summoned.claim("wallpapers");
     }
 
     function close() {
-        root.pickerOpen = false;
+        Summoned.release("wallpapers");
     }
 
     function toggle() {

@@ -11,3 +11,4 @@ singleton SessionLock 1.0 SessionLock.qml
 singleton Wallpapers 1.0 Wallpapers.qml
 singleton NotificationCenter 1.0 NotificationCenter.qml
 singleton IslandControl 1.0 IslandControl.qml
+singleton Summoned 1.0 Summoned.qml
