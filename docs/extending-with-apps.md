@@ -222,6 +222,7 @@ handaan apps-install tmux
 handaan apps                        # open the installer (also SUPER+SHIFT+A)
 handaan apps-install tmux neovim    # install these, no dialog
 handaan apps-install all            # install everything found
+handaan apps-install --upgrade all  # the same, after a full system upgrade
 handaan apps-manifest               # the catalogue, as JSON
 handaan apps-mark tmux              # record as installed without installing
 handaan apps-mark --undo tmux       # the reverse
@@ -240,7 +241,9 @@ Already-installed apps stay in the list and stay choosable; the button says `Rei
 
 `Ctrl+Delete` on an installed app uninstalls it, and asks twice: the first press arms it and the pane lists what will go, the second runs it. `Enter` never uninstalls anything. See [Uninstalling](#uninstalling).
 
-Before it installs anything, an install run performs a full system upgrade and makes sure `yay` is present, then cleans up orphaned build dependencies afterwards. Budget for that: an install on a machine that has not been updated in a while is not a quick command.
+An install run installs the app's own packages and nothing else, the way `pacman -S` would: it makes sure `yay` is present, installs with `--needed` against the package database as it stands, and cleans up orphaned build dependencies afterwards. It does not upgrade the rest of the system, and it does not refresh the database either, since refreshing without upgrading is the partial upgrade Arch warns against. Upgrading is `handaan update`'s job. Pass `--upgrade` to run a full system upgrade first, which is what an install used to do every time.
+
+The cost is a database that has fallen behind the mirrors. Packages that have since been replaced upstream are no longer there to download, so the install fails with a 404 and tells you to run `handaan update` first. Do that, then install again.
 
 An install or uninstall started from the dialog opens a terminal of its own and logs the session to `/tmp/handaan-apps.log`; when it fails the window stays open and names that file. Either way, it ends with a desktop notification saying what happened — for an uninstall, with the app directory to remove next — so the result is still in the island's history after the window closes. Started from a terminal, it just runs there, logs nothing and sends no notification.
 
@@ -302,7 +305,7 @@ An uninstall reverses the install, in the opposite order:
    It marks the rest as dependencies (`pacman -D --asdeps`), then sweeps orphans. A package nothing else needs goes, and so do its own now-unneeded dependencies. A package something still depends on stays until that dependent goes too.
 5. **handaan's pending check is refreshed**, and the run ends by naming the app's directory, and what it links to, so you can remove it.
 
-An uninstall does not upgrade the system first the way an install does, since nothing is being installed. It does take `sudo` without a prompt for the length of the run, the same as an install.
+An uninstall does not upgrade the system, and neither does an install unless you pass `--upgrade`. It does take `sudo` without a prompt for the length of the run, the same as an install.
 
 What it leaves behind:
 

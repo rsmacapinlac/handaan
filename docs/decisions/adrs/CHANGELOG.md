@@ -1,5 +1,9 @@
 # ADR Changelog
 
+## 2026-10-08 (installs stop upgrading the system)
+
+- **0005** edited in place. `handaan-apps-install` no longer runs `upgrade_system` (`yay -Syu`) before installing. It installs the named apps' packages with `yay -S --needed` against the database as it stands, like Omarchy's `omarchy-pkg-add`, and never refreshes the database without upgrading. `--upgrade` restores the old upgrade-first run. A stale database, which shows up as a 404 from the mirrors, stops the install with a message to run `handaan update` first. `upgrade_system` stays for the base install. The orphan sweep is unchanged.
+
 ## 2026-10-04 (apps can be uninstalled)
 
 - **0005** edited in place. An app can be uninstalled with `handaan apps-uninstall <app>...`, which until now had no path at all; removal was `yay -Rns` and deleting files by hand. It reverses the install from the app directory as it stands, not from a record kept at install time, so no migration is needed. The steps are: the marker goes first; a new optional `uninstall.sh` hook runs while the packages are still present; identical `config/` files are deleted and edited ones are retired to `$HANDAAN_STATE/retired-config/apps/<app>/`; the declared packages that no other installed app and nothing in core declares are marked `--asdeps` for the orphan sweep. There is no "removed" state: the app directory stays, so an uninstalled app reads as not installed until its directory is deleted, and the uninstall ends by naming that directory.

@@ -134,8 +134,7 @@ PanelWindow {
         if (root.armed === "update")
             return "Press again to update: a snapshot first, then handaan, every package, migrations and each app's update.sh. sudo asks in the terminal.";
         if (root.armed === "all")
-            return "Press again to " + (root.allPending ? "install " : "reinstall ") + root.allNames.join(", ")
-                + ". A full system upgrade runs first.";
+            return "Press again to " + (root.allPending ? "install " : "reinstall ") + root.allNames.join(", ") + ".";
         return "";
     }
 

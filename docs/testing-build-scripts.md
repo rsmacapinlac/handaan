@@ -367,7 +367,8 @@ exercise the optional interface before installing packages:
 
 ```bash
 handaan apps-install --help
-handaan apps-install not-an-app    # must fail before sudo or an upgrade
+handaan apps-install not-an-app    # must fail before sudo
+handaan apps-install --bogus app   # unknown option: must fail before sudo
 handaan apps-manifest              # catalogue as JSON; no session needed
 handaan apps                       # open the installer, cancel with Escape
 ```
@@ -389,7 +390,9 @@ handaan apps-manifest | jq '.[] | select(.name == "syncthing")'
 handaan apps-install syncthing
 ```
 
-Each invocation must perform one full system upgrade. The second run should
+No invocation may upgrade the system: only the named apps' packages are
+installed, and `pacman.log` gains no `starting full system upgrade` line.
+`handaan apps-install --upgrade all` must add exactly one. The second run should
 skip current packages, complete without errors, clean temporary build
 dependencies, and remove the temporary passwordless sudo rule.
 
