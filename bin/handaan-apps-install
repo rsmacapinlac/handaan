@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # handaan:summary=Install optional apps by name: packages, then install.sh, then config/.
-# handaan:args=<app>... | all
+# handaan:args=[--upgrade] <app>... | all
 # handaan:hidden=installs apps, not handaan itself; see docs/standards/core-stays-minimal.md
 #
 # Does the work and nothing else -- no terminal, no picker, no log file. It
@@ -24,22 +24,44 @@ readonly APPS_STATE="$HANDAAN_STATE/apps"
 
 usage() {
     cat <<EOF
-Usage: handaan-apps-install <app>... | all
+Usage: handaan-apps-install [--upgrade] <app>... | all
 
 Installs each named app: its package list, then install.sh, then config/.
 Apps live under $APPS_ROOT. "all" installs every app found there.
+
+Only the apps' own packages are installed, against the package database as
+it stands; nothing else on the system is upgraded. --upgrade runs a full
+system upgrade first. If packages can no longer be fetched, the database is
+stale: run handaan update, then install again.
 
 Re-running is free: packages are installed with --needed, install.sh is
 written to be rerunnable, and config/ is copied without clobbering.
 EOF
 }
 
-if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-    usage
-    exit 0
-fi
+upgrade=0
+names=()
+for arg in "$@"; do
+    case $arg in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --upgrade)
+            upgrade=1
+            ;;
+        -*)
+            log_error "Unknown option: $arg"
+            usage
+            exit 1
+            ;;
+        *)
+            names+=("$arg")
+            ;;
+    esac
+done
 
-if (( $# == 0 )); then
+if (( ${#names[@]} == 0 )); then
     log_error "No applications named."
     usage
     exit 1
@@ -86,6 +108,23 @@ resolve_apps() {
     done
 }
 
+# No -y: the packages come from the database as it stands, so an install
+# touches nothing but what it names. The cost is that a database the mirrors
+# have moved past points at files they no longer carry, and pacman fails with a
+# 404. Refreshing it here without upgrading would be the partial upgrade Arch
+# warns against, so the fix is named instead of attempted.
+install_packages() {
+    local list=$1 output status=0
+    output=$(mktemp -t handaan-apps-install.XXXXXX)
+    yay_install_list "$list" 2>&1 | tee "$output" || status=$?
+    if (( status != 0 )) && grep -q 'failed retrieving file.*404' "$output"; then
+        log_error "Packages could not be fetched: the package database is out of date."
+        log_error "Run 'handaan update' first, then install again."
+    fi
+    rm -f "$output"
+    return "$status"
+}
+
 # packages, then install.sh, then config/ -- in that order, so install.sh can
 # rely on its packages being present but not on its own config files, which
 # land after it. The marker is written last and only here: a run that dies
@@ -97,7 +136,7 @@ install_app() {
     log_info "Installing $name..."
 
     if [[ -f "$dir/packages" ]]; then
-        yay_install_list "$dir/packages"
+        install_packages "$dir/packages"
     fi
 
     if [[ -f "$dir/install.sh" ]]; then
@@ -117,14 +156,16 @@ install_app() {
 # clean run with nothing to do.
 selected=()
 resolved=""
-if ! resolved=$(resolve_apps "$@"); then
+if ! resolved=$(resolve_apps "${names[@]}"); then
     exit 1
 fi
 mapfile -t selected <<< "$resolved"
 
 begin_handaan_install
 install_aur_helper
-upgrade_system
+if (( upgrade )); then
+    upgrade_system
+fi
 
 for app in "${selected[@]}"; do
     install_app "$app"

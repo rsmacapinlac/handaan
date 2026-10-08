@@ -128,7 +128,7 @@ Verify help, rejection, interactive cancellation, and explicit selection:
 
 ```bash
 handaan apps-install --help
-handaan apps-install not-an-app    # must fail before sudo or upgrades
+handaan apps-install not-an-app    # must fail before sudo
 handaan apps-manifest              # the catalogue, as JSON; needs no session
 handaan apps                       # open the installer, then cancel with Esc
 handaan apps-install media mail
