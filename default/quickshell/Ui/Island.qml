@@ -47,6 +47,7 @@ import QtQuick.Controls as Controls
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Services.Mpris
+import Quickshell.Bluetooth
 import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
@@ -271,11 +272,79 @@ Item {
     // Escape closes it, as it does the shell's dialogs. Bar.qml hands this
     // surface the keyboard while the island is open; this takes it.
     onExpandedChanged: {
-        if (root.expanded)
+        if (root.expanded) {
             root.forceActiveFocus();
+        } else {
+            root.armed = "";
+            root.outputsOpen = false;
+        }
     }
 
-    Keys.onEscapePressed: root.expanded = false
+    // An armed action is let go before the island is, as the power menu does.
+    Keys.onEscapePressed: {
+        if (root.armed !== "")
+            root.armed = "";
+        else
+            root.expanded = false;
+    }
+
+    // What you hear through and speak into: WirePlumber's defaults. Session
+    // wide, like the player -- one machine has one output whichever monitor
+    // you change it from.
+    readonly property var sink: Pipewire.defaultAudioSink
+    readonly property var source: Pipewire.defaultAudioSource
+
+    // A node's volume and mute read empty until something tracks it.
+    PwObjectTracker {
+        objects: [root.sink, root.source]
+    }
+
+    // Outputs you could switch to: devices, not the apps playing into them.
+    readonly property var sinks: {
+        var out = [];
+        const nodes = Pipewire.nodes.values;
+        for (var i = 0; i < nodes.length; i++) {
+            if (nodes[i].isSink && !nodes[i].isStream && nodes[i].audio)
+                out.push(nodes[i]);
+        }
+        return out;
+    }
+
+    function nodeName(node) {
+        if (!node)
+            return "";
+        return node.description || node.nickname || node.name;
+    }
+
+    property bool outputsOpen: false
+
+    // Connected devices only. Pairing and connecting belong to Blueman, which
+    // the button beside the output opens; what the island lists is what you
+    // can let go of, so with nothing connected there is nothing to show.
+    readonly property var bluetoothConnected: {
+        var out = [];
+        const devices = Bluetooth.devices.values;
+        for (var i = 0; i < devices.length; i++) {
+            if (devices[i].connected)
+                out.push(devices[i]);
+        }
+        return out;
+    }
+
+    // The power menu's actions, with its rule: what ends every open window
+    // arms on the first click and acts on the second. The id waiting for its
+    // second click, or "".
+    property string armed: ""
+
+    function act(action) {
+        if (action.confirm && root.armed !== action.id) {
+            root.armed = action.id;
+            return;
+        }
+        root.armed = "";
+        root.expanded = false;
+        SessionControl.run(action.id);
+    }
 
     // The keyboard's way in. Every copy hears it; only the focused monitor's
     // acts, so Super+Shift+N opens the island where you are working.
@@ -382,7 +451,7 @@ Item {
         // Leaves the bar's own surface visible around it, so the shape reads
         // as cut into the bar rather than laid on top of it.
         implicitWidth: root.expanded ? root.expandedWidth : Math.max(cutout.implicitWidth + Style.space(3) * 2, Style.islandCutoutMinWidth)
-        implicitHeight: root.cutoutHeight + (root.expanded ? panel.implicitHeight + Style.space(3) : 0)
+        implicitHeight: root.cutoutHeight + (root.expanded ? panel.implicitHeight + session.implicitHeight + Style.space(3) * 2 : 0)
         width: implicitWidth
         height: implicitHeight
 
@@ -614,6 +683,335 @@ Item {
                         font.pixelSize: Style.fontSizeSmall
                         Layout.alignment: Qt.AlignHCenter
                     }
+
+                    // How you hear it, under what you are hearing.
+                    Rectangle {
+                        implicitHeight: Style.borderWidth
+                        color: Theme.border
+                        Layout.fillWidth: true
+                    }
+
+                    // The output, and beside it the way to the devices that
+                    // could become one. The button stays when nothing is
+                    // connected, which is when you need it.
+                    RowLayout {
+                        spacing: Style.space(1.5)
+                        Layout.fillWidth: true
+
+                        Rectangle {
+                            implicitHeight: outputRow.implicitHeight + Style.space(2.5)
+                            radius: Style.radius
+                            color: outputHover.hovered ? Theme.surfaceHover : Theme.surface
+                            border.width: Style.borderWidth
+                            border.color: Theme.border
+                            Layout.fillWidth: true
+
+                            RowLayout {
+                                id: outputRow
+
+                                anchors.fill: parent
+                                anchors.leftMargin: Style.space(2)
+                                anchors.rightMargin: Style.space(2)
+                                spacing: Style.space(2)
+
+                                // U+F02CB headphones.
+                                Text {
+                                    text: "󰋋"
+                                    color: Theme.barText
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSizeSmall
+                                }
+
+                                Text {
+                                    text: root.sink ? root.nodeName(root.sink) : "No output"
+                                    color: root.sink ? Theme.barText : Theme.barTextMuted
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSizeSmall
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+
+                                // U+F0140 chevron down, U+F0143 chevron up.
+                                Text {
+                                    text: root.outputsOpen ? "󰅃" : "󰅀"
+                                    color: Theme.barTextMuted
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSizeSmall
+                                }
+                            }
+
+                            HoverHandler {
+                                id: outputHover
+                            }
+
+                            TapHandler {
+                                onTapped: root.outputsOpen = !root.outputsOpen
+                            }
+                        }
+
+                        // Opens Blueman, and puts the island away: the window
+                        // that opens is where you are going next.
+                        Rectangle {
+                            implicitWidth: implicitHeight
+                            implicitHeight: outputRow.implicitHeight + Style.space(2.5)
+                            radius: Style.radius
+                            color: bluetoothHover.hovered ? Theme.surfaceHover : Theme.surface
+                            border.width: Style.borderWidth
+                            border.color: Theme.border
+
+                            // U+F00AF bluetooth.
+                            Text {
+                                anchors.centerIn: parent
+                                text: "󰂯"
+                                color: Theme.barText
+                                font.family: Style.fontFamily
+                                font.pixelSize: Style.fontSize
+                            }
+
+                            HoverHandler {
+                                id: bluetoothHover
+                            }
+
+                            TapHandler {
+                                onTapped: {
+                                    root.expanded = false;
+                                    Quickshell.execDetached(["blueman-manager"]);
+                                }
+                            }
+                        }
+                    }
+
+                    // The outputs to choose from, the current one ticked.
+                    ColumnLayout {
+                        visible: root.outputsOpen
+                        spacing: 0
+                        Layout.fillWidth: true
+
+                        Repeater {
+                            model: root.sinks
+
+                            delegate: Rectangle {
+                                id: sinkRow
+
+                                required property var modelData
+                                readonly property bool current: sinkRow.modelData === root.sink
+
+                                implicitHeight: sinkLabel.implicitHeight + Style.space(2)
+                                radius: Style.radius
+                                color: sinkHover.hovered ? Theme.surfaceHover : "transparent"
+                                Layout.fillWidth: true
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: Style.space(1.5)
+                                    anchors.rightMargin: Style.space(1.5)
+                                    spacing: Style.space(1.5)
+
+                                    // U+F012C check.
+                                    Text {
+                                        text: "󰄬"
+                                        opacity: sinkRow.current ? 1 : 0
+                                        color: Theme.active
+                                        font.family: Style.fontFamily
+                                        font.pixelSize: Style.fontSizeSmall
+                                    }
+
+                                    Text {
+                                        id: sinkLabel
+
+                                        text: root.nodeName(sinkRow.modelData)
+                                        color: sinkRow.current ? Theme.barText : Theme.barTextMuted
+                                        font.family: Style.fontFamily
+                                        font.pixelSize: Style.fontSizeSmall
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+                                }
+
+                                HoverHandler {
+                                    id: sinkHover
+                                }
+
+                                TapHandler {
+                                    onTapped: {
+                                        Pipewire.preferredDefaultAudioSink = sinkRow.modelData;
+                                        root.outputsOpen = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Volume. Moving it unmutes, as raising a hardware knob would.
+                    RowLayout {
+                        visible: root.sink !== null
+                        spacing: Style.space(2)
+                        Layout.fillWidth: true
+
+                        readonly property bool muted: root.sink && root.sink.audio ? root.sink.audio.muted : false
+
+                        // U+F057E volume high, U+F0581 volume off.
+                        IslandButton {
+                            glyph: parent.muted ? "󰖁" : "󰕾"
+                            color: parent.muted ? Theme.barTextMuted : Theme.barText
+                            onActivated: root.sink.audio.muted = !root.sink.audio.muted
+                        }
+
+                        Controls.Slider {
+                            id: volume
+
+                            from: 0
+                            to: 1
+                            Layout.fillWidth: true
+
+                            // Held off while dragging, so the slider is not
+                            // pulled back by the value it is in the middle of
+                            // writing.
+                            Binding on value {
+                                when: !volume.pressed
+                                value: root.sink && root.sink.audio ? Math.min(root.sink.audio.volume, 1) : 0
+                            }
+
+                            onMoved: {
+                                root.sink.audio.muted = false;
+                                root.sink.audio.volume = volume.value;
+                            }
+
+                            background: Rectangle {
+                                x: volume.leftPadding
+                                y: volume.topPadding + volume.availableHeight / 2 - height / 2
+                                width: volume.availableWidth
+                                height: Style.space(1)
+                                radius: height / 2
+                                color: Theme.surface
+
+                                Rectangle {
+                                    width: volume.visualPosition * parent.width
+                                    height: parent.height
+                                    radius: parent.radius
+                                    color: volume.parent.muted ? Theme.barTextMuted : Theme.active
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: volume.leftPadding + volume.visualPosition * (volume.availableWidth - width)
+                                y: volume.topPadding + volume.availableHeight / 2 - height / 2
+                                implicitWidth: Style.space(3)
+                                implicitHeight: Style.space(3)
+                                radius: width / 2
+                                color: volume.parent.muted ? Theme.barTextMuted : Theme.active
+                            }
+                        }
+
+                        Text {
+                            text: parent.muted ? "off" : Math.round(volume.value * 100)
+                            color: Theme.barTextMuted
+                            font.family: Style.fontFamily
+                            font.pixelSize: Style.fontSizeSmall
+                            horizontalAlignment: Text.AlignRight
+                            Layout.preferredWidth: Style.space(7)
+                        }
+                    }
+
+                    // The microphone: whether it is live, and the switch.
+                    // Warning when muted, so talking into a muted call is
+                    // caught at a glance.
+                    RowLayout {
+                        visible: root.source !== null
+                        spacing: Style.space(2)
+                        Layout.fillWidth: true
+
+                        readonly property bool muted: root.source && root.source.audio ? root.source.audio.muted : false
+
+                        // U+F036C microphone, U+F036D microphone off.
+                        IslandButton {
+                            glyph: parent.muted ? "󰍭" : "󰍬"
+                            color: parent.muted ? Theme.warning : Theme.barText
+                            onActivated: root.source.audio.muted = !root.source.audio.muted
+                        }
+
+                        Text {
+                            text: root.nodeName(root.source)
+                            color: Theme.barText
+                            font.family: Style.fontFamily
+                            font.pixelSize: Style.fontSizeSmall
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+
+                        Text {
+                            text: parent.muted ? "muted" : "live"
+                            color: parent.muted ? Theme.warning : Theme.barTextMuted
+                            font.family: Style.fontFamily
+                            font.pixelSize: Style.fontSizeSmall
+                        }
+                    }
+
+                    // Connected Bluetooth devices, each one click from let go.
+                    // Gone entirely, rule and all, when nothing is connected.
+                    Rectangle {
+                        visible: root.bluetoothConnected.length > 0
+                        implicitHeight: Style.borderWidth
+                        color: Theme.border
+                        Layout.fillWidth: true
+                    }
+
+                    Repeater {
+                        model: root.bluetoothConnected
+
+                        delegate: Rectangle {
+                            id: deviceRow
+
+                            required property var modelData
+
+                            implicitHeight: deviceLabel.implicitHeight + Style.space(2.5)
+                            radius: Style.radius
+                            color: Theme.surface
+                            Layout.fillWidth: true
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: Style.space(2)
+                                anchors.rightMargin: Style.space(1.5)
+                                spacing: Style.space(2)
+
+                                // U+F00AF bluetooth.
+                                Text {
+                                    text: "󰂯"
+                                    color: Theme.active
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSizeSmall
+                                }
+
+                                Text {
+                                    id: deviceLabel
+
+                                    text: deviceRow.modelData.name
+                                    color: Theme.barText
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSizeSmall
+                                    elide: Text.ElideRight
+                                    Layout.fillWidth: true
+                                }
+
+                                Text {
+                                    visible: deviceRow.modelData.batteryAvailable
+                                    text: Math.round(deviceRow.modelData.battery * 100) + "%"
+                                    color: Theme.barTextMuted
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSizeSmall
+                                }
+
+                                // U+F0156 close.
+                                IslandButton {
+                                    glyph: "󰅖"
+                                    color: Theme.barTextMuted
+                                    font.pixelSize: Style.fontSizeSmall
+                                    onActivated: deviceRow.modelData.disconnect()
+                                }
+                            }
+                        }
+                    }
                 }
                 // What is waiting, and the two controls that act on all of it.
                 // This column takes the slack, so a display too narrow for the
@@ -727,6 +1125,99 @@ Item {
                         font.pixelSize: Style.fontSizeSmall
                         Layout.alignment: Qt.AlignHCenter
                     }
+                }
+            }
+
+            // The session: the power menu's five actions, across the whole
+            // island under both columns, since they act on everything above.
+            // The same actions and the same SessionControl as the menu, which
+            // stays where Ctrl+Alt+Delete reaches it.
+            ColumnLayout {
+                id: session
+
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: panel.bottom
+                anchors.topMargin: Style.space(3)
+                spacing: Style.space(2)
+
+                Rectangle {
+                    implicitHeight: Style.borderWidth
+                    color: Theme.border
+                    Layout.fillWidth: true
+                }
+
+                RowLayout {
+                    spacing: Style.space(1.5)
+                    Layout.fillWidth: true
+
+                    Repeater {
+                        model: SessionControl.actions
+
+                        delegate: Rectangle {
+                            id: action
+
+                            required property var modelData
+                            readonly property bool armed: root.armed === action.modelData.id
+
+                            implicitHeight: actionColumn.implicitHeight + Style.space(4)
+                            radius: Style.radius
+                            color: action.armed ? Theme.warning : (actionHover.hovered ? Theme.surfaceHover : "transparent")
+                            Layout.fillWidth: true
+
+                            ColumnLayout {
+                                id: actionColumn
+
+                                anchors.centerIn: parent
+                                spacing: Style.space(1)
+
+                                Text {
+                                    text: action.modelData.icon
+                                    color: action.armed ? Theme.barBackground : Theme.barText
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSize + 2
+                                    Layout.alignment: Qt.AlignHCenter
+                                }
+
+                                Text {
+                                    text: action.modelData.label
+                                    color: action.armed ? Theme.barBackground : Theme.barText
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSizeSmall
+                                    font.bold: action.armed
+                                    Layout.alignment: Qt.AlignHCenter
+                                }
+                            }
+
+                            HoverHandler {
+                                id: actionHover
+                            }
+
+                            TapHandler {
+                                onTapped: root.act(action.modelData)
+                            }
+                        }
+                    }
+                }
+
+                // The confirmation, where the power menu puts it. Holds its
+                // line when empty, so arming does not change the island's size.
+                Text {
+                    readonly property var armedAction: {
+                        for (var i = 0; i < SessionControl.actions.length; i++) {
+                            if (SessionControl.actions[i].id === root.armed)
+                                return SessionControl.actions[i];
+                        }
+                        return null;
+                    }
+
+                    text: armedAction ? "Click again to " + armedAction.label.toLowerCase() + " · Esc to cancel" : ""
+                    color: Theme.warning
+                    font.family: Style.fontFamily
+                    font.pixelSize: Style.fontSizeSmall
+                    font.bold: true
+                    horizontalAlignment: Text.AlignHCenter
+                    Layout.fillWidth: true
                 }
             }
         }
