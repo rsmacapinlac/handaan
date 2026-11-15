@@ -34,7 +34,7 @@ install_named_wrapper() {
             install_wrapper "$1"
             ;;
         bw)
-            install_wrapper 'npm:@bitwarden/cli' bw bw
+            install_wrapper bitwarden bw bw
             ;;
         *)
             echo "Unknown mise wrapper: $1" >&2
