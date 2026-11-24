@@ -8,36 +8,38 @@
 # became a networkd lease loss and route rebuild. See
 # docs/decisions/adrs/0011-one-network-manager-owns-the-interfaces.md.
 #
-# networkd ships inside the systemd package, so it cannot be uninstalled; it is
-# masked, because it is socket-activated and a merely disabled unit can still be
-# started. Nothing is stopped here: during install it may be the only thing
-# keeping the machine online, and NetworkManager takes over at the reboot.
-# systemd-resolved stays; NetworkManager hands it DNS, and it is not a manager.
+# Managers are masked, not uninstalled: networkd ships inside the systemd
+# package, and iwd may be installed on purpose or depended on. A masked unit
+# cannot start by socket, dependency or hand. Nothing is stopped here: during
+# install it may be the only thing keeping the machine online, and
+# NetworkManager takes over at the reboot. systemd-resolved stays; it is a
+# resolver, not a manager, and NetworkManager hands it DNS.
 
 log_info "Making NetworkManager the only network manager..."
 
 for unit in systemd-networkd.service systemd-networkd.socket \
     systemd-networkd-wait-online.service; do
     sudo systemctl disable "$unit" 2>/dev/null || true
-    sudo systemctl mask "$unit" || log_warning "Could not mask $unit"
+    sudo systemctl mask "$unit"
 done
 
-# archiso's files, copied by archinstall and owned by no package.
+# Only archiso's own files, recognised by the issue link in their comments; a
+# hand-written .network file is inert with networkd masked, so it is left alone.
 for file in /etc/systemd/network/20-{ethernet,wlan,wwan}.network; do
     [[ -e $file ]] || continue
-    pacman -Qo "$file" &>/dev/null && continue
+    grep -q 'systemd/issues/17698' "$file" || continue
     sudo rm -f "$file"
-    log_info "Removed $file"
+    log_info "Removed archiso's $file"
 done
 
 # iwd is a second Wi-Fi daemon beside NetworkManager's wpa_supplicant, unless
-# NetworkManager was deliberately pointed at it as its backend.
-if pacman -Q iwd &>/dev/null; then
-    if grep -rqs '^[[:space:]]*wifi\.backend[[:space:]]*=[[:space:]]*iwd' \
-        /etc/NetworkManager/NetworkManager.conf /etc/NetworkManager/conf.d; then
-        log_info "NetworkManager uses iwd as its Wi-Fi backend; leaving iwd installed"
+# NetworkManager's merged config points at it as its backend.
+if [[ -n $(systemctl list-unit-files --no-legend iwd.service 2>/dev/null) ]]; then
+    nm_config=$(NetworkManager --print-config 2>/dev/null || true)
+    if grep -Eq '^[[:space:]]*wifi\.backend[[:space:]]*=[[:space:]]*iwd' <<<"$nm_config"; then
+        log_info "NetworkManager uses iwd as its Wi-Fi backend; leaving iwd alone"
     else
         sudo systemctl disable iwd.service 2>/dev/null || true
-        sudo pacman -Rns --noconfirm iwd || log_warning "Could not remove iwd"
+        sudo systemctl mask iwd.service
     fi
 fi

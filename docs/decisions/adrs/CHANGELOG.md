@@ -2,6 +2,8 @@
 
 ## 2026-11-24 (one network manager)
 
+- **0011** edited in place, the same day after review. iwd is masked rather than uninstalled, and the backend check reads NetworkManager's merged config through `--print-config`. A `.network` file is deleted only when its contents are archiso's. The migration runs in strict mode so that a failed step is not recorded as applied.
+
 - **0011** written. NetworkManager is the only network manager. The archinstall profiles ask for it instead of copying the ISO's network configuration, and `install/post-install/network.sh` masks systemd-networkd, deletes archiso's `/etc/systemd/network/20-*.network` and uninstalls iwd, with migration `1794756558` for installed machines. On urakara, networkd and NetworkManager had both been managing the same Wi-Fi interface, with two leases and two default routes.
 
 ## 2026-10-08 (power actions in the island)
