@@ -1,5 +1,9 @@
 # ADR Changelog
 
+## 2026-11-24 (one network manager)
+
+- **0011** written. NetworkManager is the only network manager. The archinstall profiles ask for it instead of copying the ISO's network configuration, and `install/post-install/network.sh` masks systemd-networkd, deletes archiso's `/etc/systemd/network/20-*.network` and uninstalls iwd, with migration `1794756558` for installed machines. On urakara, networkd and NetworkManager had both been managing the same Wi-Fi interface, with two leases and two default routes.
+
 ## 2026-10-08 (power actions in the island)
 
 - **0006** edited in place. The expanded island gains the power menu's five actions in a full-width row, run through `SessionControl.run` with the menu's confirm-twice rule for log out, restart and shut down. The power menu stays, reached by `Ctrl+Alt+Delete`.

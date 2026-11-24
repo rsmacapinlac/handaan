@@ -120,7 +120,7 @@
         "optional_repositories": []
     },
     "network_config": {
-        "type": "iso"
+        "type": "nm"
     },
     "ntp": true,
     "packages": [],
