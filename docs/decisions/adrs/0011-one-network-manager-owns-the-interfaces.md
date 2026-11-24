@@ -16,11 +16,11 @@ NetworkManager is the only network manager.
 |---|---|
 | archinstall profiles | `"network_config": {"type": "nm"}`, so the base system boots into NetworkManager rather than archiso's stack |
 | systemd-networkd (`.service`, `.socket`, `-wait-online.service`) | disabled and masked by `install/post-install/network.sh`; it ships inside `systemd`, so it cannot be uninstalled, and a merely disabled unit can still be socket-activated |
-| `/etc/systemd/network/20-*.network` | deleted when no package owns them; they are archiso's, copied by archinstall |
-| iwd | uninstalled, unless `wifi.backend=iwd` points NetworkManager at it |
+| `/etc/systemd/network/20-*.network` | deleted only when their contents are archiso's, recognised by the systemd issue link in their comments; any other file there is left alone, inert while networkd is masked |
+| iwd | disabled and masked, not uninstalled, unless NetworkManager's merged config (`NetworkManager --print-config`) sets `wifi.backend=iwd`; the package may be wanted or depended on |
 | wpa_supplicant | kept; it is NetworkManager's Wi-Fi backend, started on demand over D-Bus |
 | systemd-resolved | kept; it is a resolver, not a manager, and NetworkManager hands it DNS when `/etc/resolv.conf` points at its stub |
 
-The installer masks networkd without stopping it, because during the install it may be the only thing keeping the machine online. NetworkManager takes over at the reboot. Migration `1794756558` applies the same cleanup to machines that are already installed, and stops networkd straight away only when NetworkManager is already running.
+The installer masks networkd without stopping it, because during the install it may be the only thing keeping the machine online. NetworkManager takes over at the reboot. Migration `1794756558` applies the same cleanup to machines that are already installed, and stops networkd straight away only when NetworkManager is already running. It runs under `set -euo pipefail`, because `handaan-migrate` marks a migration done on exit 0, and a failed mask must not be recorded as applied.
 
 The profile change is not enough on its own. A user can pick archinstall's interactive option, or bring a profile of their own, so the install step enforces the outcome whatever the base system arrived with.
